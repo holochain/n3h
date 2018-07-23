@@ -1,0 +1,18 @@
+{
+  "name": "n3h",
+  "version": "0.0.1",
+  "description": "nodejs implementation of the lib3h p2p protocol",
+  "main": "lib/index.js",
+  "scripts": {
+    "test": "standard --fix **/*.js"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "standard": "^11.0.1"
+  },
+  "dependencies": {
+    "msgpack-lite": "^0.1.26",
+    "sodium-native": "^2.1.6",
+    "zeromq": "^4.6.0"
+  }
+}
