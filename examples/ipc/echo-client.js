@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 'use strict'
 
-const crypto = require('crypto')
 const n3h = require('../../lib/index')
 
 async function _main () {

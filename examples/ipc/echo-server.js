@@ -22,8 +22,7 @@ async function _main () {
     // for an echo, the fromAddress is the toAddress : )
     srv.recvSend(
       msg.toAddress,
-      Buffer.from("echo: " + msg.data.toString()))
-
+      Buffer.from('echo: ' + msg.data.toString()))
   })
 
   srv.on('call', (msg) => {
@@ -38,13 +37,13 @@ async function _main () {
     srv.recvCall(
       msg.messageId,
       msg.toAddress,
-      Buffer.from("echo: " + msg.data.toString()))
+      Buffer.from('echo: ' + msg.data.toString()))
 
     // also simulate a response
     srv.recvCallResp(
       msg.messageId,
       msg.toAddress,
-      Buffer.from("resp: " + msg.data.toString()))
+      Buffer.from('resp: ' + msg.data.toString()))
   })
 
   await srv.ready()
