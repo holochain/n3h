@@ -3,7 +3,7 @@
 
 const n3h = require('../../lib/index')
 
-// IPC ECHO SERVER
+// IPC Echo Server Example
 //
 // supports multiple "modes" set by sending a specially formatted `send` msg.
 //
@@ -19,6 +19,9 @@ const n3h = require('../../lib/index')
 //     `call`: RESP_FAIL
 //     `call_resp`: RESP_FAIL
 
+/**
+ * simple example, just one-functioning it... need the async
+ */
 async function _main () {
   let mode = {}
 
@@ -29,24 +32,29 @@ async function _main () {
     return mode[clientId]
   }
 
+  // set up the listening socket
   const srv = new n3h.ipc.Server(['ipc://echo-server.sock'])
 
+  // handle ctrl-c
   process.on('SIGINT', () => {
     srv.close()
     console.log('socket closed')
     process.exit(0)
   })
 
+  // debug output on connections
   srv.on('clientAdd', (id) => {
     console.log('adding client ' + id)
     mode[id] = 'ECHO'
   })
 
+  // debug output && mem cleanup on connection lost
   srv.on('clientRemove', (id) => {
     console.log('pruning client ' + id)
     delete mode[id]
   })
 
+  // the client sent us a `send`
   srv.on('send', (msg) => {
     const data = msg.data.toString()
 
@@ -55,6 +63,7 @@ async function _main () {
       data: data
     })
 
+    // handle MODE messages
     if (data.startsWith('$$ctrl$$:')) {
       const m = data.substr(9).toUpperCase()
       mode[msg.clientId] = m
@@ -63,10 +72,11 @@ async function _main () {
       return
     }
 
+    // handle non-MODE messages
     switch (getMode(msg.clientId)) {
       case 'FAIL':
         console.log('got test send, but in FAIL mode, sending fail')
-        msg.reject(new Error('echo server is in FAIL mode'));
+        msg.reject(new Error('echo server is in FAIL mode'))
         break
       default:
         // default is ECHO mode
@@ -82,6 +92,7 @@ async function _main () {
     }
   })
 
+  // the client sent us a `call`
   srv.on('call', (msg) => {
     const data = msg.data.toString()
 
@@ -109,17 +120,41 @@ async function _main () {
           Buffer.from('echo: ' + data))
         break
     }
-
-    /*
-    // also simulate a response
-    srv.recvCallResp(
-      msg.messageId,
-      msg.toAddress,
-      Buffer.from('resp: ' + data))
-    */
   })
 
+  // the client sent us a `callResp`
+  srv.on('callResp', (msg) => {
+    const data = msg.data.toString()
+
+    console.log('GOT CALL_RESP:', {
+      messageId: msg.messageId.toString('hex'),
+      toAddress: msg.toAddress.toString('hex'),
+      data: data
+    })
+
+    switch (getMode(msg.clientId)) {
+      case 'FAIL':
+        console.log('got test call_resp, but in FAIL mode, sending fail')
+        msg.reject(new Error('echo server is in FAIL mode'))
+        break
+      default:
+        // default is ECHO mode
+
+        console.log('got test call_resp, attempting to resolve')
+        msg.resolve()
+
+        // also simulate a response
+        srv.recvCallResp(
+          msg.messageId,
+          msg.toAddress,
+          Buffer.from('echo: ' + data))
+        break
+    }
+  })
+
+  // make sure we are listening
   await srv.ready()
+
   console.log('up and running')
 }
 
