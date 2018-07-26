@@ -4,12 +4,14 @@
   "description": "nodejs implementation of the lib3h p2p protocol",
   "main": "lib/index.js",
   "scripts": {
-    "test": "standard --fix '**/*.js' && nyc ./node_modules/mocha/bin/mocha 'lib/**/*.test.js'",
+    "docs": "jsdoc2md lib/ipc/server.js > docs/ipc/server.md && jsdoc2md lib/ipc/client.js > docs/ipc/client.md",
+    "test": "standard --fix '**/*.js' && npm run docs && nyc ./node_modules/mocha/bin/mocha 'lib/**/*.test.js'",
     "coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
   },
   "license": "Apache-2.0",
   "devDependencies": {
     "chai": "^4.1.2",
+    "jsdoc-to-markdown": "^4.0.1",
     "mocha": "^5.2.0",
     "nyc": "^12.0.2",
     "opn": "^5.3.0",
