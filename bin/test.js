@@ -2,11 +2,12 @@
 
 const { Node, config } = require('../lib/index')
 
-async function _newNode (name) {
+async function _newNode () {
   const c = config()
-  c.nodeName = name
-  console.log(name, Node._friend(c.nodeId.id))
+  c.ipc.socket = 'ipc://./' + Node._friend(c.nodeId.id) + '.ipc.socket'
+  console.log(Node._friend(c.nodeId.id))
   const node = new Node(c)
+  await node.init()
   await node.bind()
   /*
   console.log('-- < node endpoints --')
