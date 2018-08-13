@@ -2,20 +2,23 @@
 
 const { Node, config } = require('../lib/index')
 
-async function _newNode (id) {
+async function _newNode (name) {
   const c = config()
-  c.nodeId.id = id
+  c.nodeName = name
+  console.log(name, Node._friend(c.nodeId.id))
   const node = new Node(c)
   await node.bind()
+  /*
   console.log('-- < node endpoints --')
   for (let e of node.getListeningAddrs()) {
     console.log(e)
   }
   console.log('-- node endpoints > --')
+  */
   return node
 }
 
-function _sleep(ms) {
+function _sleep (ms) {
   return new Promise((resolve, reject) => {
     setTimeout(resolve, ms)
   })
