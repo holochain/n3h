@@ -1,26 +1,33 @@
 #!/usr/bin/env node
 
 const crypto = require('crypto')
+const fs = require('fs')
 const path = require('path')
 const childProcess = require('child_process')
 
+const msgpack = require('msgpack-lite')
+
+const { Client: IpcClient } = require('node-p2p-ipc')
+
 const { Node } = require('../../lib/node')
 
-function _spawn_p2p (name, disp) {
+function _spawn_p2p (sockName, connectTo, disp) {
   const fn = path.resolve(path.join(__dirname, '_c3hat_p2p.js'))
   disp('spawn ' + fn)
 
-  const proc = childProcess.spawn('node', [fn, name])
+  const args = [fn, sockName]
+  connectTo && args.push(connectTo)
+  const proc = childProcess.spawn('node', args)
 
   proc.stdout.on('data', (data) => {
     data.toString().split('\n').forEach(e => {
-      e && disp(e + '\n')
+      e && disp(e)
     })
   })
 
   proc.stderr.on('data', (data) => {
     data.toString().split('\n').forEach(e => {
-      e && disp(e + '\n')
+      e && disp(e)
     })
   })
 
@@ -28,21 +35,28 @@ function _spawn_p2p (name, disp) {
     disp('exited ' + code)
     process.exit(1)
   })
+
+  return proc
 }
 
 async function _main () {
+  let connectTo = null
+  if (process.argv.length > 2) {
+    connectTo = process.argv[2]
+  }
+
   process.stdin.setEncoding('utf8')
   process.stdin.resume()
   process.stdin.setRawMode(true)
 
-  const name = Node._friend(crypto.randomBytes(4))
-  console.log('my name: ' + name)
+  const sockName = Node._friend(crypto.randomBytes(4))
+  const ipcSocket = './' + sockName + '.ipc.sock'
 
   let line = ''
 
-  const disp = (txt) => {
+  const disp = (...args) => {
     process.stdout.write('\u001B[2K\r')
-    if (txt) process.stdout.write(txt)
+    args.length && console.log(...args)
     process.stdout.write('c3hat> ' + line)
   }
 
@@ -54,12 +68,27 @@ async function _main () {
 
   const handleTerm = () => {
     clean()
+    try {
+      p2pProc.kill()
+    } catch (e) { /* pass */ }
+    try {
+      client.close()
+    } catch (e) { /* pass */ }
+    try {
+      fs.unlinkSync(ipcSocket)
+    } catch (e) { /* pass */ }
     console.log('\nc3hat done')
+
     process.exit(0)
   }
 
   process.on('SIGINT', handleTerm)
   process.on('SIGTERM', handleTerm)
+  process.on('exit', handleTerm)
+  process.on('uncaughtException', e => {
+    console.error(e.stack || e.toString())
+    handleTerm()
+  })
 
   const getc = (c) => {
     switch (c) {
@@ -67,7 +96,11 @@ async function _main () {
       case '\n':
         const tmp = line
         line = ''
-        disp('\n' + name + ': ' + tmp + '\n')
+        disp('\n' + name + ': ' + tmp)
+        ipcMsg('message', tmp).then(() => {}, (err) => {
+            console.error(err)
+            process.exit(1)
+          })
         break
       case '\u0004':
       case '\u0003':
@@ -84,12 +117,32 @@ async function _main () {
     }
   }
 
-  disp()
-  process.stdin.on('data', getc)
-
-  _spawn_p2p(name, (txt) => {
+  const p2pProc = _spawn_p2p(sockName, connectTo, (txt) => {
     disp('@p2p@ ' + txt)
   })
+
+  const client = new IpcClient('ipc://' + ipcSocket)
+  await client.ready()
+
+  const ipcMsg = async (type, data) => {
+    const { callPromise, responsePromise } = client.call(
+      Buffer.alloc(0), msgpack.encode({ type, data }))
+    await callPromise
+    const resp = await responsePromise
+    if (resp.data && resp.data.byteLength) {
+      return msgpack.decode(resp.data)
+    }
+  }
+
+  const name = await ipcMsg('getName')
+  disp('\nTHIS NAME:', name)
+
+  client.on('recvSend', (msg) => {
+    msg = msgpack.decode(msg.data)
+    disp('\n' + msg.data.from + ': ' + msg.data.msg)
+  })
+
+  process.stdin.on('data', getc)
 }
 
 _main().then(() => {}, (err) => {

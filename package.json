@@ -19,8 +19,8 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "mosodium": "github:neonphog/mosodium#85fdb1d426e7df446d9c591bbbe35d5b2d7c41b8",
-    "mosocket": "github:neonphog/mosocket#8483a926fcc8c6c2afbba59e13140612bf6f8c8b",
+    "mosodium": "github:neonphog/mosodium#a680f41368b2887c66624ee2334fa0a44d7eca1f",
+    "mosocket": "github:neonphog/mosocket#e27080d2f9419ca3d0b62b63f481ed8a437f644d",
     "msgpack-lite": "^0.1.26",
     "node-p2p-ipc": "github:holochain/node-p2p-ipc#299c8596be4e43cbd1cae1da58e9372e22c19d95"
   },
