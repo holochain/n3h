@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-const fs = require('fs')
-
 const msgpack = require('msgpack-lite')
 
 const { MoSocket } = require('mosocket')
@@ -72,11 +70,11 @@ async function _main () {
             }
           }
           if (!proxies.length) {
-            opt.resolve()
+            opt.resolve(Buffer.alloc(0))
             break
           }
           protoChat.m(proxies, msg.data)
-          opt.resolve()
+          opt.resolve(Buffer.alloc(0))
           break
         default:
           opt.reject(new Error('unhandled message: ' + msg.type))

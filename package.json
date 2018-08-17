@@ -22,7 +22,7 @@
     "mosodium": "github:neonphog/mosodium#a680f41368b2887c66624ee2334fa0a44d7eca1f",
     "mosocket": "github:neonphog/mosocket#e27080d2f9419ca3d0b62b63f481ed8a437f644d",
     "msgpack-lite": "^0.1.26",
-    "node-p2p-ipc": "github:holochain/node-p2p-ipc#299c8596be4e43cbd1cae1da58e9372e22c19d95"
+    "node-p2p-ipc": "github:holochain/node-p2p-ipc#03d119c20e6b4757973ea79d55e2cecf672e3a43"
   },
   "standard": {
     "env": {

@@ -7,11 +7,11 @@ const childProcess = require('child_process')
 
 const msgpack = require('msgpack-lite')
 
-const { Client: IpcClient } = require('node-p2p-ipc')
+const { IpcClient } = require('node-p2p-ipc')
 
 const { Node } = require('../../lib/node')
 
-function _spawn_p2p (sockName, connectTo, disp) {
+function _spawnP2p (sockName, connectTo, disp) {
   const fn = path.resolve(path.join(__dirname, '_c3hat_p2p.js'))
   disp('spawn ' + fn)
 
@@ -98,13 +98,14 @@ async function _main () {
         line = ''
         disp('\n' + name + ': ' + tmp)
         ipcMsg('message', tmp).then(() => {}, (err) => {
-            console.error(err)
-            process.exit(1)
-          })
+          console.error(err)
+          process.exit(1)
+        })
         break
       case '\u0004':
       case '\u0003':
         handleTerm()
+        break
       default:
         if (c.charCodeAt(0) === 127) {
           line = line.substr(0, line.length - 1)
@@ -117,29 +118,32 @@ async function _main () {
     }
   }
 
-  const p2pProc = _spawn_p2p(sockName, connectTo, (txt) => {
+  const p2pProc = _spawnP2p(sockName, connectTo, (txt) => {
     disp('@p2p@ ' + txt)
   })
 
-  const client = new IpcClient('ipc://' + ipcSocket)
-  await client.ready()
+  const client = new IpcClient()
+  await client.connect('ipc://' + ipcSocket)
 
   const ipcMsg = async (type, data) => {
-    const { callPromise, responsePromise } = client.call(
-      Buffer.alloc(0), msgpack.encode({ type, data }))
-    await callPromise
-    const resp = await responsePromise
-    if (resp.data && resp.data.byteLength) {
-      return msgpack.decode(resp.data)
+    const resp = await client.call(
+      msgpack.encode({ type, data }))
+    if (!resp) {
+      console.error('bad ipc response', resp)
+      process.exit(1)
+    }
+    if (resp.byteLength) {
+      return msgpack.decode(resp)
     }
   }
 
   const name = await ipcMsg('getName')
   disp('\nTHIS NAME:', name)
 
-  client.on('recvSend', (msg) => {
-    msg = msgpack.decode(msg.data)
+  client.on('call', (opt) => {
+    const msg = msgpack.decode(opt.data)
     disp('\n' + msg.data.from + ': ' + msg.data.msg)
+    opt.resolve(Buffer.alloc(0))
   })
 
   process.stdin.on('data', getc)
