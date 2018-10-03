@@ -4,4 +4,8 @@ node_js:
   - "10"
 before_script:
   - npm --version
+  - find . -iname package-lock.json -delete
+  - find . -iname node_modules -type d -exec rm -rv {} \;
+  - npm cache clean --force
+  - npm install
   - npm run install-all
