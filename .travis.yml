@@ -3,9 +3,15 @@ node_js:
   - "8"
   - "10"
 before_script:
-  - npm --prefix mosodium install
-  - npm --prefix mosocket install
-  - npm --prefix hashcache install
-  - npm --prefix ipc install
-  - npm --prefix n3h install
-  - npm --prefix hc-p2p-libp2p install
+  - npm --prefix mosodium cache clear --force
+  - npm --prefix mosodium install --force
+  - npm --prefix mosocket cache clear --force
+  - npm --prefix mosocket install --force
+  - npm --prefix hashcache cache clear --force
+  - npm --prefix hashcache install --force
+  - npm --prefix ipc cache clear --force
+  - npm --prefix ipc install --force
+  - npm --prefix n3h cache clear --force
+  - npm --prefix n3h install --force
+  - npm --prefix hc-p2p-libp2p cache clear --force
+  - npm --prefix hc-p2p-libp2p install --force
