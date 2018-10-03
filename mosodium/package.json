@@ -1,0 +1,56 @@
+{
+  "name": "mosodium",
+  "version": "0.0.1",
+  "description": "light wrapper around sodium-native",
+  "main": "lib/index.js",
+  "scripts": {
+    "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
+    "mocha": "mocha 'lib/**/*.test.js' 'bin/**/*.js'",
+    "nyc": "nyc npm run mocha",
+    "test": "npm run lint && npm run nyc",
+    "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "chai": "^4.1.2",
+    "mocha": "^5.2.0",
+    "nyc": "^12.0.2",
+    "opn": "^5.3.0",
+    "sinon": "^6.1.4",
+    "standard": "^11.0.1"
+  },
+  "dependencies": {
+    "sodium-native": "^2.2.1"
+  },
+  "standard": {
+    "env": {
+      "mocha": true
+    }
+  },
+  "nyc": {
+    "check-coverage": true,
+    "per-file": false,
+    "lines": 80,
+    "statements": 80,
+    "functions": 80,
+    "branches": 80,
+    "all": true,
+    "include": [
+      "./lib/**/*.js"
+    ],
+    "reporter": [
+      "lcov",
+      "text-summary"
+    ]
+  },
+  "generate-docs": {
+    "random": "lib/random.js",
+    "secbuf": "lib/secbuf.js",
+    "hash": "lib/hash.js",
+    "pwhash": "lib/pwhash.js",
+    "kx": "lib/kx.js",
+    "kdf": "lib/kdf.js",
+    "sign": "lib/sign.js",
+    "aead": "lib/aead.js"
+  }
+}

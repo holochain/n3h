@@ -9,10 +9,14 @@ const msgpack = require('msgpack-lite')
 
 const { IpcClient } = require('node-p2p-ipc')
 
-const { Node } = require('../../lib/node')
+function _sleep (ms) {
+  return new Promise((resolve, reject) => {
+    setTimeout(resolve, ms)
+  })
+}
 
 function _spawnP2p (sockName, connectTo, disp) {
-  const fn = path.resolve(path.join(__dirname, '_c3hat_p2p.js'))
+  const fn = path.resolve(path.join(__dirname, '_chat_p2p.js'))
   disp('spawn ' + fn)
 
   const args = [fn, sockName]
@@ -49,7 +53,7 @@ async function _main () {
   process.stdin.resume()
   process.stdin.setRawMode(true)
 
-  const sockName = Node._friend(crypto.randomBytes(4))
+  const sockName = Math.random().toString(36).replace(/\./g, '')
   const ipcSocket = './' + sockName + '.ipc.sock'
 
   let line = ''
@@ -121,6 +125,9 @@ async function _main () {
   const p2pProc = _spawnP2p(sockName, connectTo, (txt) => {
     disp('@p2p@ ' + txt)
   })
+
+  // give p2p a chance to gen keys, etc
+  await _sleep(2000)
 
   const client = new IpcClient()
   await client.connect('ipc://' + ipcSocket)

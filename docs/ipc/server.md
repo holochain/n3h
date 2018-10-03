@@ -1,83 +1,46 @@
-<a name="Server"></a>
+<a name="IpcServer"></a>
 
-## Server
+## IpcServer
 IPC control api server
 
 **Kind**: global class  
 
-* [Server](#Server)
-    * [new Server(bind)](#new_Server_new)
-    * [.ready()](#Server+ready) ⇒ <code>Promise</code>
-    * [.close()](#Server+close)
-    * [.recvSend(fromAddress, data)](#Server+recvSend)
-    * [.recvCall(messageId, fromAddress, data)](#Server+recvCall)
-    * [.recvCallResp(messageId, fromAddress, data)](#Server+recvCallResp)
+* [IpcServer](#IpcServer)
+    * [new IpcServer()](#new_IpcServer_new)
+    * [.bind(bindArray)](#IpcServer+bind) ⇒ <code>Promise</code>
+    * [.call(data)](#IpcServer+call) ⇒ <code>array</code>
 
-<a name="new_Server_new"></a>
+<a name="new_IpcServer_new"></a>
 
-### new Server(bind)
-Binds to the list of ZeroMq endpoints specified in `bind` argument
-
-
-| Param | Type | Description |
-| --- | --- | --- |
-| bind | <code>array.&lt;string&gt;</code> | the array of endpoint to bind |
+### new IpcServer()
+create a new ipc server instance
 
 **Example**  
 ```js
-const IpcServer = require('n3h').ipc.Server
-const srv = new IpcServer(['ipc://my-socket.ipc', 'tcp://*:12345'])
+const srv = new IpcServer()
+await srv.bind(['ipc://my-socket.ipc', 'tcp://*:12345'])
 ```
-<a name="Server+ready"></a>
+<a name="IpcServer+bind"></a>
 
-### server.ready() ⇒ <code>Promise</code>
-**Kind**: instance method of [<code>Server</code>](#Server)  
-**Returns**: <code>Promise</code> - - when we have successfully bound to bind sockets  
-<a name="Server+close"></a>
+### ipcServer.bind(bindArray) ⇒ <code>Promise</code>
+Bind / create a listening socket for clients to connect to
 
-### server.close()
-Close all listening sockets, and remove all event listeners.
-Do not use this server again, create a new one.
-
-**Kind**: instance method of [<code>Server</code>](#Server)  
-<a name="Server+recvSend"></a>
-
-### server.recvSend(fromAddress, data)
-We have received a "send" on the p2p network, transmit it to any
-listening ipc sockets.
-
-**Kind**: instance method of [<code>Server</code>](#Server)  
+**Kind**: instance method of [<code>IpcServer</code>](#IpcServer)  
+**Returns**: <code>Promise</code> - resolved if all connections bind successfully  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| fromAddress | <code>Buffer</code> | the origin address of the message |
-| data | <code>Buffer</code> | the message content |
+| bindArray | <code>array</code> \| <code>string</code> | list of zmq endpoints to bind |
 
-<a name="Server+recvCall"></a>
+<a name="IpcServer+call"></a>
 
-### server.recvCall(messageId, fromAddress, data)
-We have received a "call" on the p2p network, transmit it to any
-listening ipc sockets.
+### ipcServer.call(data) ⇒ <code>array</code>
+Transmit a `call` message to all ipc clients
 
-**Kind**: instance method of [<code>Server</code>](#Server)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| messageId | <code>Buffer</code> | identifier to correlate the callResp |
-| fromAddress | <code>Buffer</code> | the origin address of the message |
-| data | <code>Buffer</code> | the message content |
-
-<a name="Server+recvCallResp"></a>
-
-### server.recvCallResp(messageId, fromAddress, data)
-We have received a "callResp" on the p2p network, transmit it to any
-listening ipc sockets.
-
-**Kind**: instance method of [<code>Server</code>](#Server)  
+**Kind**: instance method of [<code>IpcServer</code>](#IpcServer)  
+**Returns**: <code>array</code> - array of response data from all clients  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| messageId | <code>Buffer</code> | identifier to correlate to our origin call |
-| fromAddress | <code>Buffer</code> | the origin address of the message |
 | data | <code>Buffer</code> | the message content |
 

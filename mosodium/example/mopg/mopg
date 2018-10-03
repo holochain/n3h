@@ -1,0 +1,128 @@
+#!/usr/bin/env node
+
+const os = require('os')
+const fs = require('fs')
+const path = require('path')
+const mosodium = require('../../lib/index')
+
+switch ((process.argv[2] || '').toLowerCase()[0]) {
+  case 's':
+    _sign()
+    break
+  case 'v':
+    _verify()
+    break
+  default:
+    _usage()
+    process.exit(1)
+    break
+}
+
+function _usage () {
+  console.error('mopg [subcommand] [params]')
+  console.error('    sign _filename_')
+  console.error('  verify _sigfile_ _datafile_')
+}
+
+function _fail (e) {
+  console.error(e.stack || e.toString())
+  process.exit(1)
+}
+
+async function _init () {
+  const wd = path.resolve(path.join(os.homedir(), '.mopg'))
+  try {
+    fs.mkdirSync(wd)
+  } catch (e) { /* pass */ }
+
+  let salt = null
+  try {
+    salt = fs.readFileSync(path.join(wd, 'salt'))
+  } catch (e) {
+    try {
+      salt = mosodium.random.bytes(32)
+      fs.writeFileSync(path.join(wd, 'salt'), salt)
+    } catch (e) {
+      _fail(e)
+    }
+  }
+
+  const secPassphrase = await mosodium.SecBuf.readPrompt(
+    'mopg passphrase (no echo): ')
+
+  console.error('calculating master seed...')
+  const secMasterSeed = (await mosodium.pwhash.hash(secPassphrase, {
+    salt
+  })).hash
+
+  secPassphrase.free()
+
+  const secDiskCrypt = mosodium.kdf.derive(
+    1, Buffer.from('dskcrypt'), secMasterSeed)
+  const secSignSeed = mosodium.kdf.derive(
+    2, Buffer.from('sigcrypt'), secMasterSeed)
+
+  secMasterSeed.free()
+
+  const { publicKey: signPublicKey, secretKey: secSignSecretKey } =
+    mosodium.sign.seedKeypair(secSignSeed)
+
+  secSignSeed.free()
+
+  console.error('Public Key: ' + signPublicKey.toString('base64'))
+
+  return {
+    secDiskCrypt,
+    signPublicKey,
+    secSignSecretKey
+  }
+}
+
+async function _sign () {
+  if (process.argv.length !== 4) {
+    _usage()
+    process.exit(1)
+  }
+
+  let keys = null
+  try {
+    keys = await _init()
+    const data = fs.readFileSync(process.argv[3])
+    const sig = mosodium.sign.sign(data, keys.secSignSecretKey)
+    fs.writeFileSync(process.argv[3] + '.sig', JSON.stringify({
+      publicKey: keys.signPublicKey.toString('base64'),
+      signature: sig.toString('base64')
+    }, null, 2))
+  } catch (e) {
+    _fail(e)
+  }
+
+  keys.secDiskCrypt.free()
+  keys.secSignSecretKey.free()
+}
+
+function _verify () {
+  if (process.argv.length !== 5) {
+    _usage()
+    process.exit(1)
+  }
+
+  try {
+    const { publicKey, signature } = JSON.parse(fs.readFileSync(
+      process.argv[3]))
+    const data = fs.readFileSync(process.argv[4])
+    if (mosodium.sign.verify(
+      Buffer.from(signature, 'base64'),
+      data,
+      Buffer.from(publicKey, 'base64')
+    )) {
+      console.error('Signature is Good : )')
+      process.exit(0)
+    } else {
+      console.error('Invalid Signature')
+      process.exit(2)
+    }
+  } catch (e) {
+    _fail(e)
+  }
+}
