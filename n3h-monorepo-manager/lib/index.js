@@ -94,6 +94,7 @@ async function _execAll (cmd) {
   const pkgJson = path.resolve(path.join(baseDir, 'package.json'))
   const projects = JSON.parse(fs.readFileSync(pkgJson).toString()).projects
   for (let project of projects) {
+    await _execCmd(path.join(baseDir, project), 'which npm')
     await _execCmd(path.join(baseDir, project), cmd)
   }
 }
