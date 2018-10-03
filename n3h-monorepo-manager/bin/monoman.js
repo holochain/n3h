@@ -51,6 +51,9 @@ async function main () {
     case 'test':
       await monoman.test()
       break
+    case 'docs':
+      await monoman.docs()
+      break
     default:
       console.error('UNEXPECTED COMMAND:', process.argv[2])
       console.error('monoman.js usage:')

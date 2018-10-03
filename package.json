@@ -8,7 +8,8 @@
     "new": "node n3h-monorepo-manager/bin/monoman.js new",
     "install-all": "node n3h-monorepo-manager/bin/monoman.js install",
     "test-all": "node n3h-monorepo-manager/bin/monoman.js test",
-    "test": "npm run this-lint && npm run test-all"
+    "docs-all": "node n3h-monorepo-manager/bin/monoman.js docs",
+    "test": "npm run this-lint && npm run test-all && npm run docs-all"
   },
   "license": "Apache-2.0",
   "devDependencies": {
@@ -16,11 +17,13 @@
   },
   "dependencies": {
     "handlebars": "^4.0.12",
+    "jsdoc-to-markdown": "^4.0.1",
     "prompt": "^1.0.0"
   },
   "projects": [
     "n3h",
     "ipc",
-    "hc-p2p-libp2p"
+    "hc-p2p-libp2p",
+    "mosodium"
   ]
 }

@@ -1,12 +1,12 @@
 {
-  "name": "ipc",
+  "name": "mosodium",
   "version": "0.0.1",
-  "description": "IPC connector socket abstraction for holochain p2p messaging",
+  "description": "light wrapper around sodium-native",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
     "mocha": "mocha 'lib/**/*.test.js' 'bin/**/*.js'",
-    "nyc": "nyc npm run mocha || true",
+    "nyc": "nyc npm run mocha",
     "test": "npm run lint && npm run nyc",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
   },
@@ -20,8 +20,7 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "msgpack-lite": "^0.1.26",
-    "zeromq": "^4.6.0"
+    "sodium-native": "^2.2.1"
   },
   "standard": {
     "env": {
@@ -45,7 +44,13 @@
     ]
   },
   "generate-docs": {
-    "server": "lib/server.js",
-    "client": "lib/client.js"
+    "random": "lib/random.js",
+    "secbuf": "lib/secbuf.js",
+    "hash": "lib/hash.js",
+    "pwhash": "lib/pwhash.js",
+    "kx": "lib/kx.js",
+    "kdf": "lib/kdf.js",
+    "sign": "lib/sign.js",
+    "aead": "lib/aead.js"
   }
 }
