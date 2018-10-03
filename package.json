@@ -24,6 +24,7 @@
     "n3h",
     "ipc",
     "hc-p2p-libp2p",
-    "mosodium"
+    "mosodium",
+    "mosocket"
   ]
 }
