@@ -1,48 +1,24 @@
 {
-  "name": "n3h",
+  "name": "n3h-monorepo-manager",
   "version": "0.0.1",
-  "description": "nodejs implementation of the lib3h p2p protocol",
-  "main": "lib/index.js",
+  "description": "this top-level is just tools for helping manage the monorepo",
+  "main": "n3h-monorepo-manager/lib/index.js",
   "scripts": {
-    "docs": "true",
-    "test": "standard --fix '**/*.js' && npm run docs && nyc ./node_modules/mocha/bin/mocha 'lib/**/*.test.js'",
-    "coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
+    "this-lint": "standard --fix 'n3h-monorepo-manager/lib/**/*.js' 'n3h-monorepo-manager/bin/**/*.js'",
+    "new": "node n3h-monorepo-manager/bin/monoman.js new",
+    "install-all": "node n3h-monorepo-manager/bin/monoman.js install",
+    "test-all": "node n3h-monorepo-manager/bin/monoman.js test",
+    "test": "npm run this-lint && npm run test-all"
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "chai": "^4.1.2",
-    "jsdoc-to-markdown": "^4.0.1",
-    "mocha": "^5.2.0",
-    "nyc": "^12.0.2",
-    "opn": "^5.3.0",
-    "sinon": "^6.1.4",
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "mosodium": "github:neonphog/mosodium#a680f41368b2887c66624ee2334fa0a44d7eca1f",
-    "mosocket": "github:neonphog/mosocket#e27080d2f9419ca3d0b62b63f481ed8a437f644d",
-    "msgpack-lite": "^0.1.26",
-    "node-p2p-ipc": "github:holochain/node-p2p-ipc#03d119c20e6b4757973ea79d55e2cecf672e3a43"
+    "handlebars": "^4.0.12",
+    "prompt": "^1.0.0"
   },
-  "standard": {
-    "env": {
-      "mocha": true
-    }
-  },
-  "nyc": {
-    "check-coverage": true,
-    "per-file": false,
-    "lines": 80,
-    "statements": 80,
-    "functions": 80,
-    "branches": 80,
-    "all": true,
-    "include": [
-      "./lib/**/*.js"
-    ],
-    "reporter": [
-      "lcov",
-      "text-summary"
-    ]
-  }
+  "projects": [
+    "n3h"
+  ]
 }
