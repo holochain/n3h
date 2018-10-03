@@ -3,4 +3,9 @@ node_js:
   - "8"
   - "10"
 before_script:
-  - npm run install-all
+  - npm --prefix mosodium install
+  - npm --prefix mosocket install
+  - npm --prefix hashcache install
+  - npm --prefix ipc install
+  - npm --prefix n3h install
+  - npm --prefix hc-p2p-libp2p install
