@@ -3,7 +3,7 @@ const EventEmitter = require('events')
 
 // const msgpack = require('msgpack-lite')
 const { MoSocket } = require('mosocket')
-const { IpcServer } = require('node-p2p-ipc')
+const { IpcServer } = require('ipc')
 
 const mnemonic = require('./mnemonic/mnemonic')
 

@@ -7,7 +7,7 @@ const childProcess = require('child_process')
 
 const msgpack = require('msgpack-lite')
 
-const { IpcClient } = require('node-p2p-ipc')
+const { IpcClient } = require('ipc')
 
 const { Node } = require('../../lib/node')
 
