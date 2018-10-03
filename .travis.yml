@@ -3,4 +3,5 @@ node_js:
   - "8"
   - "10"
 before_script:
+  - npm --version
   - npm run install-all
