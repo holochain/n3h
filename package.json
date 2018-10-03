@@ -21,11 +21,11 @@
     "prompt": "^1.0.0"
   },
   "projects": [
-    "n3h",
-    "ipc",
-    "hc-p2p-libp2p",
     "mosodium",
     "mosocket",
-    "hashcache"
+    "hashcache",
+    "ipc",
+    "n3h",
+    "hc-p2p-libp2p"
   ]
 }
