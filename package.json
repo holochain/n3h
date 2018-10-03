@@ -20,6 +20,7 @@
   },
   "projects": [
     "n3h",
-    "ipc"
+    "ipc",
+    "hc-p2p-libp2p"
   ]
 }
