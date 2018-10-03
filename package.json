@@ -25,6 +25,7 @@
     "ipc",
     "hc-p2p-libp2p",
     "mosodium",
-    "mosocket"
+    "mosocket",
+    "hashcache"
   ]
 }
