@@ -5,17 +5,21 @@ const { Sqlite3Backend } = require('./sqlite3backend')
 class PrioCache {
   /**
    */
-  constructor (backend) {
+  constructor (opt) {
     this._data = new Map()
-    this._backend = backend
-    // this._cacheSize = 1024 * 1024 * 20 // 20MiB
-    this._cacheSize = 3000
+    this._backend = opt.backend
+    this._cacheSize = typeof opt.cacheSize === 'number'
+      ? opt.cacheSize
+      : 1024 * 1024 * 20 // 20 MiB
   }
 
   /**
    */
   static async connect (opt) {
-    return new PrioCache(await Sqlite3Backend.connect(opt.sqlite3))
+    return new PrioCache({
+      backend: await Sqlite3Backend.connect(opt.sqlite3),
+      cacheSize: opt.cacheSize
+    })
   }
 
   /**

@@ -48,7 +48,8 @@ describe('HashCache Suite', () => {
     const i = await HashCache.connect({
       sqlite3: {
         file: ':memory:'
-      }
+      },
+      cacheSize: 3000
     })
 
     i.registerAction('setData', async (action) => {
