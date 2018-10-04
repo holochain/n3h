@@ -3,6 +3,23 @@ const path = require('path')
 const os = require('os')
 
 const { HashCache } = require('hashcache')
+const { IpcServer } = require('ipc')
+
+function _mkdirp (p, exit) {
+  p = path.resolve(p)
+  try {
+    fs.mkdirSync(p)
+  } catch (e) {
+    if (!exit && e.code === 'ENOENT') {
+      _mkdirp(path.dirname(p))
+      _mkdirp(p, true)
+    } else {
+      if (!fs.statSync(p).isDirectory()) {
+        throw e
+      }
+    }
+  }
+}
 
 /**
  */
@@ -15,14 +32,7 @@ class Pitr {
       : path.resolve(path.join(os.homedir(), '.n3h'))
     this._configFile = path.join(this._workDir, 'n3h-config.json')
 
-    const parts = this._workDir.split(/[/\\]/g)
-    let cur = ''
-    while (parts.length) {
-      cur = path.join(cur, parts.shift())
-      try {
-        fs.mkdirSync(cur)
-      } catch (e) { /* pass */ }
-    }
+    _mkdirp(this._workDir)
 
     let config = null
     try {
@@ -42,6 +52,28 @@ class Pitr {
    */
   async run () {
     this._persist = await HashCache.connect(this._config.persistence)
+
+    this._ipc = new IpcServer()
+    this._ipc.on('clientAdd', id => {
+      console.log('client added', id)
+    })
+    this._ipc.on('clientRemove', id => {
+      console.log('client removed', id)
+    })
+    this._ipc.on('call', opt => {
+      console.log('got call', opt.data.toString())
+      opt.resolve()
+    })
+    await this._ipc.bind(this._config.hcIpc.ipcUri)
+  }
+
+  /**
+   */
+  async destroy () {
+    await this._ipc.destroy()
+    this._ipc = null
+    // await this._persist.destroy()
+    this._persist = null
   }
 
   // -- private -- //

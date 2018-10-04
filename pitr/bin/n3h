@@ -4,6 +4,7 @@ const { Pitr } = require('../lib/index')
 async function main () {
   const pitr = new Pitr()
   await pitr.run()
+  await pitr.destroy()
 }
 
 main().then(() => {

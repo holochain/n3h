@@ -1,7 +1,7 @@
 {
-  "name": "pitr",
+  "name": "test-suite-executor",
   "version": "0.0.1",
-  "description": "(p)ut (i)t (t)ogether-e(r) - nobody let me name things",
+  "description": "integration test suite for exercising a holochain networking/p2p node",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
@@ -20,9 +20,8 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "hashcache": "file:../hashcache",
     "ipc": "file:../ipc",
-    "test-suite-executor": "file:../test-suite-executor"
+    "tmp": "0.0.33"
   },
   "standard": {
     "env": {

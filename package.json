@@ -21,12 +21,14 @@
     "prompt": "^1.0.0"
   },
   "projects": [
+    "n3h-common",
     "mosodium",
     "mosocket",
     "hashcache",
     "ipc",
     "n3h",
     "hc-p2p-libp2p",
+    "test-suite-executor",
     "pitr"
   ]
 }
