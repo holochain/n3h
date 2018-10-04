@@ -1,0 +1,14 @@
+#!/usr/bin/env node
+const { Pitr } = require('../lib/index')
+
+async function main () {
+  const pitr = new Pitr()
+  await pitr.run()
+}
+
+main().then(() => {
+  console.log('up and running')
+}, (err) => {
+  console.error(err)
+  process.exit(1)
+})

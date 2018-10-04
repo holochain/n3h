@@ -26,6 +26,7 @@
     "hashcache",
     "ipc",
     "n3h",
-    "hc-p2p-libp2p"
+    "hc-p2p-libp2p",
+    "pitr"
   ]
 }
