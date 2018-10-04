@@ -11,6 +11,23 @@ describe('Sqlite3 promise wrapper Suite', () => {
     await i.close()
   })
 
+  it('should connect and close, twice ok', async () => {
+    const i = await sqlite3.Db.connect(':memory:')
+    await i.close()
+    await i.close()
+  })
+
+  it('should error on destroyed usage', async () => {
+    const i = await sqlite3.Db.connect(':memory:')
+    await i.close()
+    try {
+      await i.prepare('SELECT * FROM life;')
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, but got success')
+  })
+
   it('should run and get', async () => {
     const i = await sqlite3.Db.connect(':memory:')
     await i.run('CREATE TABLE test (data TEXT)')

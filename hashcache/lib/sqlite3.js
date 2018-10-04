@@ -1,5 +1,18 @@
 const sqlite3 = require('sqlite3')
 
+function $p (fn) {
+  return new Promise((resolve, reject) => {
+    try {
+      fn((err, res) => {
+        if (err) return reject(err)
+        resolve(res)
+      })
+    } catch (e) {
+      reject(e)
+    }
+  })
+}
+
 /**
  */
 class Statement {
@@ -12,68 +25,32 @@ class Statement {
   /**
    */
   finalize () {
-    return new Promise((resolve, reject) => {
-      try {
-        this._stmt.finalize(err => {
-          if (err) {
-            return reject(err)
-          }
-          resolve()
-        })
-      } catch (e) {
-        reject(e)
-      }
+    return $p(cb => {
+      this._stmt.finalize(cb)
     })
   }
 
   /**
    */
   run (...params) {
-    return new Promise((resolve, reject) => {
-      try {
-        this._stmt.run(...params, err => {
-          if (err) {
-            return reject(err)
-          }
-          resolve()
-        })
-      } catch (e) {
-        reject(e)
-      }
+    return $p(cb => {
+      this._stmt.run(...params, cb)
     })
   }
 
   /**
    */
   get (...params) {
-    return new Promise((resolve, reject) => {
-      try {
-        this._stmt.get(...params, (err, row) => {
-          if (err) {
-            return reject(err)
-          }
-          resolve(row)
-        })
-      } catch (e) {
-        reject(e)
-      }
+    return $p(cb => {
+      this._stmt.get(...params, cb)
     })
   }
 
   /**
    */
   all (...params) {
-    return new Promise((resolve, reject) => {
-      try {
-        this._stmt.all(...params, (err, rows) => {
-          if (err) {
-            return reject(err)
-          }
-          resolve(rows)
-        })
-      } catch (e) {
-        reject(e)
-      }
+    return $p(cb => {
+      this._stmt.all(...params, cb)
     })
   }
 }
@@ -90,63 +67,37 @@ class Db {
 
   /**
    */
-  static connect (filename, mode) {
-    return new Promise((resolve, reject) => {
-      try {
-        const _db = new sqlite3.Database(filename, function (err) {
-          if (err) {
-            console.error(err)
-            return reject(err)
-          }
-          _db.serialize()
-          const out = new Db(_db)
-          resolve(out)
-        })
-      } catch (e) {
-        console.error(e)
-        reject(e)
-      }
+  static async connect (filename) {
+    let _db = null
+    await $p(cb => {
+      _db = new sqlite3.Database(filename, cb)
     })
+    _db.serialize()
+    return new Db(_db)
   }
 
   /**
    */
-  close () {
-    return new Promise((resolve, reject) => {
-      try {
-        if (this._destroyed) {
-          return resolve()
-        }
-        this._db.close(err => {
-          if (err) {
-            return reject(err)
-          }
-          resolve()
-        })
-        this._db = null
-        this._destroyed = true
-      } catch (e) {
-        reject(e)
-      }
+  async close () {
+    if (this._destroyed) {
+      return
+    }
+    await $p(cb => {
+      this._db.close(cb)
     })
+    this._db = null
+    this._destroyed = true
   }
 
   /**
    */
-  prepare (sql, ...params) {
-    return new Promise((resolve, reject) => {
-      try {
-        this._checkDestroyed()
-        const s = this._db.prepare(sql, ...params, err => {
-          if (err) {
-            return reject(err)
-          }
-          resolve(new Statement(s))
-        })
-      } catch (e) {
-        reject(e)
-      }
+  async prepare (sql, ...params) {
+    this._checkDestroyed()
+    let s = null
+    await $p(cb => {
+      s = this._db.prepare(sql, ...params, cb)
     })
+    return new Statement(s)
   }
 
   /**

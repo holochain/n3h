@@ -1,1 +1,1 @@
-exports.Sqlite3Backend = require('./sqlite3backend').Sqlite3Backend
+exports.HashCache = require('./cache').HashCache
