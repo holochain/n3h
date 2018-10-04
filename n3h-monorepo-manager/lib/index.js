@@ -8,6 +8,17 @@ const handlebars = require('handlebars')
 /**
  */
 exports.install = async function install () {
+  // XXX - huge kluge!!
+  // npm doesn't like `file:` dependency references...
+  // we have to:
+  //   - go through, delete all `file:` references
+  //   - npm install everything
+  //   - go through, add the `file:` references back
+  //   - npm install everything again
+
+  const orig = await _deleteFileRefs()
+  await _execAll('npm install')
+  await _restoreFileRefs(orig)
   await _execAll('npm install')
 }
 
@@ -195,5 +206,47 @@ async function _assertDir (dir) {
     }
   } catch (e) {
     fs.mkdirSync(dir)
+  }
+}
+
+/**
+ */
+async function _deleteFileRefs () {
+  const baseDir = path.resolve(path.join(__dirname, '..', '..'))
+  const pkgJsonFile = path.resolve(path.join(baseDir, 'package.json'))
+  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonFile).toString())
+
+  const projects = pkgJson.projects
+
+  const out = {}
+  for (let project of projects) {
+    const file = path.join(baseDir, project, 'package.json')
+    out[file] = fs.readFileSync(file)
+
+    const data = JSON.parse(out[file].toString())
+    for (let depName in data.devDependencies) {
+      let dep = data.devDependencies[depName]
+      if (dep.startsWith('file:')) {
+        delete data.devDependencies[depName]
+      }
+    }
+    for (let depName in data.dependencies) {
+      let dep = data.dependencies[depName]
+      if (dep.startsWith('file:')) {
+        delete data.dependencies[depName]
+      }
+    }
+
+    fs.writeFileSync(file, JSON.stringify(data, null, 2))
+  }
+
+  return out
+}
+
+/**
+ */
+async function _restoreFileRefs (orig) {
+  for (let file in orig) {
+    fs.writeFileSync(file, orig[file])
   }
 }
