@@ -1,9 +1,11 @@
 const sqlite3 = require('./sqlite3')
 
 /**
+ * sqlite3 persistence engine for hashcache
  */
 class Sqlite3Backend {
   /**
+   * don't use this, see `await connect()`
    */
   constructor (db) {
     this._db = db
@@ -11,6 +13,9 @@ class Sqlite3Backend {
   }
 
   /**
+   * initialize a sqlite3 persistence backend
+   * @param {object} opt
+   * @param {string} opt.file - the sqlite3 db file
    */
   static async connect (opt) {
     opt || (opt = {})
@@ -22,6 +27,9 @@ class Sqlite3Backend {
   }
 
   /**
+   * get a value from the database
+   * @param {string} ns - the namespace
+   * @param {string} hash - the base64 encoded 32 byte hash
    */
   async get (ns, hash) {
     ns = await this._assertTable(ns)
@@ -33,6 +41,10 @@ class Sqlite3Backend {
   }
 
   /**
+   * set a value in the database
+   * @param {string} ns - the namespace
+   * @param {string} hash - the base64 encoded 32 byte hash
+   * @param {Buffer} data - the data to store
    */
   async set (ns, hash, data) {
     ns = await this._assertTable(ns)
@@ -44,6 +56,8 @@ class Sqlite3Backend {
   // -- private -- //
 
   /**
+   * prepare a table and associated getter/setters
+   * @private
    */
   async _assertTable (ns) {
     if (this._ns.has(ns)) {

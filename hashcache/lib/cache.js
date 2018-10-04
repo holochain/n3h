@@ -3,9 +3,11 @@ const BACKEND = {
 }
 
 /**
+ * Priority (LRU) cache, deletes old items on prune
  */
 class PrioCache {
   /**
+   * Don't use this directly, call await PrioCache.connect()
    */
   constructor (opt) {
     this._data = new Map()
@@ -17,6 +19,7 @@ class PrioCache {
   }
 
   /**
+   * Constructor that connects our backend
    */
   static async connect (opt) {
     const backend = await BACKEND[opt.backend.type].connect(opt.backend.config)
@@ -27,6 +30,7 @@ class PrioCache {
   }
 
   /**
+   * get a value from the cache
    */
   async get (ns, key) {
     const nsMap = this._getNsRef(ns)
@@ -44,6 +48,7 @@ class PrioCache {
   }
 
   /**
+   * set a value in the cache
    */
   async set (ns, key, data) {
     const nsMap = this._getNsRef(ns)
@@ -61,6 +66,7 @@ class PrioCache {
   }
 
   /**
+   * prune if we are over our size
    */
   async prune () {
     if (this._currentSize < this._cacheSize) {
@@ -89,6 +95,7 @@ class PrioCache {
   // -- private -- //
 
   /**
+   * helper fetch the namespaced map
    */
   _getNsRef (ns) {
     if (!this._data.has(ns)) {
@@ -98,6 +105,9 @@ class PrioCache {
   }
 }
 
+/**
+ * used to sore LRU items
+ */
 function _timeSort (a, b) {
   if (a[0] < b[0]) {
     return 1
@@ -108,9 +118,12 @@ function _timeSort (a, b) {
 }
 
 /**
+ * Store namespaced items in an LRU memory cache
+ * items are persisted using the specified backed (probably sqlite3)
  */
 class HashCache {
   /**
+   * Don't use this directly, see `await connect(opt)`
    */
   constructor (priocache, dispatchTimeout) {
     this._actions = new Map()
@@ -123,6 +136,15 @@ class HashCache {
   }
 
   /**
+   * use this to create a HashCache instance
+   * specify a backend / config params
+   * @param {object} opt
+   * @param {object} opt.backend
+   * @param {string} opt.backend.type - e.g. 'sqlite3'
+   * @param {object} opt.backend.config - any backend specific options
+   * @param {string} opt.backend.config.file - e.g. ':memory:'
+   * @param {number} opt.cacheSize - size in bytes to keep in memory
+   * @param {number} opt.dispatchTimeout - in ms (e.g. 1000)
    */
   static async connect (opt) {
     return new HashCache(
@@ -132,6 +154,9 @@ class HashCache {
   }
 
   /**
+   * register an action handler (or reducer in redux parlance)
+   * @param {string} type - the handler type name
+   * @param {function} fn - the handler callback function
    */
   async registerAction (type, fn) {
     if (typeof type !== 'string') {
@@ -147,6 +172,11 @@ class HashCache {
   }
 
   /**
+   * dispatch an action - will call the handler/reducer
+   * @param {object} action
+   * @param {string} action.type - the action type name
+   * @param {string} action.ns - the namespace to work with
+   * @param {array} action.fetch - list of hashes to fetch before invoking handler
    */
   async dispatch (action) {
     return new Promise((resolve, reject) => {
@@ -194,6 +224,9 @@ class HashCache {
   }
 
   /**
+   * get a value from the cache
+   * @param {string} ns - the namespace
+   * @param {string} hash - the base64 encoded 32 byte hash to fetch
    */
   async get (ns, hash) {
     return this._data.get(ns, hash)
@@ -202,6 +235,8 @@ class HashCache {
   // -- private -- //
 
   /**
+   * do we need to process any actions?
+   * @private
    */
   _checkQueue () {
     if (this._running) {
@@ -217,6 +252,8 @@ class HashCache {
   }
 
   /**
+   * we have an action to process... process it
+   * @private
    */
   async _process (action, resolve, reject) {
     try {

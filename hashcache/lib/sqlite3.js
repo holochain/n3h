@@ -1,5 +1,8 @@
 const sqlite3 = require('sqlite3')
 
+/**
+ * helper promisifier
+ */
 function $p (fn) {
   return new Promise((resolve, reject) => {
     try {
@@ -14,15 +17,18 @@ function $p (fn) {
 }
 
 /**
+ * Represents a prepared sqlite3 statement
  */
 class Statement {
   /**
+   * accepts the low-level statement instance
    */
   constructor (stmt) {
     this._stmt = stmt
   }
 
   /**
+   * clean up the prepared statement
    */
   finalize () {
     return $p(cb => {
@@ -31,6 +37,7 @@ class Statement {
   }
 
   /**
+   * run the prepared statement with parameters
    */
   run (...params) {
     return $p(cb => {
@@ -39,6 +46,7 @@ class Statement {
   }
 
   /**
+   * get a single row result of the prepared statement with parameters
    */
   get (...params) {
     return $p(cb => {
@@ -47,6 +55,7 @@ class Statement {
   }
 
   /**
+   * get multiple row results of the prepared statement with parameters
    */
   all (...params) {
     return $p(cb => {
@@ -56,9 +65,11 @@ class Statement {
 }
 
 /**
+ * represents a sqlite3 database connection
  */
 class Db {
   /**
+   * don't use this directly, see `await connect()`
    */
   constructor (db) {
     this._db = db
@@ -66,6 +77,7 @@ class Db {
   }
 
   /**
+   * create a new sqlite3 database connection
    */
   static async connect (filename) {
     let _db = null
@@ -77,6 +89,7 @@ class Db {
   }
 
   /**
+   * close the sqlite3 database connection
    */
   async close () {
     if (this._destroyed) {
@@ -90,6 +103,7 @@ class Db {
   }
 
   /**
+   * prepare a sqlite3 database query
    */
   async prepare (sql, ...params) {
     this._checkDestroyed()
@@ -101,6 +115,7 @@ class Db {
   }
 
   /**
+   * prepare, execute, and cleanup a sqlite3 database query (no results)
    */
   async run (sql, ...params) {
     const s = await this.prepare(sql)
@@ -109,6 +124,7 @@ class Db {
   }
 
   /**
+   * prepare, execute, and cleanup a sqlite3 database query (one row result)
    */
   async get (sql, ...params) {
     const s = await this.prepare(sql)
@@ -118,6 +134,7 @@ class Db {
   }
 
   /**
+   * prepare, execute, and cleanup a sqlite3 database query (all row results)
    */
   async all (sql, ...params) {
     const s = await this.prepare(sql)
@@ -129,6 +146,7 @@ class Db {
   // -- private -- //
 
   /**
+   * throw an exception if we've been destroyed already
    */
   _checkDestroyed () {
     if (this._destroyed) {
