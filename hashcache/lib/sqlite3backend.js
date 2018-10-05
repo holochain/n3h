@@ -17,9 +17,15 @@ class Sqlite3Backend extends AsyncClass {
       self._db = await new sqlite3.Db(opt.file)
       self._ns = new Map()
       self.$pushDestructor(async () => {
+        const wait = []
+        for (let v of self._ns.values()) {
+          wait.push(v.getter.destroy())
+          wait.push(v.setter.destroy())
+        }
+        await Promise.all(wait)
+        self._ns = null
         await self._db.destroy()
         self._db = null
-        self._ns = null
       })
       return self
     })

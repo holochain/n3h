@@ -13,7 +13,7 @@ let DISPATCH_TIMEOUT = null
 
 class TestCache {
   static async create () {
-    const i = await HashCache.connect({
+    const i = await new HashCache({
       backend: {
         type: 'sqlite3',
         config: {
@@ -53,6 +53,10 @@ class TestCache {
     const out = new TestCache()
     out._i = i
     return out
+  }
+
+  destroy () {
+    return this._i.destroy()
   }
 
   get (hash) {
@@ -98,6 +102,7 @@ describe('HashCache Suite', () => {
     try {
       await i._i.registerAction(2, () => {})
     } catch (e) {
+      await i.destroy()
       return
     }
     throw new Error('expected exception, got success')
@@ -108,6 +113,7 @@ describe('HashCache Suite', () => {
     try {
       await i._i.registerAction('test', 2)
     } catch (e) {
+      await i.destroy()
       return
     }
     throw new Error('expected exception, got success')
@@ -119,6 +125,7 @@ describe('HashCache Suite', () => {
     try {
       await i._i.registerAction('test', () => {})
     } catch (e) {
+      await i.destroy()
       return
     }
     throw new Error('expected exception, got success')
@@ -134,6 +141,7 @@ describe('HashCache Suite', () => {
         fetch: []
       })
     } catch (e) {
+      await i.destroy()
       return
     }
     throw new Error('expected exception, got success')
@@ -145,6 +153,7 @@ describe('HashCache Suite', () => {
     try {
       await i.longTime()
     } catch (e) {
+      await i.destroy()
       return
     }
     throw new Error('expected exception, got success')
@@ -155,6 +164,7 @@ describe('HashCache Suite', () => {
     try {
       await i._i.dispatch(2)
     } catch (e) {
+      await i.destroy()
       return
     }
     throw new Error('expected exception, got success')
@@ -171,6 +181,7 @@ describe('HashCache Suite', () => {
         ]
       })
     } catch (e) {
+      await i.destroy()
       return
     }
     throw new Error('expected exception, got success')
@@ -187,6 +198,7 @@ describe('HashCache Suite', () => {
         ]
       })
     } catch (e) {
+      await i.destroy()
       return
     }
     throw new Error('expected exception, got success')
@@ -203,6 +215,7 @@ describe('HashCache Suite', () => {
         ]
       })
     } catch (e) {
+      await i.destroy()
       return
     }
     throw new Error('expected exception, got success')
@@ -217,6 +230,7 @@ describe('HashCache Suite', () => {
         fetch: 2
       })
     } catch (e) {
+      await i.destroy()
       return
     }
     throw new Error('expected exception, got success')
@@ -233,6 +247,7 @@ describe('HashCache Suite', () => {
         ]
       })
     } catch (e) {
+      await i.destroy()
       return
     }
     throw new Error('expected exception, got success')
@@ -250,20 +265,36 @@ describe('HashCache Suite', () => {
     const res = await i.get(hash)
 
     expect(res.count).equals(2)
+    await i.destroy()
   })
 
   it('should lru', async () => {
     CACHE_SIZE = 3000
     const i = await TestCache.create()
 
+    const list = []
+
     for (let j = 0; j < 4; ++j) {
+      const hash = crypto.randomBytes(32).toString('base64')
+      list.push(hash)
       await i.setData(
-        crypto.randomBytes(32).toString('base64'),
+        hash,
         crypto.randomBytes(512).toString('hex')
       )
       await _sleep((Math.random() * 2 + 2) | 0)
     }
 
     expect(i._i._data._currentSize).lessThan(3000)
+
+    // now backwards
+    for (let j = list.length - 1; j >= 0; --j) {
+      // make sure we can get a values0 that have been elided
+      const val = await i.get(list[j])
+      expect(val.data.length).greaterThan(1000)
+    }
+
+    expect(i._i._data._currentSize).lessThan(3000)
+
+    await i.destroy()
   })
 })

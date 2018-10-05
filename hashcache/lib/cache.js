@@ -2,30 +2,32 @@ const BACKEND = {
   'sqlite3': require('./sqlite3backend').Sqlite3Backend
 }
 
+const { AsyncClass } = require('n3h-common')
+
 /**
  * Priority (LRU) cache, deletes old items on prune
  */
-class PrioCache {
+class PrioCache extends AsyncClass {
   /**
-   * Don't use this directly, call await PrioCache.connect()
    */
   constructor (opt) {
-    this._data = new Map()
-    this._backend = opt.backend
-    this._cacheSize = typeof opt.cacheSize === 'number'
-      ? opt.cacheSize
-      : 1024 * 1024 * 20 // 20 MiB
-    this._currentSize = 0
-  }
+    super()
 
-  /**
-   * Constructor that connects our backend
-   */
-  static async connect (opt) {
-    const backend = await new BACKEND[opt.backend.type](opt.backend.config)
-    return new PrioCache({
-      backend,
-      cacheSize: opt.cacheSize
+    return AsyncClass.$construct(this, async (self) => {
+      self._data = new Map()
+      self._backend = await new BACKEND[opt.backend.type](opt.backend.config)
+      self._cacheSize = typeof opt.cacheSize === 'number'
+        ? opt.cacheSize
+        : 1024 * 1024 * 20 // 20 MiB
+      self._currentSize = 0
+
+      self.$pushDestructor(async () => {
+        await self._backend.destroy()
+        self._backend = null
+        self._data = null
+      })
+
+      return self
     })
   }
 
@@ -38,13 +40,18 @@ class PrioCache {
       try {
         const data = await this._backend.get(ns, key)
         nsMap.set(key, [Date.now(), data])
+        this._currentSize += data.byteLength
       } catch (e) {
-        nsMap.set(key, [Date.now(), Buffer.from('{}', 'utf8')])
+        const data = Buffer.from('{}', 'utf8')
+        nsMap.set(key, [Date.now(), data])
+        this._currentSize += data.byteLength
       }
     }
     const ref = nsMap.get(key)
     ref[0] = Date.now()
-    return JSON.parse(ref[1].toString('utf8'))
+    const out = JSON.parse(ref[1].toString('utf8'))
+    await this.prune()
+    return out
   }
 
   /**
@@ -63,6 +70,8 @@ class PrioCache {
     }
     nsMap.set(key, [Date.now(), data])
     this._currentSize += data.byteLength
+
+    await this.prune()
   }
 
   /**
@@ -121,20 +130,7 @@ function _timeSort (a, b) {
  * Store namespaced items in an LRU memory cache
  * items are persisted using the specified backed (probably sqlite3)
  */
-class HashCache {
-  /**
-   * Don't use this directly, see `await connect(opt)`
-   */
-  constructor (priocache, dispatchTimeout) {
-    this._actions = new Map()
-    this._queue = []
-    this._running = false
-    this._data = priocache
-    this._dispatchTimeout = typeof dispatchTimeout === 'number'
-      ? dispatchTimeout
-      : 1000
-  }
-
+class HashCache extends AsyncClass {
   /**
    * use this to create a HashCache instance
    * specify a backend / config params
@@ -146,11 +142,26 @@ class HashCache {
    * @param {number} opt.cacheSize - size in bytes to keep in memory
    * @param {number} opt.dispatchTimeout - in ms (e.g. 1000)
    */
-  static async connect (opt) {
-    return new HashCache(
-      await PrioCache.connect(opt),
-      opt.dispatchTimeout
-    )
+  constructor (opt) {
+    super()
+
+    return AsyncClass.$construct(this, async (self) => {
+      self._actions = new Map()
+      self._queue = []
+      self._running = false
+      self._data = await new PrioCache(opt)
+      self._dispatchTimeout = typeof opt.dispatchTimeout === 'number'
+        ? opt.dispatchTimeout
+        : 1000
+
+      self.$pushDestructor(() => {
+        self._data.destroy()
+        self._data = null
+        self._actions = null
+      })
+
+      return self
+    })
   }
 
   /**
@@ -287,8 +298,6 @@ class HashCache {
         toSave.push(this._data.set(action.ns, key, value))
       }
       await Promise.all(toSave)
-
-      await this._data.prune()
 
       resolve()
     } catch (e) {
