@@ -5,7 +5,7 @@
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
-    "mocha": "mocha 'lib/**/*.test.js' 'bin/**/*.js'",
+    "mocha": "mocha 'lib/**/*.test.js' 'bin/**/*.test.js'",
     "nyc": "nyc npm run mocha || true",
     "test": "npm run lint && npm run nyc",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
@@ -22,6 +22,7 @@
   "dependencies": {
     "hashcache": "file:../hashcache",
     "ipc": "file:../ipc",
+    "n3h-common": "file:../n3h-common",
     "test-suite-executor": "file:../test-suite-executor"
   },
   "standard": {

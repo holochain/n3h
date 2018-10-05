@@ -43,10 +43,10 @@ class AsyncClass {
    */
   async destroy () {
     if (this._destroyed) return
-    this._destroyed = true
     for (let d of this._destroy) {
       await d()
     }
+    this._destroyed = true
     this._destroy = null
   }
 
@@ -117,7 +117,7 @@ class AsyncClass {
       if (typeof destructor !== 'function') {
         throw new Error('$pushDestructor only accepts functions')
       }
-      this._destroy.push(destructor)
+      this._destroy.unshift(destructor)
     }
   }
 }

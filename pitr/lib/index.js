@@ -2,56 +2,67 @@ const fs = require('fs')
 const path = require('path')
 const os = require('os')
 
+const { AsyncClass, mkdirp } = require('n3h-common')
 const { HashCache } = require('hashcache')
 const { IpcServer } = require('ipc')
 
-function _mkdirp (p, exit) {
-  p = path.resolve(p)
-  try {
-    fs.mkdirSync(p)
-  } catch (e) {
-    if (!exit && e.code === 'ENOENT') {
-      _mkdirp(path.dirname(p))
-      _mkdirp(p, true)
-    } else {
-      if (!fs.statSync(p).isDirectory()) {
-        throw e
-      }
-    }
-  }
-}
-
 /**
  */
-class Pitr {
+class Pitr extends AsyncClass {
   /**
    */
   constructor () {
-    this._workDir = 'N3H_WORK' in process.env
-      ? process.env.N3H_WORK
-      : path.resolve(path.join(os.homedir(), '.n3h'))
-    this._configFile = path.join(this._workDir, 'n3h-config.json')
+    super()
 
-    _mkdirp(this._workDir)
+    return AsyncClass.$construct(this, async (self) => {
+      self._workDir = 'N3H_WORK' in process.env
+        ? process.env.N3H_WORK
+        : path.resolve(path.join(os.homedir(), '.n3h'))
+      self._configFile = path.join(self._workDir, 'n3h-config.json')
 
-    let config = null
-    try {
-      config = fs.readFileSync(this._configFile)
-    } catch (e) {
-      config = JSON.stringify(Pitr.defaultInitialConfig, null, 2)
-      fs.writeFileSync(this._configFile, config + '\n')
-    }
+      await mkdirp(self._workDir)
 
-    this._config = JSON.parse(config)
-    this._config.hcIpc.ipcUri = this._fixWorkDir(this._config.hcIpc.ipcUri)
-    this._config.persistence.backend.config.file =
-      this._fixWorkDir(this._config.persistence.backend.config.file)
+      let config = null
+      try {
+        config = fs.readFileSync(self._configFile)
+      } catch (e) {
+        config = JSON.stringify(Pitr.defaultInitialConfig, null, 2)
+        fs.writeFileSync(self._configFile, config + '\n')
+      }
+
+      self._config = JSON.parse(config)
+      self._config.hcIpc.ipcUri = self._fixWorkDir(self._config.hcIpc.ipcUri)
+      self._config.persistence.backend.config.file =
+        self._fixWorkDir(self._config.persistence.backend.config.file)
+
+      self.$pushDestructor(async () => {
+        await Promise.all([
+          self._ipc.destroy(),
+          self._persist.destroy()
+        ])
+        self._ipc = null
+        self._persist = null
+      })
+
+      await self._startupServices()
+
+      return self
+    })
   }
+
+  run () {
+    return new Promise((resolve, reject) => {
+      this._resolve = resolve
+      this._reject = reject
+    })
+  }
+
+  // -- private -- //
 
   /**
    */
-  async run () {
-    this._persist = await HashCache.connect(this._config.persistence)
+  async _startupServices () {
+    this._persist = await new HashCache(this._config.persistence)
 
     this._ipc = new IpcServer()
     this._ipc.on('clientAdd', id => {
@@ -60,23 +71,17 @@ class Pitr {
     this._ipc.on('clientRemove', id => {
       console.log('client removed', id)
     })
-    this._ipc.on('call', opt => {
-      console.log('got call', opt.data.toString())
+    this._ipc.on('call', async opt => {
+      const call = opt.data.toString()
+      console.log('n3h got call', call)
+      if (call === 'funky') {
+        await this._ipc.call(Buffer.from('test-from-n3h'))
+      }
       opt.resolve()
     })
     await this._ipc.bind(this._config.hcIpc.ipcUri)
+    console.log('bound to', this._config.hcIpc.ipcUri)
   }
-
-  /**
-   */
-  async destroy () {
-    await this._ipc.destroy()
-    this._ipc = null
-    // await this._persist.destroy()
-    this._persist = null
-  }
-
-  // -- private -- //
 
   _fixWorkDir (str) {
     return str.replace(/\$N3H_WORK/g, this._workDir)

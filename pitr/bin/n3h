@@ -2,9 +2,27 @@
 const { Pitr } = require('../lib/index')
 
 async function main () {
-  const pitr = new Pitr()
+  const pitr = await new Pitr()
+
+  let terminated = false
+  const terminate = async () => {
+    if (terminated) {
+      return
+    }
+    try {
+      await pitr.destroy()
+      console.log('n3h exited cleanly')
+      process.exit(0)
+    } catch (e) {
+      console.error(e.stack || e.toString())
+      process.exit(1)
+    }
+  }
+
+  process.on('SIGINT', terminate)
+  process.on('SIGTERM', terminate)
+
   await pitr.run()
-  await pitr.destroy()
 }
 
 main().then(() => {

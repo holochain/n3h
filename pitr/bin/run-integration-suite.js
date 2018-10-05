@@ -8,9 +8,9 @@ const { TestSuiteExecutor } = require('test-suite-executor')
 async function main () {
   const n3hCmd = path.resolve(path.join(__dirname, 'n3h'))
 
-  const exec = new TestSuiteExecutor()
+  const exec = await new TestSuiteExecutor()
 
-  exec.on('spawnNode', node => {
+  exec.on('spawnNode', async node => {
     console.log('spawnNode', node.nodeName, node.nodeDir)
 
     const env = JSON.parse(JSON.stringify(process.env))
@@ -33,10 +33,26 @@ async function main () {
   })
 
   exec.on('killNode', (node, resolve) => {
-    console.log('killNode', node.nodeName)
-
-    // node.proc.kill('SIGINT')
+    node.proc.kill('SIGINT')
   })
+
+  let terminated = false
+  const terminate = async () => {
+    if (terminated) {
+      return
+    }
+    try {
+      await exec.destroy()
+      console.log('run-integration-suite exited cleanly')
+      process.exit(0)
+    } catch (e) {
+      console.error(e.stack || e.toString())
+      process.exit(1)
+    }
+  }
+
+  process.on('SIGINT', terminate)
+  process.on('SIGTERM', terminate)
 
   await exec.run()
 }
