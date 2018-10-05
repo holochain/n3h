@@ -20,6 +20,7 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
+    "n3h-common": "file:../n3h-common",
     "sqlite3": "^4.0.2"
   },
   "standard": {

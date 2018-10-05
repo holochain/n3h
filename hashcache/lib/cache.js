@@ -22,7 +22,7 @@ class PrioCache {
    * Constructor that connects our backend
    */
   static async connect (opt) {
-    const backend = await BACKEND[opt.backend.type].connect(opt.backend.config)
+    const backend = await new BACKEND[opt.backend.type](opt.backend.config)
     return new PrioCache({
       backend,
       cacheSize: opt.cacheSize

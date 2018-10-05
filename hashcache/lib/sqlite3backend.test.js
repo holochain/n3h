@@ -11,7 +11,7 @@ describe('Sqlite3Backend Suite', () => {
 
   it('should error with no config', async () => {
     try {
-      await Sqlite3Backend.connect()
+      await new Sqlite3Backend()
     } catch (e) {
       return
     }
@@ -20,14 +20,14 @@ describe('Sqlite3Backend Suite', () => {
 
   it('should save and get', async () => {
     const hash = crypto.randomBytes(32).toString('base64')
-    const i = await Sqlite3Backend.connect({ file: ':memory:' })
+    const i = await new Sqlite3Backend({ file: ':memory:' })
     await i.set(NS, hash, Buffer.from('this is a test'))
     expect((await i.get(NS, hash)).toString()).equals('this is a test')
   })
 
   it('should save multi and get', async () => {
     const hash = crypto.randomBytes(32).toString('base64')
-    const i = await Sqlite3Backend.connect({ file: ':memory:' })
+    const i = await new Sqlite3Backend({ file: ':memory:' })
     await i.set(NS, hash, Buffer.from('this is a test'))
     await i.set(NS, hash, Buffer.from('this is a test2'))
     expect((await i.get(NS, hash)).toString()).equals('this is a test2')

@@ -1,29 +1,28 @@
 const sqlite3 = require('./sqlite3')
+const { AsyncClass } = require('n3h-common')
 
 /**
  * sqlite3 persistence engine for hashcache
  */
-class Sqlite3Backend {
+class Sqlite3Backend extends AsyncClass {
   /**
-   * don't use this, see `await connect()`
    */
-  constructor (db) {
-    this._db = db
-    this._ns = new Map()
-  }
+  constructor (opt) {
+    super()
 
-  /**
-   * initialize a sqlite3 persistence backend
-   * @param {object} opt
-   * @param {string} opt.file - the sqlite3 db file
-   */
-  static async connect (opt) {
-    opt || (opt = {})
-    if (!opt.file) {
-      throw new Error('cannot initialize a hashcache without a sqlite3 file')
-    }
-
-    return new Sqlite3Backend(await sqlite3.Db.connect(opt.file))
+    return AsyncClass.$construct(this, async (self) => {
+      if (!opt.file) {
+        throw new Error('cannot initialize a hashcache without a sqlite3 file')
+      }
+      self._db = await new sqlite3.Db(opt.file)
+      self._ns = new Map()
+      self.$pushDestructor(async () => {
+        await self._db.destroy()
+        self._db = null
+        self._ns = null
+      })
+      return self
+    })
   }
 
   /**

@@ -1,16 +1,22 @@
 const { expect } = require('chai')
-const { AsyncClass } = require('./async-class')
+const { AsyncClass } = require('./index')
 const sinon = require('sinon')
 
 /**
  * since AsyncClass is intended to be subclassed... test it that way
  */
 class StubClass extends AsyncClass {
-  constructor (destroy) {
-    super(destroy)
-    return new Promise(async (resolve, reject) => {
-      const self = await this
-      resolve(self)
+  constructor () {
+    super()
+
+    return AsyncClass.$construct(this, async (self) => {
+      self._realObj = true
+      self.$pushDestructor(() => {
+        if (!self._realObj) {
+          throw new Error('uh oh... destroying wrong object')
+        }
+      })
+      return self
     })
   }
 }
@@ -31,11 +37,44 @@ describe('StubClass Suite', () => {
     await i.destroy()
   })
 
+  it('should not construct with bad inst', async () => {
+    try {
+      await AsyncClass.$construct(2, async () => {
+        return new StubClass()
+      })
+    } catch (e) {
+      return
+    }
+    throw await new Error('expected exception, got success')
+  })
+
+  it('should not construct with bad return', async () => {
+    const i = await new StubClass()
+    try {
+      await AsyncClass.$construct(i, async () => {
+        return 2
+      })
+    } catch (e) {
+      return
+    }
+    throw await new Error('expected exception, got success')
+  })
+
   it('should not allow methods after destroy', async () => {
     const i = await new StubClass()
     await i.destroy()
     try {
       i.on('yo', () => {})
+    } catch (e) {
+      return
+    }
+    throw await new Error('expected exception, got success')
+  })
+
+  it('should not allow push bad destructor', async () => {
+    const i = await new StubClass()
+    try {
+      i.$pushDestructor(2)
     } catch (e) {
       return
     }

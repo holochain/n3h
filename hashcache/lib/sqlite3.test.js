@@ -7,19 +7,19 @@ describe('Sqlite3 promise wrapper Suite', () => {
   })
 
   it('should connect and close', async () => {
-    const i = await sqlite3.Db.connect(':memory:')
-    await i.close()
+    const i = await new sqlite3.Db(':memory:')
+    await i.destroy()
   })
 
   it('should connect and close, twice ok', async () => {
-    const i = await sqlite3.Db.connect(':memory:')
-    await i.close()
-    await i.close()
+    const i = await new sqlite3.Db(':memory:')
+    await i.destroy()
+    await i.destroy()
   })
 
   it('should error on destroyed usage', async () => {
-    const i = await sqlite3.Db.connect(':memory:')
-    await i.close()
+    const i = await new sqlite3.Db(':memory:')
+    await i.destroy()
     try {
       await i.prepare('SELECT * FROM life;')
     } catch (e) {
@@ -29,16 +29,16 @@ describe('Sqlite3 promise wrapper Suite', () => {
   })
 
   it('should run and get', async () => {
-    const i = await sqlite3.Db.connect(':memory:')
+    const i = await new sqlite3.Db(':memory:')
     await i.run('CREATE TABLE test (data TEXT)')
     await i.run('INSERT INTO test VALUES (?)', 'hello')
     const res = await i.get('SELECT data FROM test LIMIT 1')
     expect(res.data).equals('hello')
-    await i.close()
+    await i.destroy()
   })
 
   it('should all', async () => {
-    const i = await sqlite3.Db.connect(':memory:')
+    const i = await new sqlite3.Db(':memory:')
     await i.run('CREATE TABLE test (data TEXT)')
     await i.run('INSERT INTO test VALUES (?)', 'hello1')
     await i.run('INSERT INTO test VALUES (?)', 'hello2')
@@ -47,11 +47,11 @@ describe('Sqlite3 promise wrapper Suite', () => {
       { 'data': 'hello1' },
       { 'data': 'hello2' }
     ])
-    await i.close()
+    await i.destroy()
   })
 
   it('should prepare', async () => {
-    const i = await sqlite3.Db.connect(':memory:')
+    const i = await new sqlite3.Db(':memory:')
     await i.run('CREATE TABLE test (data TEXT)')
     const s = await i.prepare('INSERT INTO test VALUES (?)')
     await s.run('hello1')
@@ -62,6 +62,6 @@ describe('Sqlite3 promise wrapper Suite', () => {
       { 'data': 'hello1' },
       { 'data': 'hello2' }
     ])
-    await i.close()
+    await i.destroy()
   })
 })

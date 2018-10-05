@@ -22,30 +22,19 @@
  */
 class AsyncClass {
   /**
-   * pass in any additional destructors you may need called
-   * @param {array|function|undefined} destroy - any destructors
    */
-  constructor (destroy) {
-    this._destroyed = false
+  constructor () {
+    return AsyncClass.$construct(this, async (self) => {
+      self._destroyed = false
+      self._destroy = []
 
-    if (Array.isArray(destroy)) {
-      this._destroy = destroy
-    } else {
-      if (typeof destroy === 'function') {
-        this._destroy = [destroy]
-      } else {
-        this._destroy = []
-      }
-    }
+      self._events = Object.create(null)
 
-    this._events = Object.create(null)
+      self.$pushDestructor(() => {
+        self._events = null
+      })
 
-    this._destroy.push(() => {
-      this._events = null
-    })
-
-    return new Promise((resolve, reject) => {
-      resolve(this)
+      return self
     })
   }
 
@@ -93,11 +82,42 @@ class AsyncClass {
   // -- protected -- //
 
   /**
+   */
+  static $construct (inst, fn) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        inst = await inst
+        if (!(inst instanceof AsyncClass)) {
+          throw new Error('bad $construct call, inst not AsyncClass')
+        }
+        const res = await fn.call(inst, inst)
+        if (!(res instanceof AsyncClass)) {
+          throw new Error('bad $construct call, return value not AsyncClass')
+        }
+        resolve(res)
+      } catch (e) {
+        reject(e)
+      }
+    })
+  }
+
+  /**
    * throws an error if this instance has already been destroyed
    */
   $checkDestroyed () {
     if (this._destroyed) {
       throw new Error('instance used after destruction')
+    }
+  }
+
+  /**
+   */
+  $pushDestructor (...destructors) {
+    for (let destructor of destructors) {
+      if (typeof destructor !== 'function') {
+        throw new Error('$pushDestructor only accepts functions')
+      }
+      this._destroy.push(destructor)
     }
   }
 }
