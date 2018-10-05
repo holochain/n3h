@@ -33,8 +33,6 @@ class TestSuiteExecutor extends EventEmitter {
         }).name
 
         this.emit('spawnNode', node)
-
-
       })
       this._nodes.push(node)
     }
