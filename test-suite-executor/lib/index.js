@@ -43,25 +43,26 @@ class TestSuiteExecutor extends AsyncClass {
     let wait = []
     for (let i = 0; i < 3; ++i) {
       const node = {}
-      node.nodePromise = new Promise(async (resolve, reject) => {
-        try {
-          node.resolve = resolve
-          node.reject = reject
-          node.nodeName = 'node-' + i
-          const t = tmp.dirSync({
-            prefix: 'n3h-test-suite-' + node.nodeName + '-',
-            unsafeCleanup: true
-          })
-          node.nodeDir = t.name
-          this._dirs.push(t.removeCallback)
-
-          await mkdirp(node.nodeDir)
-
-          wait.push(this.emit('spawnNode', node))
-        } catch (e) {
-          reject(e)
-        }
+      node.nodePromise = new Promise((resolve, reject) => {
+        node.resolve = resolve
+        node.reject = reject
       })
+
+      node.name = 'node-' + i
+      const t = tmp.dirSync({
+        prefix: 'n3h-test-suite-' + node.name + '-',
+        unsafeCleanup: true
+      })
+
+      node.dir = t.name
+      this._dirs.push(t.removeCallback)
+
+      await mkdirp(node.dir)
+
+      node.ipcUri = 'ipc://' + path.join(node.dir, 'n3h-ipc.socket')
+
+      wait.push(this.emit('spawnNode', node))
+
       this._nodes.push(node)
     }
 
@@ -70,8 +71,7 @@ class TestSuiteExecutor extends AsyncClass {
     wait = []
     for (let node of this._nodes) {
       wait.push((async () => {
-        node.ipcClient = await new TestIpcClient('ipc://' + path.join(
-          node.nodeDir, 'n3h-ipc.socket'))
+        node.ipcClient = await new TestIpcClient(node.ipcUri)
       })())
     }
 
@@ -79,12 +79,46 @@ class TestSuiteExecutor extends AsyncClass {
 
     wait = []
     for (let node of this._nodes) {
-      wait.push(node.ipcClient.call(Buffer.from('funky')))
+      wait.push(node.ipcClient.call(Buffer.from(JSON.stringify({
+        method: "getState"
+      }))))
+    }
+
+    console.log('@@', await Promise.all(wait))
+
+    wait = []
+    for (let node of this._nodes) {
+      wait.push(node.ipcClient.call(Buffer.from(JSON.stringify({
+        method: "getDefaultConfig"
+      }))))
+    }
+
+    const defConfig = JSON.parse((await Promise.all(wait))[0])
+    console.log('@@', JSON.stringify(defConfig, null, 2))
+
+    wait = []
+    for (let node of this._nodes) {
+      wait.push(node.ipcClient.call(Buffer.from(JSON.stringify({
+        method: "setConfig",
+        config: defConfig
+      }))))
     }
 
     await Promise.all(wait)
+    console.log('@@ setComplete')
+
+    wait = []
+    for (let node of this._nodes) {
+      wait.push(node.ipcClient.call(Buffer.from(JSON.stringify({
+        method: "getState"
+      }))))
+    }
+
+    console.log('@@', await Promise.all(wait))
 
     console.log('got all calls')
+
+    this.emit('done')
   }
 }
 

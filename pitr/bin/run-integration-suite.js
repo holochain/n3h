@@ -11,19 +11,20 @@ async function main () {
   const exec = await new TestSuiteExecutor()
 
   exec.on('spawnNode', async node => {
-    console.log('spawnNode', node.nodeName, node.nodeDir)
+    console.log('spawnNode', node.name, node.dir)
 
     const env = JSON.parse(JSON.stringify(process.env))
-    env.N3H_WORK = node.nodeDir
+    env.N3H_WORK_DIR = node.dir
+    env.N3H_IPC_SOCKET = node.ipcUri
 
     node.proc = childProcess.spawn(n3hCmd, {
-      cwd: node.nodeDir,
+      cwd: node.dir,
       env,
       stdio: 'inherit'
     })
 
     node.proc.on('close', code => {
-      console.log(node.nodeName, 'ended', code)
+      console.log(node.name, 'ended', code)
       if (code === 0) {
         node.resolve()
       } else {
@@ -53,6 +54,10 @@ async function main () {
 
   process.on('SIGINT', terminate)
   process.on('SIGTERM', terminate)
+
+  exec.on('done', async () => {
+    await terminate()
+  })
 
   await exec.run()
 }

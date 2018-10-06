@@ -25,9 +25,7 @@ async function main () {
   await pitr.run()
 }
 
-main().then(() => {
-  console.log('up and running')
-}, (err) => {
+main().then(() => {}, (err) => {
   console.error(err)
   process.exit(1)
 })
