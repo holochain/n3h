@@ -82,12 +82,14 @@ class Db extends AsyncClass {
         self._db = new sqlite3.Database(filename, cb)
       })
       self._db.serialize()
+
       self.$pushDestructor(async () => {
         await $p(cb => {
           self._db.close(cb)
         })
         self._db = null
       })
+
       return self
     })
   }

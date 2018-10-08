@@ -1,5 +1,6 @@
 const sqlite3 = require('./sqlite3')
 const { expect } = require('chai')
+const tmp = require('tmp')
 
 describe('Sqlite3 promise wrapper Suite', () => {
   it('should be a function', () => {
@@ -15,6 +16,13 @@ describe('Sqlite3 promise wrapper Suite', () => {
     const i = await new sqlite3.Db(':memory:')
     await i.destroy()
     await i.destroy()
+  })
+
+  it('should also destroy with file backend', async () => {
+    const file = tmp.fileSync()
+    const i = await new sqlite3.Db(file.name)
+    await i.destroy()
+    file.removeCallback()
   })
 
   it('should error on destroyed usage', async () => {

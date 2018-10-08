@@ -44,7 +44,12 @@ class AsyncClass {
   async destroy () {
     if (this._destroyed) return
     for (let d of this._destroy) {
-      await d()
+      try {
+        await d()
+      } catch (e) {
+        console.error(e)
+        throw e
+      }
     }
     this._destroyed = true
     this._destroy = null

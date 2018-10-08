@@ -3,8 +3,12 @@ const os = require('os')
 const { URL } = require('url')
 
 const state = require('./state')
+const modules = require('./modules')
 const { AsyncClass, mkdirp } = require('n3h-common')
 const { PitrIpcServer } = require('./ipc-server')
+
+// modules self load
+require('./modules/persistence')
 
 /**
  */
@@ -15,6 +19,9 @@ class Pitr extends AsyncClass {
     super()
 
     return AsyncClass.$construct(this, async (self) => {
+      // make sure all our modules are loaded
+      await modules.ready()
+
       state.workDir = 'N3H_WORK_DIR' in process.env
         ? process.env.N3H_WORK_DIR
         : path.resolve(path.join(
@@ -33,11 +40,16 @@ class Pitr extends AsyncClass {
         await mkdirp(path.dirname(tmpUri.pathname))
       }
 
+      self._modules = await modules.createModules()
+
       self.$pushDestructor(async () => {
         await Promise.all([
           self._ipc.destroy()
         ])
         self._ipc = null
+        await self._modules.destroy()
+        self._modules = null
+        await modules.destroy()
         if (typeof self._resolve === 'function') {
           self._resolve()
         }

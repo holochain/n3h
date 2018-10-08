@@ -154,8 +154,8 @@ class HashCache extends AsyncClass {
         ? opt.dispatchTimeout
         : 1000
 
-      self.$pushDestructor(() => {
-        self._data.destroy()
+      self.$pushDestructor(async () => {
+        await self._data.destroy()
         self._data = null
         self._actions = null
       })

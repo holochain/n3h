@@ -80,7 +80,7 @@ class TestSuiteExecutor extends AsyncClass {
     wait = []
     for (let node of this._nodes) {
       wait.push(node.ipcClient.call(Buffer.from(JSON.stringify({
-        method: "getState"
+        method: 'getState'
       }))))
     }
 
@@ -89,7 +89,7 @@ class TestSuiteExecutor extends AsyncClass {
     wait = []
     for (let node of this._nodes) {
       wait.push(node.ipcClient.call(Buffer.from(JSON.stringify({
-        method: "getDefaultConfig"
+        method: 'getDefaultConfig'
       }))))
     }
 
@@ -99,7 +99,7 @@ class TestSuiteExecutor extends AsyncClass {
     wait = []
     for (let node of this._nodes) {
       wait.push(node.ipcClient.call(Buffer.from(JSON.stringify({
-        method: "setConfig",
+        method: 'setConfig',
         config: defConfig
       }))))
     }
@@ -110,7 +110,7 @@ class TestSuiteExecutor extends AsyncClass {
     wait = []
     for (let node of this._nodes) {
       wait.push(node.ipcClient.call(Buffer.from(JSON.stringify({
-        method: "getState"
+        method: 'getState'
       }))))
     }
 
