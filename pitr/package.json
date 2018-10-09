@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "hashcache": "file:../hashcache",
+    "hc-p2p-libp2p": "file:../hc-p2p-libp2p",
     "ipc": "file:../ipc",
     "n3h-common": "file:../n3h-common",
     "test-suite-executor": "file:../test-suite-executor"

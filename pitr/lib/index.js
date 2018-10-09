@@ -9,6 +9,7 @@ const { PitrIpcServer } = require('./ipc-server')
 
 // modules self load
 require('./modules/persistence')
+require('./modules/messenger')
 
 /**
  */
@@ -53,10 +54,7 @@ class Pitr extends AsyncClass {
         self._reject = null
       })
 
-      await modules.createModules()
       await self._startupServices()
-      await modules.injectModule('ipc', self._ipc)
-      await modules.initModules()
 
       return self
     })
@@ -77,6 +75,13 @@ class Pitr extends AsyncClass {
    */
   async _startupServices () {
     this._ipc = await new PitrIpcServer(state.ipcUri)
+    console.log('#IPC-READY#')
+    this._ipc.on('configReady', async () => {
+      await modules.createModules()
+      await modules.injectModule('ipc', this._ipc)
+      await modules.initModules()
+      console.log('@@ modules initialized!!')
+    })
   }
 }
 

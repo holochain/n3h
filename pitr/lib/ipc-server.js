@@ -22,32 +22,7 @@ class PitrIpcServer extends AsyncClass {
       })
 
       self._ipc.on('call', async opt => {
-        try {
-          let call = null
-          try {
-            call = JSON.parse(opt.data.toString())
-          } catch (e) {
-            throw new Error('expected json... ' + (e.stack || e.toString()))
-          }
-          if (typeof call !== 'object' || typeof call.method !== 'string') {
-            throw new Error('expected object.method to be a string')
-          }
-
-          switch (call.method) {
-            case 'getState':
-              return opt.resolve(state.state)
-            case 'getDefaultConfig':
-              return opt.resolve(state.defaultConfig)
-            case 'setConfig':
-              state.config = call.config
-              state.state = 'pending'
-              return opt.resolve()
-            default:
-              throw new Error('unhandled method: ' + call.method)
-          }
-        } catch (e) {
-          opt.reject(e)
-        }
+        await self._handleCall(opt)
       })
 
       self.$pushDestructor(async () => {
@@ -71,10 +46,42 @@ class PitrIpcServer extends AsyncClass {
   /**
    */
   async createInstance (/* config */) {
-    return this._ipc
+    return this
   }
 
   async initInstance () {
+  }
+
+  // -- private -- //
+
+  async _handleCall (opt) {
+    try {
+      let call = null
+      try {
+        call = JSON.parse(opt.data.toString())
+      } catch (e) {
+        throw new Error('expected json... ' + (e.stack || e.toString()))
+      }
+      if (typeof call !== 'object' || typeof call.method !== 'string') {
+        throw new Error('expected object.method to be a string')
+      }
+
+      switch (call.method) {
+        case 'getState':
+          return opt.resolve(state.state)
+        case 'getDefaultConfig':
+          return opt.resolve(state.defaultConfig)
+        case 'setConfig':
+          state.config = call.config
+          state.state = 'pending'
+          await this.emit('configReady')
+          return opt.resolve()
+        default:
+          throw new Error('unhandled method: ' + call.method)
+      }
+    } catch (e) {
+      opt.reject(e)
+    }
   }
 }
 

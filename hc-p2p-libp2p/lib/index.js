@@ -39,7 +39,7 @@ class Node extends EventEmitter {
    */
   async init (ipcBind, p2pBind) {
     await this._initP2pSocket(Array.isArray(p2pBind) ? p2pBind : [p2pBind])
-    await this._initIpcSocket(Array.isArray(ipcBind) ? ipcBind : [ipcBind])
+    //await this._initIpcSocket(Array.isArray(ipcBind) ? ipcBind : [ipcBind])
   }
 
   /**
@@ -48,10 +48,12 @@ class Node extends EventEmitter {
     this._peerCache.clear()
     this.removeAllListeners()
     this.setMaxListeners(0)
+    /*
     if (this._ipc) {
       this._ipc.destroy()
       this._ipc = null
     }
+    */
     if (this._p2p) {
       /// ACK! HACK! is there a better way to do this??
       this._p2p._dht.randomWalk.stop()
@@ -238,6 +240,7 @@ class Node extends EventEmitter {
 
   /**
    */
+  /*
   async _initIpcSocket (ipcBind) {
     this._ipc = new IpcServer()
     this._ipc.on('call', opt => {
@@ -249,12 +252,15 @@ class Node extends EventEmitter {
     })
     await this._ipc.bind(ipcBind)
   }
+  */
 
   /**
    */
+  /*
   ipcSendMessage (data) {
     return this._ipc.call(data)
   }
+  */
 }
 
 /**
