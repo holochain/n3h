@@ -1,7 +1,11 @@
 const { AsyncClass } = require('n3h-common')
 const state = require('./state')
 
+/**
+ */
 class ModHelper extends AsyncClass {
+  /**
+   */
   constructor () {
     super()
 
@@ -22,6 +26,8 @@ class ModHelper extends AsyncClass {
     })
   }
 
+  /**
+   */
   async registerModule (name, inst) {
     inst = await inst
 
@@ -35,22 +41,20 @@ class ModHelper extends AsyncClass {
     this._modules.set(name, inst)
   }
 
+  /**
+   */
   async createModules () {
-    const wait = []
-    const destroy = []
-    const out = {
-      destroy: async () => {
-        await Promise.all(destroy.map(fn => fn()))
-      }
+    if ('modules' in state) {
+      throw new Error('modules already created')
     }
+
+    const wait = []
+    const out = state.modules = {}
 
     for (let [modName, modHelper] of this._modules) {
       wait.push(new Promise(async (resolve, reject) => {
         try {
           out[modName] = await modHelper.createInstance(state.config[modName])
-          destroy.push(async () => {
-            await out[modName].destroy()
-          })
           resolve()
         } catch (e) {
           reject(e)
@@ -59,13 +63,35 @@ class ModHelper extends AsyncClass {
     }
 
     await Promise.all(wait)
+  }
 
-    return out
+  /**
+   */
+  async injectModule (modName, modHelper) {
+    state.modules[modName] = await modHelper.createInstance()
+    this._modules.set(modName, modHelper)
+  }
+
+  /**
+   */
+  async initModules () {
+    if (this._didInit) {
+      throw new Error('modules already initialized')
+    }
+    this._didInit = true
+
+    const wait = []
+    for (let modHelper of this._modules.values()) {
+      wait.push(modHelper.initInstance(state.modules))
+    }
+    await Promise.all(wait)
   }
 }
 
 let singletonPromise = null
 
+/**
+ */
 function _getHelper () {
   if (singletonPromise) {
     return singletonPromise
@@ -76,6 +102,8 @@ function _getHelper () {
 
 const waitMods = []
 
+/**
+ */
 exports.registerModule = function registerModule (name, inst) {
   waitMods.push(new Promise(async (resolve, reject) => {
     try {
@@ -87,14 +115,32 @@ exports.registerModule = function registerModule (name, inst) {
   }))
 }
 
+/**
+ */
 exports.ready = function ready () {
   return Promise.all(waitMods)
 }
 
+/**
+ */
 exports.destroy = async function destroy () {
   (await _getHelper()).destroy()
 }
 
+/**
+ */
 exports.createModules = async function createModules () {
-  return (await _getHelper()).createModules()
+  await (await _getHelper()).createModules()
+}
+
+/**
+ */
+exports.injectModule = async function injectModule (modName, modHelper) {
+  await (await _getHelper()).injectModule(modName, modHelper)
+}
+
+/**
+ */
+exports.initModules = async function initModules () {
+  await (await _getHelper()).initModules()
 }

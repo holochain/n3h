@@ -7,6 +7,15 @@ class Persistence extends AsyncClass {
     super()
 
     return AsyncClass.$construct(this, async (self) => {
+      self._inst = null
+
+      self.$pushDestructor(async () => {
+        if (self._inst) {
+          await self._inst.destroy()
+        }
+        self._inst = null
+      })
+
       return self
     })
   }
@@ -31,7 +40,17 @@ class Persistence extends AsyncClass {
   }
 
   async createInstance (config) {
-    return new HashCache(config)
+    if (!this._inst) {
+      this._inst = await new HashCache(config)
+    }
+    return this._inst
+  }
+
+  async initInstance () {
+    if (!this._inst) {
+      throw new Error('instance not yet created')
+    }
+    // no init needed for hashcache
   }
 }
 

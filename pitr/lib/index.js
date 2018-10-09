@@ -40,15 +40,11 @@ class Pitr extends AsyncClass {
         await mkdirp(path.dirname(tmpUri.pathname))
       }
 
-      self._modules = await modules.createModules()
-
       self.$pushDestructor(async () => {
         await Promise.all([
           self._ipc.destroy()
         ])
         self._ipc = null
-        await self._modules.destroy()
-        self._modules = null
         await modules.destroy()
         if (typeof self._resolve === 'function') {
           self._resolve()
@@ -57,7 +53,10 @@ class Pitr extends AsyncClass {
         self._reject = null
       })
 
+      await modules.createModules()
       await self._startupServices()
+      await modules.injectModule('ipc', self._ipc)
+      await modules.initModules()
 
       return self
     })
@@ -78,27 +77,6 @@ class Pitr extends AsyncClass {
    */
   async _startupServices () {
     this._ipc = await new PitrIpcServer(state.ipcUri)
-  }
-}
-
-Pitr.defaultInitialConfig = {
-  '#hcIpc': 'config for how holochain will communicate with us',
-  hcIpc: {
-    '#ipcUri': 'the zmq socket uri to listen on ($N3H_WORK is available)',
-    ipcUri: 'ipc://$N3H_WORK/n3h-ipc.socket'
-  },
-  '#persistence': 'config for how p2p info will be cached / persisted',
-  persistence: {
-    '#backend': 'settings for the backend persistence',
-    backend: {
-      '#type': 'backend type (only have sqlite3 for now)',
-      type: 'sqlite3',
-      '#config': 'backend specific configuration',
-      config: {
-        '#file': 'the sqlite3 file to use ($N3H_WORK is available)',
-        file: '$N3H_WORK/n3h-persistence.sqlite3'
-      }
-    }
   }
 }
 

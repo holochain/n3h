@@ -61,6 +61,21 @@ class PitrIpcServer extends AsyncClass {
       return self
     })
   }
+
+  /**
+   */
+  async getDefaultConfig () {
+    // not needed for injected module
+  }
+
+  /**
+   */
+  async createInstance (/* config */) {
+    return this._ipc
+  }
+
+  async initInstance () {
+  }
 }
 
 exports.PitrIpcServer = PitrIpcServer
