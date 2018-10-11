@@ -23,18 +23,32 @@
 class AsyncClass {
   /**
    */
-  constructor () {
+  constructor (...params) {
     return AsyncClass.$construct(this, async (self) => {
-      self._destroyed = false
-      self._destroy = []
+      self._calledSuperInit = false
 
-      self._events = Object.create(null)
+      await self.init(...params)
 
-      self.$pushDestructor(() => {
-        self._events = null
-      })
+      if (!self._calledSuperInit) {
+        throw new Error('super.init() not called')
+      }
 
       return self
+    })
+  }
+
+  /**
+   */
+  async init () {
+    this._destroyed = false
+    this._destroy = []
+
+    this._events = Object.create(null)
+
+    this._calledSuperInit = true
+
+    this.$pushDestructor(() => {
+      this._events = null
     })
   }
 
@@ -118,6 +132,10 @@ class AsyncClass {
   /**
    */
   $pushDestructor (...destructors) {
+    if (!this._calledSuperInit) {
+      throw new Error('protected function invoked before `await super.init()` call')
+    }
+
     for (let destructor of destructors) {
       if (typeof destructor !== 'function') {
         throw new Error('$pushDestructor only accepts functions')

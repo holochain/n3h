@@ -6,22 +6,18 @@ const sinon = require('sinon')
  * since AsyncClass is intended to be subclassed... test it that way
  */
 class StubClass extends AsyncClass {
-  constructor () {
-    super()
-
-    return AsyncClass.$construct(this, async (self) => {
-      self._realObj = true
-      self.$pushDestructor(() => {
-        if (!self._realObj) {
-          throw new Error('uh oh... destroying wrong object')
-        }
-      })
-      return self
+  async init () {
+    await super.init()
+    this._realObj = true
+    this.$pushDestructor(() => {
+      if (!this._realObj) {
+        throw new Error('uh oh... destroying wrong object')
+      }
     })
   }
 }
 
-describe('StubClass Suite', () => {
+describe('AsyncClass Suite', () => {
   it('should be a function', () => {
     expect(typeof StubClass).equals('function')
   })

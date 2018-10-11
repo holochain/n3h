@@ -7,7 +7,7 @@ const msgpack = require('msgpack-lite')
 const PeerId = require('peer-id')
 const PeerInfo = require('peer-info')
 const pull = require('pull-stream/pull')
-const { IpcServer } = require('ipc')
+// const { IpcServer } = require('ipc')
 
 const { P2pBundle } = require('./libp2p-bundle')
 const { $p } = require('./util')
@@ -39,7 +39,7 @@ class Node extends EventEmitter {
    */
   async init (ipcBind, p2pBind) {
     await this._initP2pSocket(Array.isArray(p2pBind) ? p2pBind : [p2pBind])
-    //await this._initIpcSocket(Array.isArray(ipcBind) ? ipcBind : [ipcBind])
+    // await this._initIpcSocket(Array.isArray(ipcBind) ? ipcBind : [ipcBind])
   }
 
   /**
