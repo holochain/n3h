@@ -1,6 +1,13 @@
-const { HashCache } = require('./index')
-const { expect } = require('chai')
 const crypto = require('crypto')
+
+const { expect } = require('chai')
+
+const { Moduleit } = require('n3h-common')
+const persistCacheLru = require('./index')
+
+const NS = 'test'
+
+const bail = e => { throw new Error(e) }
 
 function _sleep (ms) {
   return new Promise((resolve, reject) => {
@@ -8,293 +15,103 @@ function _sleep (ms) {
   })
 }
 
-let CACHE_SIZE = null
-let DISPATCH_TIMEOUT = null
-
-class TestCache {
-  static async create () {
-    const i = await new HashCache({
-      backend: {
-        type: 'sqlite3',
-        config: {
-          file: ':memory:'
-        }
-      },
-      cacheSize: CACHE_SIZE,
-      dispatchTimeout: DISPATCH_TIMEOUT
-    })
-
-    i.registerAction('incrCount', async (action) => {
-      const out = new Map()
-      for (const [hash, item] of action.fetch) {
-        if (typeof item.count !== 'number') {
-          item.count = 1
-        } else {
-          ++item.count
-        }
-        out.set(hash, item)
-      }
-      return out
-    })
-
-    i.registerAction('setData', async (action) => {
-      const out = new Map()
-      for (const [hash, item] of action.fetch) {
-        item.data = action.data
-        out.set(hash, item)
-      }
-      return out
-    })
-
-    i.registerAction('longTime', async (action) => {
-      await _sleep(100)
-    })
-
-    const out = new TestCache()
-    out._i = i
-    return out
-  }
-
-  destroy () {
-    return this._i.destroy()
-  }
-
-  get (hash) {
-    return this._i.get('test', hash)
-  }
-
-  incrCount (hash) {
-    return this._i.dispatch({
-      type: 'incrCount', ns: 'test', fetch: [ hash ]
-    })
-  }
-
-  setData (hash, data) {
-    return this._i.dispatch({
-      type: 'setData',
-      ns: 'test',
-      data,
-      fetch: [ hash ]
-    })
-  }
-
-  longTime () {
-    return this._i.dispatch({
-      type: 'longTime',
-      ns: 'test',
-      fetch: []
-    })
+const zero = Buffer.from([0])
+let stubData = {}
+const nvStub = {
+  start: () => {
+    stubData = {}
+  },
+  destroy: () => {},
+  get: (nv, key) => {
+    key instanceof Buffer || bail('key type')
+    return stubData[Buffer.concat([Buffer.from(nv), zero, key])]
+  },
+  set: (nv, key, data) => {
+    key instanceof Buffer || bail('key type')
+    data instanceof Buffer || bail('data type')
+    stubData[Buffer.concat([Buffer.from(nv), zero, key])] = data
   }
 }
 
-describe('HashCache Suite', () => {
-  beforeEach(() => {
-    CACHE_SIZE = null
-    DISPATCH_TIMEOUT = null
+async function addRand (cache, keyIdx, size) {
+  const bytes = crypto.randomBytes(size)
+  await cache.set(NS, Buffer.from(keyIdx.toString()), bytes)
+}
+
+describe('PersistCacheLRU Suite', () => {
+  let m = null
+  let c = null
+
+  beforeEach(async () => {
+    m = await new Moduleit()
+    const tmp = m.loadModuleGroup([
+      persistCacheLru,
+      {
+        moduleitRegister: (r) => {
+          r({
+            type: 'nvPersist',
+            name: 'testStub',
+            defaultConfig: {},
+            construct: () => nvStub
+          })
+        }
+      }
+    ])
+
+    tmp.defaultConfig.persistCache.lru.config.cacheSize = 500
+
+    await tmp.createGroup(tmp.defaultConfig)
+    c = m.getProxy().persistCache
   })
 
-  it('should be a function', () => {
-    expect(typeof HashCache).equals('function')
+  afterEach(async () => {
+    await m.destroy()
   })
 
-  it('should fail on bad registerAction type', async () => {
-    const i = await TestCache.create()
-    try {
-      await i._i.registerAction(2, () => {})
-    } catch (e) {
-      await i.destroy()
-      return
-    }
-    throw new Error('expected exception, got success')
-  })
-
-  it('should fail on bad registerAction fn', async () => {
-    const i = await TestCache.create()
-    try {
-      await i._i.registerAction('test', 2)
-    } catch (e) {
-      await i.destroy()
-      return
-    }
-    throw new Error('expected exception, got success')
-  })
-
-  it('should fail on bad registerAction - double set', async () => {
-    const i = await TestCache.create()
-    await i._i.registerAction('test', () => {})
-    try {
-      await i._i.registerAction('test', () => {})
-    } catch (e) {
-      await i.destroy()
-      return
-    }
-    throw new Error('expected exception, got success')
-  })
-
-  it('should fail on action result not iterable', async () => {
-    const i = await TestCache.create()
-    await i._i.registerAction('test', () => ({}))
-    try {
-      await i._i.dispatch({
-        type: 'test',
-        ns: 'test',
-        fetch: []
-      })
-    } catch (e) {
-      await i.destroy()
-      return
-    }
-    throw new Error('expected exception, got success')
-  })
-
-  it('should fail on dispatch timeout', async () => {
-    DISPATCH_TIMEOUT = 5
-    const i = await TestCache.create()
-    try {
-      await i.longTime()
-    } catch (e) {
-      await i.destroy()
-      return
-    }
-    throw new Error('expected exception, got success')
-  })
-
-  it('should fail on bad action - not an object', async () => {
-    const i = await TestCache.create()
-    try {
-      await i._i.dispatch(2)
-    } catch (e) {
-      await i.destroy()
-      return
-    }
-    throw new Error('expected exception, got success')
-  })
-
-  it('should fail on bad action - bad type', async () => {
-    const i = await TestCache.create()
-    try {
-      await i._i.dispatch({
-        type: 'hello',
-        ns: 'hello',
-        fetch: [
-          crypto.randomBytes(32).toString('base64')
-        ]
-      })
-    } catch (e) {
-      await i.destroy()
-      return
-    }
-    throw new Error('expected exception, got success')
-  })
-
-  it('should fail on bad action - bad type', async () => {
-    const i = await TestCache.create()
-    try {
-      await i._i.dispatch({
-        type: 2,
-        ns: 'hello',
-        fetch: [
-          crypto.randomBytes(32).toString('base64')
-        ]
-      })
-    } catch (e) {
-      await i.destroy()
-      return
-    }
-    throw new Error('expected exception, got success')
-  })
-
-  it('should fail on bad action - bad ns', async () => {
-    const i = await TestCache.create()
-    try {
-      await i._i.dispatch({
-        type: 'incrCount',
-        ns: 2,
-        fetch: [
-          crypto.randomBytes(32).toString('base64')
-        ]
-      })
-    } catch (e) {
-      await i.destroy()
-      return
-    }
-    throw new Error('expected exception, got success')
-  })
-
-  it('should fail on bad action - bad fetch', async () => {
-    const i = await TestCache.create()
-    try {
-      await i._i.dispatch({
-        type: 'incrCount',
-        ns: 'hello',
-        fetch: 2
-      })
-    } catch (e) {
-      await i.destroy()
-      return
-    }
-    throw new Error('expected exception, got success')
-  })
-
-  it('should fail on bad action - bad fetch contents', async () => {
-    const i = await TestCache.create()
-    try {
-      await i._i.dispatch({
-        type: 'incrCount',
-        ns: 'hello',
-        fetch: [
-          2
-        ]
-      })
-    } catch (e) {
-      await i.destroy()
-      return
-    }
-    throw new Error('expected exception, got success')
+  it('should be an instance', () => {
+    expect(typeof c).equals('object')
   })
 
   it('should set and get', async () => {
-    const hash = crypto.randomBytes(32).toString('base64')
-    const i = await TestCache.create()
-
-    await Promise.all([
-      i.incrCount(hash),
-      i.incrCount(hash)
-    ])
-
-    const res = await i.get(hash)
-
-    expect(res.count).equals(2)
-    await i.destroy()
+    await c.set(NS, Buffer.from('bla'), Buffer.from('hello'))
+    expect((await c.get(NS, Buffer.from('bla'))).toString()).equals('hello')
   })
 
-  it('should lru', async () => {
-    CACHE_SIZE = 3000
-    const i = await TestCache.create()
+  it('should update', async () => {
+    await c.set(NS, Buffer.from('bla'), Buffer.from('hello'))
+    await c.set(NS, Buffer.from('bla'), Buffer.from('zoik'))
+    expect((await c.get(NS, Buffer.from('bla'))).toString()).equals('zoik')
+  })
 
-    const list = []
+  it('should get null', async () => {
+    expect(await c.get(NS, Buffer.from('bla'))).equals(null)
+  })
 
-    for (let j = 0; j < 4; ++j) {
-      const hash = crypto.randomBytes(32).toString('base64')
-      list.push(hash)
-      await i.setData(
-        hash,
-        crypto.randomBytes(512).toString('hex')
-      )
-      await _sleep((Math.random() * 2 + 2) | 0)
+  it('should drop LRU', async () => {
+    for (let i = 0; i < 10; ++i) {
+      await addRand(c, i, 101)
+      expect(c._currentSize).lessThan(500)
     }
+  })
 
-    expect(i._i._data._currentSize).lessThan(3000)
+  it('can fetch dropped items', async () => {
+    await c.set(NS, Buffer.from('bla'), Buffer.from('hello'))
+    await _sleep(5)
+    await addRand(c, 1, 499)
+    await addRand(c, 2, 499)
+    expect(c._currentSize).lessThan(500)
+    expect((await c.get(NS, Buffer.from('bla'))).toString()).equals('hello')
+  })
 
-    // now backwards
-    for (let j = list.length - 1; j >= 0; --j) {
-      // make sure we can get a values0 that have been elided
-      const val = await i.get(list[j])
-      expect(val.data.length).greaterThan(1000)
+  it('should LRU sort order', async () => {
+    for (let i = 0; i < 10; ++i) {
+      await addRand(c, i, 101)
+      await _sleep(1)
+
+      // get the first one to update the timestamp
+      await c.get(NS, Buffer.from((1).toString()))
+
+      expect(c._currentSize).lessThan(500)
     }
-
-    expect(i._i._data._currentSize).lessThan(3000)
-
-    await i.destroy()
   })
 })

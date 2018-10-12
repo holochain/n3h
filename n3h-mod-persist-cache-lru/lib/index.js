@@ -1,7 +1,7 @@
 const { AsyncClass } = require('n3h-common')
 
 /**
- * used to sore LRU items
+ * used to sort LRU items
  */
 function _timeSort (a, b) {
   if (a[0] < b[0]) {
@@ -20,6 +20,8 @@ class PersistCacheLru extends AsyncClass {
   async init (modules, config) {
     await super.init()
 
+    this._currentSize = 0
+
     this._modules = modules
     this._config = config
 
@@ -36,21 +38,20 @@ class PersistCacheLru extends AsyncClass {
    * get a value from the cache
    */
   async get (ns, key) {
+    const key64 = key.toString('base64')
+
     const nsMap = this._getNsRef(ns)
-    if (!nsMap.has(key)) {
-      try {
-        const data = await this._persist.get(ns, key)
-        nsMap.set(key, [Date.now(), data])
-        this._currentSize += data.byteLength
-      } catch (e) {
-        const data = Buffer.from('{}', 'utf8')
-        nsMap.set(key, [Date.now(), data])
-        this._currentSize += data.byteLength
+    if (!nsMap.has(key64)) {
+      const data = await this._persist.get(ns, key)
+      if (!data) {
+        return null
       }
+      nsMap.set(key64, [Date.now(), data])
+      this._currentSize += data.byteLength
     }
-    const ref = nsMap.get(key)
+    const ref = nsMap.get(key64)
     ref[0] = Date.now()
-    const out = JSON.parse(ref[1].toString('utf8'))
+    const out = ref[1]
     await this.prune()
     return out
   }
@@ -59,17 +60,16 @@ class PersistCacheLru extends AsyncClass {
    * set a value in the cache
    */
   async set (ns, key, data) {
+    const key64 = key.toString('base64')
+
     const nsMap = this._getNsRef(ns)
 
-    data = Buffer.from(JSON.stringify(data), 'utf8')
+    await this._persist.set(ns, key, data)
 
-    // do not `await` here... we want it to run in the background
-    this._persist.set(ns, key, data)
-
-    if (nsMap.has(key)) {
-      this._currentSize -= nsMap.get(key)[1].byteLength
+    if (nsMap.has(key64)) {
+      this._currentSize -= nsMap.get(key64)[1].byteLength
     }
-    nsMap.set(key, [Date.now(), data])
+    nsMap.set(key64, [Date.now(), data])
     this._currentSize += data.byteLength
 
     await this.prune()
@@ -79,7 +79,7 @@ class PersistCacheLru extends AsyncClass {
    * prune if we are over our size
    */
   async prune () {
-    if (this._currentSize < this._cacheSize) {
+    if (this._currentSize < this._config.cacheSize) {
       return
     }
     const arr = []
@@ -94,7 +94,7 @@ class PersistCacheLru extends AsyncClass {
 
     this._currentSize = 0
     for (let ref of arr) {
-      if (this._currentSize + ref[3] > this._cacheSize) {
+      if (this._currentSize + ref[3] > this._config.cacheSize) {
         this._data.get(ref[1]).delete(ref[2])
       } else {
         this._currentSize += ref[3]

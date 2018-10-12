@@ -13,7 +13,11 @@ class Moduleit extends AsyncClass {
         return this._instances.has(prop)
       },
       get: (_, prop) => {
-        return this._instances.get(prop)
+        const out = this._instances.get(prop)
+        if (!out) {
+          throw new Error(prop + ' module not found, is it loaded?')
+        }
+        return out
       },
       ownKeys: (_) => {
         return Array.from(this._instances.keys())
