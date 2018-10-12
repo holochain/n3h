@@ -3,11 +3,21 @@ const os = require('os')
 const { URL } = require('url')
 
 const { AsyncClass, Moduleit, mkdirp } = require('n3h-common')
-const { PitrIpcServer } = require('./ipc-server')
+const { IpcServer } = require('./ipc-server')
+
+const DEFAULT_MODULES = [
+  require('n3h-mod-nv-persist-sqlite3')
+]
 
 /**
  */
-class Pitr extends AsyncClass {
+class N3hNode extends AsyncClass {
+  /**
+   */
+  static async constructDefault (modules) {
+    return new N3hNode((modules || []).concat(DEFAULT_MODULES))
+  }
+
   /**
    */
   async init (modules) {
@@ -76,7 +86,7 @@ class Pitr extends AsyncClass {
   /**
    */
   async _startupServices () {
-    this._ipc = await new PitrIpcServer(this._ipcUri)
+    this._ipc = await new IpcServer(this._ipcUri)
     console.log('#IPC-READY#')
     this._ipc.on('configReady', async () => {
       console.log('@@ modules initialized!!')
@@ -84,4 +94,4 @@ class Pitr extends AsyncClass {
   }
 }
 
-exports.Pitr = Pitr
+exports.N3hNode = N3hNode

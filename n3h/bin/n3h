@@ -1,13 +1,9 @@
 #!/usr/bin/env node
 
-const { Pitr } = require('../lib/index')
-
-const nvPersistSqlite3 = require('n3h-mod-nv-persist-sqlite3')
+const { N3hNode } = require('../lib/index')
 
 async function main () {
-  const pitr = await new Pitr([
-    nvPersistSqlite3
-  ])
+  const n3hNode = await N3hNode.constructDefault()
 
   let terminated = false
   const terminate = async () => {
@@ -15,7 +11,7 @@ async function main () {
       return
     }
     try {
-      await pitr.destroy()
+      await n3hNode.destroy()
       console.log('n3h exited cleanly')
       process.exit(0)
     } catch (e) {
@@ -27,7 +23,7 @@ async function main () {
   process.on('SIGINT', terminate)
   process.on('SIGTERM', terminate)
 
-  await pitr.run()
+  await n3hNode.run()
 }
 
 main().then(() => {}, (err) => {

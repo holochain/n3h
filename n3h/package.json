@@ -1,7 +1,7 @@
 {
-  "name": "pitr",
+  "name": "n3h",
   "version": "0.0.1",
-  "description": "(p)ut (i)t (t)ogether-e(r) - nobody let me name things",
+  "description": "nodejs holochain networking library with swapable / configurable modules",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",

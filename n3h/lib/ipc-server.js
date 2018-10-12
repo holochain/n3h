@@ -1,17 +1,17 @@
 const { AsyncClass } = require('n3h-common')
-const { IpcServer } = require('ipc')
+const { IpcServer: RawIpcServer } = require('ipc')
 const state = require('./state')
 
 /**
  */
-class PitrIpcServer extends AsyncClass {
+class IpcServer extends AsyncClass {
   /**
    */
   constructor (ipcSocketUri) {
     super()
 
     return AsyncClass.$construct(this, async (self) => {
-      self._ipc = new IpcServer()
+      self._ipc = new RawIpcServer()
 
       self._ipc.on('clientAdd', id => {
         console.log('clientAdd', id)
@@ -85,4 +85,4 @@ class PitrIpcServer extends AsyncClass {
   }
 }
 
-exports.PitrIpcServer = PitrIpcServer
+exports.IpcServer = IpcServer
