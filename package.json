@@ -26,9 +26,9 @@
     "mosocket",
     "hashcache",
     "ipc",
-    "n3h",
     "hc-p2p-libp2p",
     "test-suite-executor",
-    "pitr"
+    "pitr",
+    "n3h-mod-nv-persist-sqlite3"
   ]
 }

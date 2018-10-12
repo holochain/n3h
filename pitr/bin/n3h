@@ -1,8 +1,13 @@
 #!/usr/bin/env node
+
 const { Pitr } = require('../lib/index')
 
+const nvPersistSqlite3 = require('n3h-mod-nv-persist-sqlite3')
+
 async function main () {
-  const pitr = await new Pitr()
+  const pitr = await new Pitr([
+    nvPersistSqlite3
+  ])
 
   let terminated = false
   const terminate = async () => {

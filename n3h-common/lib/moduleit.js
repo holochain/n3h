@@ -24,11 +24,14 @@ class Moduleit extends AsyncClass {
     })
 
     this.$pushDestructor(async () => {
+      this._proxy = null
       const wait = []
       for (let inst of this._instances.values()) {
         wait.push(inst.destroy())
       }
       await Promise.all(wait)
+      this._instances.clear()
+      this._instances = null
     })
   }
 
@@ -61,7 +64,7 @@ class Moduleit extends AsyncClass {
           load[opt.type] = {}
         }
         const loadRef = load[opt.type]
-        loadRef[opt.name] = opt.Class
+        loadRef[opt.name] = opt.construct
       })
     }
 
@@ -82,9 +85,9 @@ class Moduleit extends AsyncClass {
               throw new Error('already created instance for type ' + type)
             }
 
-            const Class = load[type][name]
+            const construct = load[type][name]
             wait.push((async () => {
-              const inst = await new Class(
+              const inst = await construct(
                 this._proxy, oneConf.config)
               this._instances.set(type, inst)
               startAll.push(() => { return inst.start() })

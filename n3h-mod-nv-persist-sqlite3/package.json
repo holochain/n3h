@@ -1,12 +1,12 @@
 {
-  "name": "pitr",
+  "name": "n3h-mod-nv-persist-sqlite3",
   "version": "0.0.1",
-  "description": "(p)ut (i)t (t)ogether-e(r) - nobody let me name things",
+  "description": "n3h sqlite3 nv-persist module",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
     "mocha": "mocha 'lib/**/*.test.js' 'bin/**/*.test.js'",
-    "nyc": "nyc npm run mocha || true",
+    "nyc": "nyc npm run mocha",
     "test": "npm run lint && npm run nyc",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
   },
@@ -20,12 +20,8 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "hashcache": "file:../hashcache",
-    "hc-p2p-libp2p": "file:../hc-p2p-libp2p",
-    "ipc": "file:../ipc",
     "n3h-common": "file:../n3h-common",
-    "n3h-mod-nv-persist-sqlite3": "file:../n3h-mod-nv-persist-sqlite3",
-    "test-suite-executor": "file:../test-suite-executor"
+    "sqlite3": "^4.0.2"
   },
   "standard": {
     "env": {

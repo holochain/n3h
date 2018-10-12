@@ -16,6 +16,10 @@ class Stub extends AsyncClass {
   }
 }
 
+function constructStub (...args) {
+  return new Stub(...args)
+}
+
 describe('Moduleit Suite', () => {
   it('should be a function', async () => {
     expect(typeof Moduleit).equals('function')
@@ -41,13 +45,13 @@ describe('Moduleit Suite', () => {
               type: 't',
               name: 't',
               defaultConfig: {},
-              Class: Stub
+              construct: constructStub
             })
             r({
               type: 't',
               name: 't',
               defaultConfig: {},
-              Class: Stub
+              construct: constructStub
             })
           }
         }
@@ -67,13 +71,13 @@ describe('Moduleit Suite', () => {
             type: 't',
             name: 't1',
             defaultConfig: { who: 'we are t1' },
-            Class: Stub
+            construct: constructStub
           })
           r({
             type: 't',
             name: 't2',
             defaultConfig: { who: 'we are t2' },
-            Class: Stub
+            construct: constructStub
           })
         }
       }
