@@ -89,6 +89,9 @@ class Moduleit extends AsyncClass {
             wait.push((async () => {
               const inst = await construct(
                 this._proxy, oneConf.config)
+              if (!inst) {
+                throw new Error('construct did not return a value on ' + type + ':' + name)
+              }
               this._instances.set(type, inst)
               startAll.push(() => { return inst.start() })
             })())

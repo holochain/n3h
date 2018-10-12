@@ -29,6 +29,7 @@
     "hc-p2p-libp2p",
     "test-suite-executor",
     "pitr",
-    "n3h-mod-nv-persist-sqlite3"
+    "n3h-mod-nv-persist-sqlite3",
+    "n3h-mod-persist-cache-lru"
   ]
 }

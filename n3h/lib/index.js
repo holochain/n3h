@@ -2,11 +2,12 @@ const path = require('path')
 const os = require('os')
 const { URL } = require('url')
 
-const { AsyncClass, Moduleit, mkdirp } = require('n3h-common')
+const { AsyncClass, mkdirp } = require('n3h-common')
 const { IpcServer } = require('./ipc-server')
 
 const DEFAULT_MODULES = [
-  require('n3h-mod-nv-persist-sqlite3')
+  require('n3h-mod-nv-persist-sqlite3'),
+  require('n3h-mod-persist-cache-lru')
 ]
 
 /**
@@ -50,12 +51,10 @@ class N3hNode extends AsyncClass {
           type: 'ipc',
           name: '_builtin_',
           defaultConfig: {},
-          construct: async () => this.ipc
+          construct: async () => this._ipc
         })
       }
     })
-
-    this._modules = await new Moduleit(modules)
 
     this.$pushDestructor(async () => {
       await Promise.all([
@@ -69,7 +68,7 @@ class N3hNode extends AsyncClass {
       this._reject = null
     })
 
-    await this._startupServices()
+    await this._startupServices(modules)
   }
 
   run () {
@@ -85,8 +84,8 @@ class N3hNode extends AsyncClass {
 
   /**
    */
-  async _startupServices () {
-    this._ipc = await new IpcServer(this._ipcUri)
+  async _startupServices (modules) {
+    this._ipc = await new IpcServer(this._ipcUri, modules)
     console.log('#IPC-READY#')
     this._ipc.on('configReady', async () => {
       console.log('@@ modules initialized!!')

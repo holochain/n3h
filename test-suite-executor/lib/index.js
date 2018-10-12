@@ -94,7 +94,7 @@ class TestSuiteExecutor extends AsyncClass {
     }
 
     const defConfig = JSON.parse((await Promise.all(wait))[0])
-    console.log('@@', JSON.stringify(defConfig, null, 2))
+    console.log('@@config@@', JSON.stringify(defConfig, null, 2))
 
     wait = []
     for (let node of this._nodes) {

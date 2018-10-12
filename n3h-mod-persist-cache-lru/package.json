@@ -1,12 +1,12 @@
 {
-  "name": "n3h",
+  "name": "n3h-mod-persist-cache-lru",
   "version": "0.0.1",
-  "description": "nodejs holochain networking library with swapable / configurable modules",
+  "description": "n3h lru persist-cache module",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
     "mocha": "mocha 'lib/**/*.test.js' 'bin/**/*.test.js'",
-    "nyc": "nyc npm run mocha || true",
+    "nyc": "nyc npm run mocha",
     "test": "npm run lint && npm run nyc",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
   },
@@ -20,13 +20,7 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "hashcache": "file:../hashcache",
-    "hc-p2p-libp2p": "file:../hc-p2p-libp2p",
-    "ipc": "file:../ipc",
-    "n3h-common": "file:../n3h-common",
-    "n3h-mod-nv-persist-sqlite3": "file:../n3h-mod-nv-persist-sqlite3",
-    "n3h-mod-persist-cache-lru": "file:../n3h-mod-persist-cache-lru",
-    "test-suite-executor": "file:../test-suite-executor"
+    "n3h-common": "file:../n3h-common"
   },
   "standard": {
     "env": {

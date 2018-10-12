@@ -1,55 +1,49 @@
-const { AsyncClass } = require('n3h-common')
+const { AsyncClass, Moduleit } = require('n3h-common')
 const { IpcServer: RawIpcServer } = require('ipc')
-const state = require('./state')
 
 /**
  */
 class IpcServer extends AsyncClass {
   /**
    */
-  constructor (ipcSocketUri) {
-    super()
+  async init (ipcSocketUri, modules) {
+    await super.init()
 
-    return AsyncClass.$construct(this, async (self) => {
-      self._ipc = new RawIpcServer()
+    this._modules = await new Moduleit()
 
-      self._ipc.on('clientAdd', id => {
-        console.log('clientAdd', id)
-      })
+    this._moduleTmp = this._modules.loadModuleGroup(modules)
+    this._defaultConfig = JSON.stringify(
+      this._moduleTmp.defaultConfig, null, 2)
 
-      self._ipc.on('clientRemove', id => {
-        console.log('clientRemove', id)
-      })
+    this._state = 'need_config'
 
-      self._ipc.on('call', async opt => {
-        await self._handleCall(opt)
-      })
+    this._ipc = new RawIpcServer()
 
-      self.$pushDestructor(async () => {
-        await self._ipc.destroy()
-        self._ipc = null
-      })
-
-      await self._ipc.bind(ipcSocketUri)
-      console.log('bound to', ipcSocketUri)
-
-      return self
+    this._ipc.on('clientAdd', id => {
+      console.log('clientAdd', id)
     })
+
+    this._ipc.on('clientRemove', id => {
+      console.log('clientRemove', id)
+    })
+
+    this._ipc.on('call', async opt => {
+      await this._handleCall(opt)
+    })
+
+    this.$pushDestructor(async () => {
+      await this._ipc.destroy()
+      this._ipc = null
+    })
+
+    await this._ipc.bind(ipcSocketUri)
+    console.log('bound to', ipcSocketUri)
   }
 
   /**
    */
-  async getDefaultConfig () {
-    // not needed for injected module
-  }
-
-  /**
-   */
-  async createInstance (/* config */) {
-    return this
-  }
-
-  async initInstance () {
+  async start () {
+    /* pass - we initialize in init */
   }
 
   // -- private -- //
@@ -68,13 +62,18 @@ class IpcServer extends AsyncClass {
 
       switch (call.method) {
         case 'getState':
-          return opt.resolve(state.state)
+          return opt.resolve(this._state)
         case 'getDefaultConfig':
-          return opt.resolve(state.defaultConfig)
+          return opt.resolve(this._defaultConfig)
         case 'setConfig':
-          state.config = call.config
-          state.state = 'pending'
+          this._state = 'pending'
+
+          await this._moduleTmp.createGroup(call.config)
+          this._moduleTmp = null
+
+          this._state = 'ready'
           await this.emit('configReady')
+
           return opt.resolve()
         default:
           throw new Error('unhandled method: ' + call.method)
