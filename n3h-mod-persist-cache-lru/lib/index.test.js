@@ -77,6 +77,12 @@ describe('PersistCacheLRU Suite', () => {
     expect((await c.get(NS, Buffer.from('bla'))).toString()).equals('hello')
   })
 
+  it('should set and get (StringJson)', async () => {
+    const t = c.getNsAsStringJson(NS)
+    await t.set('bla', 'hello')
+    expect(await t.get('bla')).equals('hello')
+  })
+
   it('should update', async () => {
     await c.set(NS, Buffer.from('bla'), Buffer.from('hello'))
     await c.set(NS, Buffer.from('bla'), Buffer.from('zoik'))
@@ -85,6 +91,11 @@ describe('PersistCacheLRU Suite', () => {
 
   it('should get null', async () => {
     expect(await c.get(NS, Buffer.from('bla'))).equals(null)
+  })
+
+  it('should get null (StringJson)', async () => {
+    const t = c.getNsAsStringJson(NS)
+    expect(await t.get('bla')).equals(null)
   })
 
   it('should drop LRU', async () => {

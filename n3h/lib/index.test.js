@@ -1,9 +1,9 @@
 const { expect } = require('chai')
 
-const { Pitr } = require('./index')
+const { N3hNode } = require('./index')
 
-describe('Pitr Suite', () => {
+describe('N3hNode Suite', () => {
   it('should be a function', () => {
-    expect(typeof Pitr).equals('function')
+    expect(typeof N3hNode).equals('function')
   })
 })

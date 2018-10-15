@@ -3,7 +3,7 @@ const { $p, AsyncClass } = require('n3h-common')
 const PeerInfo = require('peer-info')
 const PeerId = require('peer-id')
 
-const { LibP2pBundle } = require('./libp2p-bundle')
+// const { LibP2pBundle } = require('./libp2p-bundle')
 
 /**
  */
