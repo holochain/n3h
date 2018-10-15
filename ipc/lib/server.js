@@ -240,11 +240,12 @@ class IpcServer extends common.EventClass {
   async _handleCall (zmqid, data) {
     if (this._destroyed) return
     try {
-      const result = await this.$timeoutPromise((resolve, reject) => {
+      const result = await this.$timeoutPromise((resolve, reject, resetTimeout) => {
         this.emit('call', {
           data: Buffer.from(data[1]),
           resolve,
-          reject
+          reject,
+          resetTimeout
         })
       }, 2000)
       this._send(zmqid, msg.Message.CALL_OK, [

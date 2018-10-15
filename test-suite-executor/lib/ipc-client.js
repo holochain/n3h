@@ -30,8 +30,8 @@ class TestIpcClient extends AsyncClass {
 
   /**
    */
-  async call (data) {
-    return this._ipc.call(data)
+  async call (data, timeout) {
+    return this._ipc.call(data, timeout)
   }
 }
 

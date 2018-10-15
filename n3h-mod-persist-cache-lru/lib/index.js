@@ -17,6 +17,28 @@ function _timeSort (a, b) {
 class PersistCacheLru extends AsyncClass {
   /**
    */
+  getNsAsStringJson (ns) {
+    return {
+      set: async (key, value) => {
+        return this.set(
+          ns,
+          Buffer.from(key, 'utf8'),
+          Buffer.from(JSON.stringify(value), 'utf8'))
+      },
+      get: async (key) => {
+        let out = await this.get(
+          ns,
+          Buffer.from(key, 'utf8'))
+        if (out) {
+          out = JSON.parse(out.toString('utf8'))
+        }
+        return out
+      }
+    }
+  }
+
+  /**
+   */
   async init (modules, config) {
     await super.init()
 

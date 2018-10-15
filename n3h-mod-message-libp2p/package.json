@@ -1,7 +1,7 @@
 {
-  "name": "n3h",
+  "name": "n3h-mod-message-libp2p",
   "version": "0.0.1",
-  "description": "nodejs holochain networking library with swapable / configurable modules",
+  "description": "libp2p n3h message prototype module",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
@@ -20,16 +20,12 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "hashcache": "file:../hashcache",
-    "hc-p2p-libp2p": "file:../hc-p2p-libp2p",
-    "ipc": "file:../ipc",
-    "n3h-common": "file:../n3h-common",
-    "n3h-mod-message-libp2p": "file:../n3h-mod-message-libp2p",
-    "n3h-mod-nv-persist-sqlite3": "file:../n3h-mod-nv-persist-sqlite3",
-    "n3h-mod-persist-cache-lru": "file:../n3h-mod-persist-cache-lru",
-    "peer-id": "^0.11.0",
-    "peer-info": "^0.14.1",
-    "test-suite-executor": "file:../test-suite-executor"
+    "@nodeutils/defaults-deep": "^1.1.0",
+    "libp2p": "^0.23.1",
+    "libp2p-kad-dht": "^0.10.5",
+    "libp2p-mplex": "^0.8.2",
+    "libp2p-tcp": "^0.13.0",
+    "n3h-common": "file:../n3h-common"
   },
   "standard": {
     "env": {

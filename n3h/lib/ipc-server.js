@@ -66,6 +66,9 @@ class IpcServer extends AsyncClass {
         case 'getDefaultConfig':
           return opt.resolve(this._defaultConfig)
         case 'setConfig':
+          // startup can take a while
+          opt.resetTimeout(10000)
+
           this._state = 'pending'
 
           await this._moduleTmp.createGroup(call.config)

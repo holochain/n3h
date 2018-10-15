@@ -132,7 +132,7 @@ class EventClass extends EventEmitter {
     return new Promise(async (resolve, reject) => {
       try {
         const timeoutStack = (new Error('timeout')).stack
-        const timeout = setTimeout(() => {
+        let timeout = setTimeout(() => {
           reject(new Error('timeout, inner-stack: ' + timeoutStack))
         }, timeoutMs)
         await fn((result) => {
@@ -141,6 +141,13 @@ class EventClass extends EventEmitter {
         }, (err) => {
           clearTimeout(timeout)
           reject(err)
+        }, (ms) => {
+          clearTimeout(timeout)
+          if (typeof ms === 'number') {
+            timeout = setTimeout(() => {
+              reject(new Error('timeout, inner-stack: ' + timeoutStack))
+            }, ms)
+          }
         })
       } catch (e) {
         reject(e)

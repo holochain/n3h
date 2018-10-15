@@ -101,7 +101,7 @@ class TestSuiteExecutor extends AsyncClass {
       wait.push(node.ipcClient.call(Buffer.from(JSON.stringify({
         method: 'setConfig',
         config: defConfig
-      }))))
+      })), 10000))
     }
 
     await Promise.all(wait)

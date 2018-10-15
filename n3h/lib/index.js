@@ -7,7 +7,8 @@ const { IpcServer } = require('./ipc-server')
 
 const DEFAULT_MODULES = [
   require('n3h-mod-nv-persist-sqlite3'),
-  require('n3h-mod-persist-cache-lru')
+  require('n3h-mod-persist-cache-lru'),
+  require('n3h-mod-message-libp2p')
 ]
 
 /**
