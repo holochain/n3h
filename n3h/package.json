@@ -20,8 +20,6 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "hashcache": "file:../hashcache",
-    "hc-p2p-libp2p": "file:../hc-p2p-libp2p",
     "ipc": "file:../ipc",
     "n3h-common": "file:../n3h-common",
     "n3h-mod-message-libp2p": "file:../n3h-mod-message-libp2p",
