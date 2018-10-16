@@ -31,9 +31,12 @@ class IpcServer extends AsyncClass {
       await this._handleCall(opt)
     })
 
+    this._handlers = []
+
     this.$pushDestructor(async () => {
       await this._ipc.destroy()
       this._ipc = null
+      this._handlers = null
     })
 
     await this._ipc.bind(ipcSocketUri)
@@ -44,6 +47,31 @@ class IpcServer extends AsyncClass {
    */
   async start () {
     /* pass - we initialize in init */
+  }
+
+  /**
+   */
+  registerHandler (fn) {
+    this._handlers.push(fn)
+  }
+
+  /**
+   */
+  async handleSend (toAddress, fromAddress, data) {
+    let result = await this._ipc.call(Buffer.from(JSON.stringify({
+      method: 'handleSend',
+      toAddress,
+      fromAddress,
+      data
+    })))
+    if (result.length !== 1) {
+      throw new Error('only supports a single listener at a time for now')
+    }
+    result = result[0]
+    if (result.error || !result.result) {
+      throw new Error('unexpected' + JSON.stringify(result))
+    }
+    return result.result
   }
 
   // -- private -- //
@@ -79,6 +107,12 @@ class IpcServer extends AsyncClass {
 
           return opt.resolve()
         default:
+          for (let handler of this._handlers) {
+            if (await handler(call, opt)) {
+              return
+            }
+          }
+
           throw new Error('unhandled method: ' + call.method)
       }
     } catch (e) {

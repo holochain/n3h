@@ -13,8 +13,9 @@ class TestIpcClient extends AsyncClass {
     return AsyncClass.$construct(this, async (self) => {
       self._ipc = new IpcClient()
       self._ipc.on('call', async (opt) => {
-        console.log('test-exec got call', opt.data.toString())
-        opt.resolve()
+        console.log('test-exec got call', opt.data.toString(), 'echoing')
+        const data = JSON.parse(opt.data.toString()).data
+        opt.resolve('echo: ' + data)
       })
       console.log('connecting to', addr)
       await self._ipc.connect(addr)

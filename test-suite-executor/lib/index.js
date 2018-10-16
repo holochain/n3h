@@ -116,6 +116,72 @@ class TestSuiteExecutor extends AsyncClass {
 
     console.log('@@', await Promise.all(wait))
 
+    wait = []
+    for (let node of this._nodes) {
+      wait.push(node.ipcClient.call(Buffer.from(JSON.stringify({
+        method: 'getBindings'
+      }))))
+    }
+
+    wait = await Promise.all(wait)
+    console.log('@@', wait)
+
+    const hubAddr = wait[0][0]
+
+    console.log('@@ using as hub:', hubAddr)
+
+    wait = []
+    for (let i = 1; i < this._nodes.length; ++i) {
+      const node = this._nodes[i]
+      wait.push(node.ipcClient.call(Buffer.from(JSON.stringify({
+        method: 'connect',
+        address: hubAddr
+      })), 10000))
+    }
+
+    console.log('@@', await Promise.all(wait))
+
+    wait = []
+    for (let node of this._nodes) {
+      wait.push(new Promise(async (resolve, reject) => {
+        try {
+          const id = await node.ipcClient.call(Buffer.from(JSON.stringify({
+            method: 'getId'
+          })))
+          node.$id = id
+          resolve(id)
+        } catch (e) {
+          reject(e)
+        }
+      }))
+    }
+
+    console.log('@@', await Promise.all(wait))
+
+    wait = []
+    for (let fromNode of this._nodes) {
+      for (let toNode of this._nodes) {
+        if (fromNode === toNode) {
+          continue
+        }
+        console.log('message from', fromNode.$id, 'to', toNode.$id)
+        wait.push((async () => {
+          const magic = Math.random().toString(36).substr(2, 6)
+          const result = await fromNode.ipcClient.call(Buffer.from(JSON.stringify({
+            method: 'send',
+            toAddress: toNode.$id,
+            data: magic
+          })))
+          if (result !== 'echo: ' + magic) {
+            throw new Error('unexpected result: ' + JSON.stringify(result))
+          }
+          return result
+        })())
+      }
+    }
+
+    console.log('@@', await Promise.all(wait))
+
     console.log('got all calls')
 
     this.emit('done')

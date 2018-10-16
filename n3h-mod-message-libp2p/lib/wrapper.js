@@ -3,7 +3,7 @@ const { $p, AsyncClass } = require('n3h-common')
 const PeerInfo = require('peer-info')
 const PeerId = require('peer-id')
 
-// const { LibP2pBundle } = require('./libp2p-bundle')
+const { LibP2pBundle } = require('./libp2p-bundle')
 
 /**
  */
@@ -36,8 +36,6 @@ class Wrapper extends AsyncClass {
       nodeInfo = await this.persistCache.get('nodeInfo')
     }
 
-    console.log(nodeInfo)
-
     const thisPeerInfo = new PeerInfo(await $p(
       PeerId.createFromJSON.bind(PeerId, nodeInfo.id)))
 
@@ -45,7 +43,73 @@ class Wrapper extends AsyncClass {
       thisPeerInfo.multiaddrs.add(bind)
     }
 
-    console.log('##', thisPeerInfo)
+    this._node = await new LibP2pBundle({
+      peerInfo: thisPeerInfo
+    })
+
+    this._node.on('handleSend', async opt => {
+      console.log('@@ handleSend @@', opt.from, opt.data)
+      const result = await this._modules.ipc.handleSend(
+        this.getId(),
+        opt.from,
+        opt.data)
+      opt.resolve(result)
+    })
+
+    for (let connect of this._config.connectList) {
+      console.error('connectlist not yet implemented', connect)
+      process.exit(1)
+    }
+
+    this._modules.ipc.registerHandler(async (call, opt) => {
+      switch (call.method) {
+        case 'getId':
+          opt.resolve(this.getId())
+          return true
+        case 'getBindings':
+          opt.resolve(this.getBindings())
+          return true
+        case 'connect':
+          // can take a while
+          opt.resetTimeout(10000)
+
+          await this.connect(call.address)
+          opt.resolve()
+          return true
+        case 'send':
+          // can take a while
+          opt.resetTimeout(10000)
+
+          const result = await this.send(call.toAddress, call.data)
+          opt.resolve(result)
+          return true
+      }
+      return false
+    })
+  }
+
+  /**
+   */
+  getId () {
+    return this._node.getId()
+  }
+
+  /**
+   */
+  getBindings () {
+    return this._node.getBindings()
+  }
+
+  /**
+   */
+  async connect (multiaddr) {
+    return this._node.connect(multiaddr)
+  }
+
+  /**
+   */
+  async send (toAddress, data) {
+    return this._node.send(toAddress, data)
   }
 }
 
