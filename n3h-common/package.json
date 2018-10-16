@@ -1,12 +1,12 @@
 {
-  "name": "mosocket",
+  "name": "n3h-common",
   "version": "0.0.1",
-  "description": "peer to peer networking protocol abstraction",
+  "description": "some utilities to share among n3h subprojects",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
     "mocha": "mocha 'lib/**/*.test.js' 'bin/**/*.test.js'",
-    "nyc": "nyc npm run mocha || true",
+    "nyc": "nyc npm run mocha",
     "test": "npm run lint && npm run nyc",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
   },
@@ -19,10 +19,7 @@
     "sinon": "^6.1.4",
     "standard": "^11.0.1"
   },
-  "dependencies": {
-    "msgpack-lite": "^0.1.26",
-    "mosodium": "file:../mosodium"
-  },
+  "dependencies": {},
   "standard": {
     "env": {
       "mocha": true

@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+
+const { N3hNode } = require('../lib/index')
+
+async function main () {
+  const n3hNode = await N3hNode.constructDefault()
+
+  let terminated = false
+  const terminate = async () => {
+    if (terminated) {
+      return
+    }
+    try {
+      await n3hNode.destroy()
+      console.log('n3h exited cleanly')
+      process.exit(0)
+    } catch (e) {
+      console.error(e.stack || e.toString())
+      process.exit(1)
+    }
+  }
+
+  process.on('SIGINT', terminate)
+  process.on('SIGTERM', terminate)
+
+  await n3hNode.run()
+}
+
+main().then(() => {}, (err) => {
+  console.error(err)
+  process.exit(1)
+})

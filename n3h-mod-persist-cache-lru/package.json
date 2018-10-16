@@ -1,12 +1,12 @@
 {
-  "name": "mosocket",
+  "name": "n3h-mod-persist-cache-lru",
   "version": "0.0.1",
-  "description": "peer to peer networking protocol abstraction",
+  "description": "n3h lru persist-cache module",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
     "mocha": "mocha 'lib/**/*.test.js' 'bin/**/*.test.js'",
-    "nyc": "nyc npm run mocha || true",
+    "nyc": "nyc npm run mocha",
     "test": "npm run lint && npm run nyc",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
   },
@@ -20,8 +20,7 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "msgpack-lite": "^0.1.26",
-    "mosodium": "file:../mosodium"
+    "n3h-common": "file:../n3h-common"
   },
   "standard": {
     "env": {

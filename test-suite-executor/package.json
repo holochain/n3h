@@ -1,7 +1,7 @@
 {
-  "name": "mosocket",
+  "name": "test-suite-executor",
   "version": "0.0.1",
-  "description": "peer to peer networking protocol abstraction",
+  "description": "integration test suite for exercising a holochain networking/p2p node",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
@@ -20,8 +20,9 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "msgpack-lite": "^0.1.26",
-    "mosodium": "file:../mosodium"
+    "ipc": "file:../ipc",
+    "n3h-common": "file:../n3h-common",
+    "tmp": "0.0.33"
   },
   "standard": {
     "env": {

@@ -21,11 +21,15 @@
     "prompt": "^1.0.0"
   },
   "projects": [
+    "n3h-common",
     "mosodium",
     "mosocket",
-    "hashcache",
     "ipc",
-    "n3h",
-    "hc-p2p-libp2p"
+    "test-suite-executor",
+    "n3h-mod-nv-persist-sqlite3",
+    "n3h-mod-persist-cache-lru",
+    "n3h-mod-message-libp2p",
+    "n3h-mod-message-mosocket",
+    "n3h"
   ]
 }

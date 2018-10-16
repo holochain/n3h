@@ -1,7 +1,7 @@
 {
-  "name": "mosocket",
+  "name": "n3h-mod-message-libp2p",
   "version": "0.0.1",
-  "description": "peer to peer networking protocol abstraction",
+  "description": "libp2p n3h message prototype module",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
@@ -20,8 +20,14 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
+    "@nodeutils/defaults-deep": "^1.1.0",
+    "libp2p": "^0.23.1",
+    "libp2p-kad-dht": "^0.10.5",
+    "libp2p-mplex": "^0.8.2",
+    "libp2p-tcp": "^0.13.0",
     "msgpack-lite": "^0.1.26",
-    "mosodium": "file:../mosodium"
+    "n3h-common": "file:../n3h-common",
+    "pull-stream": "^3.6.9"
   },
   "standard": {
     "env": {

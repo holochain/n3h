@@ -73,7 +73,7 @@ class IpcClient extends common.EventClass {
           const timeoutStack = (new Error('timeout')).stack
           connectTimeout = setTimeout(() => {
             throw new Error('timeout, inner-stack: ' + timeoutStack)
-          }, 3000)
+          }, 10000)
         }
       }
 
@@ -126,13 +126,14 @@ class IpcClient extends common.EventClass {
    * @param {Buffer} data - the message content
    * @return {Buffer} the response data
    */
-  call (data) {
+  call (data, timeout) {
     this.$checkDestroyed()
+    timeout || (timeout = 2000)
     if (!(data instanceof Buffer)) {
       throw new Error('data must be a Buffer')
     }
     const messageId = this.$nextId()
-    const promise = this.$trackMessage(messageId, 2000)
+    const promise = this.$trackMessage(messageId, timeout)
 
     this._send(msg.Message.CALL, [
       messageId,

@@ -1,7 +1,7 @@
 {
-  "name": "mosocket",
+  "name": "n3h",
   "version": "0.0.1",
-  "description": "peer to peer networking protocol abstraction",
+  "description": "nodejs implementation of the lib3h p2p protocol",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
@@ -20,8 +20,10 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
+    "mosodium": "file:../mosodium",
+    "mosocket": "file:../mosocket",
     "msgpack-lite": "^0.1.26",
-    "mosodium": "file:../mosodium"
+    "ipc": "file:../ipc"
   },
   "standard": {
     "env": {
