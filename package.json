@@ -23,6 +23,7 @@
   "projects": [
     "n3h-common",
     "mosodium",
+    "hc-dpki",
     "mosocket",
     "ipc",
     "test-suite-executor",

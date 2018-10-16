@@ -41,6 +41,13 @@ describe('SecBuf Suite', () => {
         r.randomize()
       })
 
+      it('should be able to query size', () => {
+        const r = new sodium.SecBuf(1, memLockType)
+        expect(r.size()).equals(1)
+        const r2 = new sodium.SecBuf(12, memLockType)
+        expect(r2.size()).equals(12)
+      })
+
       it('readable should propagate throw', () => {
         const sb = new sodium.SecBuf(1, memLockType)
         expect(() => {

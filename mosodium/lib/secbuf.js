@@ -129,6 +129,12 @@ class SecBuf {
   }
 
   /**
+   */
+  size () {
+    return this._.byteLength
+  }
+
+  /**
    * get current mlock/mprotect level
    * @return {string} the SecBuf.LOCK_* level this SecBuf is using
    */
