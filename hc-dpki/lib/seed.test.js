@@ -2,6 +2,12 @@ const { expect } = require('chai')
 
 const mosodium = require('mosodium')
 
+const seed = require('./seed')
+
+// speed up the unit tests
+seed.pwhashOpslimit = mosodium.pwhash.OPSLIMIT_INTERACTIVE
+seed.pwhashMemlimit = mosodium.pwhash.MEMLIMIT_INTERACTIVE
+
 const { RootSeed } = require('./index')
 
 describe('seed Suite', () => {
@@ -34,8 +40,8 @@ describe('seed Suite', () => {
     const seed = new mosodium.SecBuf(32, mosodium.SecBuf.LOCK_NONE)
     const rs = await new RootSeed(seed)
     const ds = await rs.getDeviceSeed(384, '123456')
-    expect(ds.getMnemonic()).equals('amount gasp illegal hammer gym bundle winter jacket swear matrix few goat salmon teach lucky prevent treat script prosper scissors security oil basket lab')
+    expect(ds.getMnemonic()).equals('adjust copper neither clap panther bicycle hero pitch daughter pelican judge holiday aisle tooth logic feel urban ranch number deny spin shoe correct hunt')
     await ds.destroy()
     await rs.destroy()
-  }).timeout(10000)
+  })
 })

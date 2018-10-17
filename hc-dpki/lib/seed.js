@@ -2,6 +2,9 @@ const { AsyncClass } = require('n3h-common')
 const mosodium = require('mosodium')
 const bip39 = require('bip39')
 
+exports.pwhashOpslimit = mosodium.pwhash.OPSLIMIT_SENSITIVE
+exports.pwhashMemlimit = mosodium.pwhash.MEMLIMIT_SENSITIVE
+
 /**
  */
 class Seed extends AsyncClass {
@@ -78,8 +81,9 @@ class RootSeed extends Seed {
 
     salt.$makeReadable()
     const seed = await mosodium.pwhash.hash(pass, {
-      opslimit: mosodium.pwhash.OPSLIMIT_SENSITIVE,
-      memlimit: mosodium.pwhash.MEMLIMIT_SENSITIVE,
+      opslimit: exports.pwhashOpslimit,
+      memlimit: exports.pwhashMemlimit,
+      algorithm: mosodium.pwhash.ALG_ARGON2ID13,
       salt: salt._
     })
     salt.$restoreProtection()

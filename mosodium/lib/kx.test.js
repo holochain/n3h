@@ -20,6 +20,21 @@ describe('kx Suite', () => {
     secretKey.free()
   })
 
+  it('should generate keypair from seed', () => {
+    const seed = new sodium.SecBuf(32)
+    const { publicKey, secretKey } = sodium.kx.seedKeypair(seed)
+    expect(secretKey.size()).equals(32)
+    expect(publicKey.toString('base64')).equals('+zJ0mojXbOsOf+1xyWrMB0ewCwtNKWcCPenXn8/d/XA=')
+    seed.free()
+    secretKey.free()
+  })
+
+  it('should throw on bad seedKeypair seed', () => {
+    expect(() => {
+      sodium.kx.seedKeypair()
+    }).throws()
+  })
+
   it('should throw on bad clientsession cliPublic', () => {
     expect(() => {
       sodium.kx.clientSession()

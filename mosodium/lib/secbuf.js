@@ -102,6 +102,24 @@ class SecBuf {
   }
 
   /**
+   * create a new SecBuf based off a source buffer
+   * attempts to clear the source buffer
+   * @param {Buffer} buffer - the buffer to copy then destroy
+   * @param {string} lockLevel - the SecBuf.LOCK_* level of output SecBuf
+   */
+  static from (buffer, lockLevel) {
+    if (!(buffer instanceof Buffer)) {
+      throw new Error('buffer must be a Buffer')
+    }
+    const out = new SecBuf(buffer.byteLength, lockLevel)
+    out.writable(w => {
+      buffer.copy(out._)
+      sodium.randombytes_buf(buffer)
+    })
+    return out
+  }
+
+  /**
    * create a new SecBuf with specified length
    * @param {number} len - the byteLength of the new SecBuf
    * @param {string} lockLevel - the SecBuf.LOCK_* level of output SecBuf

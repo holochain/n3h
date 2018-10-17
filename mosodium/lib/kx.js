@@ -24,6 +24,35 @@ exports.keypair = function kxKeypair (lockLevel) {
 }
 
 /**
+ * Generate a fresh, keyexchange keypair, based off a seed
+ * @example
+ * const { publicKey, secretKey } = mosodium.kx.seedKeypair(seed)
+ *
+ * @param {SecBuf} seed - the seed to derive a keypair from
+ * @param {string} lockLevel - the SecBuf.LOCK_* level of output SecBuf
+ * @return {object} { publicKey, secretKey }
+ */
+exports.seedKeypair = function kxSeedKeypair (seed, lockLevel) {
+  if (!(seed instanceof SecBuf)) {
+    throw new Error('seed must be a SecBuf')
+  }
+
+  const pk = Buffer.alloc(sodium.crypto_kx_PUBLICKEYBYTES)
+  const sk = new SecBuf(sodium.crypto_kx_SECRETKEYBYTES, lockLevel)
+
+  seed.readable(_seed => {
+    sk.writable((_sk) => {
+      sodium.crypto_kx_seed_keypair(pk, _sk, _seed)
+    })
+  })
+
+  return {
+    publicKey: pk,
+    secretKey: sk
+  }
+}
+
+/**
  * Given a server's public key, derive shared secrets.
  * @example
  * const { rx, tx } = mosodium.kx.clientSession(cliPub, cliSec, srvPub)
