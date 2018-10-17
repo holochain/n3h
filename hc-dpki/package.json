@@ -23,7 +23,8 @@
     "bip39": "^2.5.0",
     "mosodium": "file:../mosodium",
     "msgpack-lite": "^0.1.26",
-    "n3h-common": "file:../n3h-common"
+    "n3h-common": "file:../n3h-common",
+    "prompt": "^1.0.0"
   },
   "standard": {
     "env": {

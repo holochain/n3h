@@ -10,14 +10,6 @@ const util = require('./util')
 class Seed extends AsyncClass {
   /**
    */
-  static async newRandom () {
-    const seed = new mosodium.SecBuf(32)
-    seed.randomize()
-    return new RootSeed(seed)
-  }
-
-  /**
-   */
   static async fromBundle (bundle, passphrase) {
     let Class = null
     switch (bundle.type) {
@@ -121,6 +113,14 @@ exports.DeviceSeed = DeviceSeed
 /**
  */
 class RootSeed extends Seed {
+  /**
+   */
+  static async newRandom () {
+    const seed = new mosodium.SecBuf(32)
+    seed.randomize()
+    return new RootSeed(seed)
+  }
+
   /**
    */
   async init (seed) {

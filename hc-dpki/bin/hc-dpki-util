@@ -1,0 +1,141 @@
+#!/usr/bin/env node
+// vim: set syntax=javascript:
+
+const os = require('os')
+const fs = require('fs')
+const path = require('path')
+
+const { mkdirp } = require('n3h-common')
+const mosodium = require('mosodium')
+const prompt = require('prompt')
+
+const { RootSeed, Seed } = require('../lib/index')
+
+function getp (opt) {
+  if (typeof opt === 'string') {
+    opt = { description: opt }
+  }
+  return new Promise((resolve, reject) => {
+    prompt.message = ''
+    prompt.start()
+    prompt.get({
+      properties: {
+        input: {
+          description: opt.description || '',
+          message: opt.message || 'invalid input',
+          pattern: opt.pattern || /^[^]+$/,
+          default: opt.default,
+          required: typeof opt.required === 'boolean' ? opt.required : true
+        }
+      }
+    }, (err, res) => {
+      if (err) {
+        return reject(err)
+      }
+      resolve(res)
+    })
+  })
+}
+
+async function main () {
+  if (!(process.argv[2] in CMD)) {
+    return CMD.help()
+  }
+
+  await CMD[process.argv[2]](...process.argv.slice(3))
+}
+
+async function init () {
+  const homeDir = 'HC_DPKI_HOME' in process.env
+    ? process.env.HC_DPKI_HOME
+    : path.join(os.homedir(), '.hc-dpki')
+
+  await mkdirp(homeDir)
+  const passphrase = await mosodium.SecBuf.readPrompt('passphrase (no echo): ')
+
+  let rsbundle = null
+  try {
+    rsbundle = fs.readFileSync(path.join(homeDir, 'root-seed.json'))
+  } catch (e) {
+    console.error('\n')
+    console.error(e.stack || e.toString())
+    console.error('could not load root seed')
+    const answer = await getp('generate new root seed? [y/N]')
+    if ((answer.input[0] || '').toUpperCase() !== 'Y') {
+      throw new Error('aborting')
+    }
+
+    const rs = await RootSeed.newRandom()
+
+    const hint = (await getp('root seed hint / info / description')).input
+
+    console.log('generating / encrypting root seed, this may take a while...')
+
+    rsbundle = JSON.stringify(await rs.getBundle(
+      passphrase, hint), null, 2)
+
+    await rs.destroy()
+  }
+
+  rsbundle = JSON.parse(rsbundle)
+
+  console.log(JSON.stringify(rsbundle, null, 2))
+
+  console.log('loading / decrypting root seed, this may take a while...')
+
+  const rootSeed = await Seed.fromBundle(rsbundle, passphrase)
+
+  console.log('your mnemonic: ', rootSeed.getMnemonic())
+
+  return {
+    homeDir,
+    passphrase,
+    rootSeed
+  }
+}
+
+const CMD = {
+  device: async (index, pin) => {
+    if (typeof pin !== 'string' || pin.length < 4) {
+      throw new Error('pin must be a string >= 4 characters')
+    }
+
+    index = parseInt(index, 10)
+    if (isNaN(index) || index < 0) {
+      throw new Error('invalid index: ' + index)
+    }
+    console.log('device', index)
+
+    const z = await init()
+
+    console.log('generating device seed, this may take a while...')
+    const device = await z.rootSeed.getDeviceSeed(index, pin)
+
+    console.log('device mnemonic: ' + device.getMnemonic())
+
+    console.log('encrypting device seed, this may take a while...')
+    const bundle = JSON.stringify(await device.getBundle(
+      z.passphrase, 'device index ' + index), null, 2)
+
+    console.log(bundle)
+
+    for (let i = 1; i <= 5; ++i) {
+      const kp = await device.getApplicationKeypair(i)
+      console.log('APP ' + i + ' ID: ' + kp.getId())
+      await kp.destroy()
+    }
+
+    await device.destroy()
+    z.passphrase.free()
+  },
+
+  help: async () => {
+    console.log('hc-dpki-util [command] [args]')
+    console.log('  device /index/ /pin/ - generate password encrypted device seed')
+  }
+}
+
+main().then(() => {}, (err) => {
+  console.error(err.stack || err.toString())
+  process.exit(1)
+})
