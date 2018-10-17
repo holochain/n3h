@@ -41,7 +41,7 @@ describe('keypair Suite', () => {
   })
 
   it('should gen a keypair', async () => {
-    expect(pair0.getId()).equals('O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl+7zU1TVtSCIrGpZk6X9sJHg==')
+    expect(pair0.getId()).equals('O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl+7zU1TVtSCIrGpZk6X9sJHt4m')
   })
 
   it('should sign / verify', async () => {

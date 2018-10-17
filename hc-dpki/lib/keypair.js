@@ -3,6 +3,22 @@ const msgpack = require('msgpack-lite')
 const { AsyncClass } = require('n3h-common')
 const mosodium = require('mosodium')
 
+function genId (signPub, encPub) {
+  const hash = mosodium.hash.sha256(Buffer.concat([signPub, encPub]))
+
+  let c = hash.readInt16LE(0)
+  for (let i = 2; i < 32; i += 2) {
+    c = c ^ hash.readInt16LE(i)
+  }
+
+  const checksum = Buffer.alloc(2)
+  checksum.writeInt16LE(c, 0)
+
+  return Buffer.concat([signPub, encPub, checksum]).toString('base64')
+}
+
+exports.genId = genId
+
 /**
  * Actually, more like 2 keypairs...
  */
@@ -14,7 +30,7 @@ class Keypair extends AsyncClass {
       mosodium.sign.seedKeypair(seed, seed.lockLevel())
     const { publicKey: encPub, secretKey: encPriv } =
       mosodium.kx.seedKeypair(seed, seed.lockLevel())
-    const pubkeys = Buffer.concat([signPub, encPub]).toString('base64')
+    const pubkeys = genId(signPub, encPub)
     return new Keypair({
       pubkeys,
       signPriv,
@@ -45,7 +61,7 @@ class Keypair extends AsyncClass {
     this._pubkeys = Buffer.from(opt.pubkeys, 'base64')
     this._signPub = this._pubkeys.slice(0, 32)
     this._encPub = this._pubkeys.slice(32, 64)
-    this._pubkeys = Buffer.concat([this._signPub, this._encPub]).toString('base64')
+    this._pubkeys = genId(this._signPub, this._encPub)
 
     if (this._pubkeys !== opt.pubkeys) {
       throw new Error('error parsing opt.pubkeys')

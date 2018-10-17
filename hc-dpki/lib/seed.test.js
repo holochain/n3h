@@ -36,12 +36,32 @@ describe('seed Suite', () => {
     await rs2.destroy()
   })
 
-  it('should derive device seed', async () => {
-    const seed = new mosodium.SecBuf(32, mosodium.SecBuf.LOCK_NONE)
-    const rs = await new RootSeed(seed)
-    const ds = await rs.getDeviceSeed(384, '123456')
-    expect(ds.getMnemonic()).equals('adjust copper neither clap panther bicycle hero pitch daughter pelican judge holiday aisle tooth logic feel urban ranch number deny spin shoe correct hunt')
-    await ds.destroy()
-    await rs.destroy()
+  describe('device seed subsuite', () => {
+    let seed = null
+    let rs = null
+    let ds = null
+
+    beforeEach(async () => {
+      seed = new mosodium.SecBuf(32, mosodium.SecBuf.LOCK_NONE)
+      rs = await new RootSeed(seed)
+      ds = await rs.getDeviceSeed(384, '123456')
+    })
+
+    afterEach(async () => {
+      await Promise.all([
+        rs.destroy(),
+        ds.destroy()
+      ])
+    })
+
+    it('should derive device seed', async () => {
+      expect(ds.getMnemonic()).equals('adjust copper neither clap panther bicycle hero pitch daughter pelican judge holiday aisle tooth logic feel urban ranch number deny spin shoe correct hunt')
+    })
+
+    it('should derive application keypair', async () => {
+      const kp = await ds.getApplicationKeypair(1952)
+      expect(kp.getId()).equals('2Q79zxkpezKLNVEtOc+nP/1Gzg8viiVLiSriJ66dnfbIlIX4rPXwRQuGXwuOZ/o9n2diguYVjFYD063iG7wofvKG')
+      await kp.destroy()
+    })
   })
 })

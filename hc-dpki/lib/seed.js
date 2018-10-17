@@ -2,6 +2,8 @@ const { AsyncClass } = require('n3h-common')
 const mosodium = require('mosodium')
 const bip39 = require('bip39')
 
+const { Keypair } = require('./keypair')
+
 exports.pwhashOpslimit = mosodium.pwhash.OPSLIMIT_SENSITIVE
 exports.pwhashMemlimit = mosodium.pwhash.MEMLIMIT_SENSITIVE
 
@@ -57,7 +59,21 @@ class Seed extends AsyncClass {
 /**
  */
 class DeviceSeed extends Seed {
+  /**
+   */
+  async getApplicationKeypair (index) {
+    if (typeof index !== 'number' || parseInt(index, 10) !== index || index < 1) {
+      throw new Error('invalid index')
+    }
+
+    const appSeed = mosodium.kdf.derive(
+      index, Buffer.from('HCAPPLIC'), this._seed, this._seed.lockLevel())
+
+    return Keypair.newFromSeed(appSeed)
+  }
 }
+
+exports.DeviceSeed = DeviceSeed
 
 /**
  */
@@ -65,7 +81,7 @@ class RootSeed extends Seed {
   /**
    */
   async getDeviceSeed (index, pin) {
-    if (typeof index !== 'number' || index < 1) {
+    if (typeof index !== 'number' || parseInt(index, 10) !== index || index < 1) {
       throw new Error('invalid index')
     }
 
