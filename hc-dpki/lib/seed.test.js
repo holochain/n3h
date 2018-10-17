@@ -2,13 +2,13 @@ const { expect } = require('chai')
 
 const mosodium = require('mosodium')
 
-const seed = require('./seed')
+const util = require('./util')
 
 // speed up the unit tests
-seed.pwhashOpslimit = mosodium.pwhash.OPSLIMIT_INTERACTIVE
-seed.pwhashMemlimit = mosodium.pwhash.MEMLIMIT_INTERACTIVE
+util.pwhashOpslimit = mosodium.pwhash.OPSLIMIT_INTERACTIVE
+util.pwhashMemlimit = mosodium.pwhash.MEMLIMIT_INTERACTIVE
 
-const { RootSeed } = require('./index')
+const { Seed, RootSeed, DeviceSeed } = require('./index')
 
 describe('seed Suite', () => {
   it('should initialize with a SecBuf', async () => {
@@ -23,6 +23,20 @@ describe('seed Suite', () => {
     const rs = await RootSeed.newRandom()
     expect(rs.getMnemonic().split(/\s/g).length).equals(24)
     await rs.destroy()
+  })
+
+  it('should bundle / restore', async () => {
+    const rs = await RootSeed.newRandom()
+    const m = rs.getMnemonic()
+    const b = await rs.getBundle(mosodium.SecBuf.from(Buffer.from('hello')), 'hola')
+    await rs.destroy()
+    expect(b.hint).equals('hola')
+    expect(b.type).equals('hcRootSeed')
+    const rs2 = await Seed.fromBundle(
+      b, mosodium.SecBuf.from(Buffer.from('hello')))
+    expect(rs2.getMnemonic()).equals(m)
+    expect(rs2 instanceof RootSeed).equals(true)
+    await rs2.destroy()
   })
 
   it('should work with a mnemonic', async () => {
@@ -60,8 +74,20 @@ describe('seed Suite', () => {
 
     it('should derive application keypair', async () => {
       const kp = await ds.getApplicationKeypair(1952)
-      expect(kp.getId()).equals('2Q79zxkpezKLNVEtOc+nP/1Gzg8viiVLiSriJ66dnfbIlIX4rPXwRQuGXwuOZ/o9n2diguYVjFYD063iG7wofvKG')
+      expect(kp.getId()).equals('2Q79zxkpezKLNVEtOc-nP_1Gzg8viiVLiSriJ66dnfbIlIX4rPXwRQuGXwuOZ_o9n2diguYVjFYD063iG7wofvKG')
       await kp.destroy()
+    })
+
+    it('should bundle / restore', async () => {
+      const m = ds.getMnemonic()
+      const b = await ds.getBundle(mosodium.SecBuf.from(Buffer.from('hello')), 'hola')
+      expect(b.hint).equals('hola')
+      expect(b.type).equals('hcDeviceSeed')
+      const ds2 = await Seed.fromBundle(
+        b, mosodium.SecBuf.from(Buffer.from('hello')))
+      expect(ds2.getMnemonic()).equals(m)
+      expect(ds2 instanceof DeviceSeed).equals(true)
+      await ds2.destroy()
     })
   })
 })

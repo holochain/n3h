@@ -41,7 +41,7 @@ describe('keypair Suite', () => {
   })
 
   it('should gen a keypair', async () => {
-    expect(pair0.getId()).equals('O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl+7zU1TVtSCIrGpZk6X9sJHt4m')
+    expect(pair0.getId()).equals('O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl-7zU1TVtSCIrGpZk6X9sJHt4m')
   })
 
   it('should sign / verify', async () => {
@@ -77,5 +77,15 @@ describe('keypair Suite', () => {
       return
     }
     throw new Error('expected exception, got success')
+  })
+
+  it('should bundle / restore', async () => {
+    const b = await pair0.getBundle(mosodium.SecBuf.from(Buffer.from('hello')), 'hola')
+    expect(b.hint).equals('hola')
+    expect(b.type).equals('hcKeypair')
+    const kp2 = await Keypair.fromBundle(
+      b, mosodium.SecBuf.from(Buffer.from('hello')))
+    expect(kp2.getId()).equals(pair0.getId())
+    await kp2.destroy()
   })
 })

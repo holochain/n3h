@@ -3,9 +3,7 @@ const mosodium = require('mosodium')
 const bip39 = require('bip39')
 
 const { Keypair } = require('./keypair')
-
-exports.pwhashOpslimit = mosodium.pwhash.OPSLIMIT_SENSITIVE
-exports.pwhashMemlimit = mosodium.pwhash.MEMLIMIT_SENSITIVE
+const util = require('./util')
 
 /**
  */
@@ -20,8 +18,31 @@ class Seed extends AsyncClass {
 
   /**
    */
-  async init (seed) {
+  static async fromBundle (bundle, passphrase) {
+    let Class = null
+    switch (bundle.type) {
+      case 'hcDeviceSeed':
+        Class = DeviceSeed
+        break
+      case 'hcRootSeed':
+        Class = RootSeed
+        break
+      default:
+        throw new Error('unrecognized bundle type: "' + bundle.type + '"')
+    }
+    return new Class(mosodium.SecBuf.from(await util.pwDec(
+      Buffer.from(bundle.data, 'base64'), passphrase)))
+  }
+
+  /**
+   */
+  async init (type, seed) {
     await super.init()
+
+    if (typeof type !== 'string') {
+      throw new Error('type must be specified for bundling')
+    }
+    this._type = type
 
     if (seed instanceof mosodium.SecBuf && seed.size() === 32) {
       this._seed = seed
@@ -29,12 +50,8 @@ class Seed extends AsyncClass {
       if (!bip39.validateMnemonic(seed)) {
         throw new Error('invalid mnemonic string')
       }
-      this._seed = new mosodium.SecBuf(32)
-      const mnBuf = Buffer.from(bip39.mnemonicToEntropy(seed), 'hex')
-      this._seed.writable(s => {
-        mnBuf.copy(s)
-        mnBuf.fill(0)
-      })
+      this._seed = mosodium.SecBuf.from(
+        Buffer.from(bip39.mnemonicToEntropy(seed), 'hex'))
     } else {
       throw new Error('`seed` must be a 32 byte mosodium.SecBuf or 24 word bip39 mnemonic string')
     }
@@ -43,6 +60,24 @@ class Seed extends AsyncClass {
       this._seed.free()
       this._seed = null
     })
+  }
+
+  /**
+   */
+  async getBundle (passphrase, hint) {
+    if (typeof hint !== 'string') {
+      throw new Error('hint must be a string')
+    }
+
+    this._seed.$makeReadable()
+    const out = {
+      type: this._type,
+      hint,
+      data: (await util.pwEnc(this._seed._, passphrase)).toString('base64')
+    }
+    this._seed.$restoreProtection()
+
+    return out
   }
 
   /**
@@ -56,9 +91,17 @@ class Seed extends AsyncClass {
   }
 }
 
+exports.Seed = Seed
+
 /**
  */
 class DeviceSeed extends Seed {
+  /**
+   */
+  async init (seed) {
+    await super.init('hcDeviceSeed', seed)
+  }
+
   /**
    */
   async getApplicationKeypair (index) {
@@ -80,6 +123,12 @@ exports.DeviceSeed = DeviceSeed
 class RootSeed extends Seed {
   /**
    */
+  async init (seed) {
+    await super.init('hcRootSeed', seed)
+  }
+
+  /**
+   */
   async getDeviceSeed (index, pin) {
     if (typeof index !== 'number' || parseInt(index, 10) !== index || index < 1) {
       throw new Error('invalid index')
@@ -96,12 +145,7 @@ class RootSeed extends Seed {
       index, Buffer.from('HCDEVICE'), this._seed, this._seed.lockLevel())
 
     salt.$makeReadable()
-    const seed = await mosodium.pwhash.hash(pass, {
-      opslimit: exports.pwhashOpslimit,
-      memlimit: exports.pwhashMemlimit,
-      algorithm: mosodium.pwhash.ALG_ARGON2ID13,
-      salt: salt._
-    })
+    const seed = await util.pwHash(pass, salt._)
     salt.$restoreProtection()
 
     return new DeviceSeed(seed.hash)

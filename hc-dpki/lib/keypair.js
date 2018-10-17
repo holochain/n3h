@@ -3,21 +3,7 @@ const msgpack = require('msgpack-lite')
 const { AsyncClass } = require('n3h-common')
 const mosodium = require('mosodium')
 
-function genId (signPub, encPub) {
-  const hash = mosodium.hash.sha256(Buffer.concat([signPub, encPub]))
-
-  let c = hash.readInt16LE(0)
-  for (let i = 2; i < 32; i += 2) {
-    c = c ^ hash.readInt16LE(i)
-  }
-
-  const checksum = Buffer.alloc(2)
-  checksum.writeInt16LE(c, 0)
-
-  return Buffer.concat([signPub, encPub, checksum]).toString('base64')
-}
-
-exports.genId = genId
+const util = require('./util')
 
 /**
  * Actually, more like 2 keypairs...
@@ -30,11 +16,23 @@ class Keypair extends AsyncClass {
       mosodium.sign.seedKeypair(seed, seed.lockLevel())
     const { publicKey: encPub, secretKey: encPriv } =
       mosodium.kx.seedKeypair(seed, seed.lockLevel())
-    const pubkeys = genId(signPub, encPub)
+    const pubkeys = util.encodeId(signPub, encPub)
     return new Keypair({
       pubkeys,
       signPriv,
       encPriv
+    })
+  }
+
+  /**
+   */
+  static async fromBundle (bundle, passphrase) {
+    bundle = msgpack.decode(await util.pwDec(
+      Buffer.from(bundle.data, 'base64'), passphrase))
+    return new Keypair({
+      pubkeys: util.encodeId(bundle[0], bundle[1]),
+      signPriv: mosodium.SecBuf.from(bundle[2]),
+      encPriv: mosodium.SecBuf.from(bundle[3])
     })
   }
 
@@ -58,10 +56,10 @@ class Keypair extends AsyncClass {
       throw new Error('if opt.encPriv is specified, it must be a SecBuf')
     }
 
-    this._pubkeys = Buffer.from(opt.pubkeys, 'base64')
-    this._signPub = this._pubkeys.slice(0, 32)
-    this._encPub = this._pubkeys.slice(32, 64)
-    this._pubkeys = genId(this._signPub, this._encPub)
+    this._pubkeys = util.decodeId(opt.pubkeys)
+    this._signPub = this._pubkeys.signPub
+    this._encPub = this._pubkeys.encPub
+    this._pubkeys = util.encodeId(this._signPub, this._encPub)
 
     if (this._pubkeys !== opt.pubkeys) {
       throw new Error('error parsing opt.pubkeys')
@@ -69,6 +67,29 @@ class Keypair extends AsyncClass {
 
     this._signPriv = opt.signPriv
     this._encPriv = opt.encPriv
+  }
+
+  /**
+   */
+  async getBundle (passphrase, hint) {
+    if (typeof hint !== 'string') {
+      throw new Error('hint must be a string')
+    }
+
+    this._signPriv.$makeReadable()
+    this._encPriv.$makeReadable()
+    const out = {
+      type: 'hcKeypair',
+      hint,
+      data: (await util.pwEnc(msgpack.encode([
+        this._signPub, this._encPub,
+        this._signPriv._, this._encPriv._
+      ]), passphrase))
+    }
+    this._signPriv.$restoreProtection()
+    this._encPriv.$restoreProtection()
+
+    return out
   }
 
   /**
@@ -89,7 +110,7 @@ class Keypair extends AsyncClass {
   /**
    */
   verify (signature, data) {
-    return mosodium.sign.verify(signature, data, this._signPub)
+    return util.verify(signature, data, this._pubkeys)
   }
 
   /**
