@@ -16,6 +16,9 @@ class Seed extends AsyncClass {
       case 'hcDeviceSeed':
         Class = DeviceSeed
         break
+      case 'hcDevicePinSeed':
+        Class = DevicePinSeed
+        break
       case 'hcRootSeed':
         Class = RootSeed
         break
@@ -87,11 +90,11 @@ exports.Seed = Seed
 
 /**
  */
-class DeviceSeed extends Seed {
+class DevicePinSeed extends Seed {
   /**
    */
   async init (seed) {
-    await super.init('hcDeviceSeed', seed)
+    await super.init('hcDevicePinSeed', seed)
   }
 
   /**
@@ -105,6 +108,34 @@ class DeviceSeed extends Seed {
       index, Buffer.from('HCAPPLIC'), this._seed, this._seed.lockLevel())
 
     return Keypair.newFromSeed(appSeed)
+  }
+}
+
+exports.DevicePinSeed = DevicePinSeed
+
+/**
+ */
+class DeviceSeed extends Seed {
+  /**
+   */
+  async init (seed) {
+    await super.init('hcDeviceSeed', seed)
+  }
+
+  /**
+   */
+  async getDevicePinSeed (pin) {
+    if (typeof pin !== 'string' || pin.length < 4) {
+      throw new Error('pin must be a string >= 4 characters')
+    }
+    pin = Buffer.from(pin, 'utf8')
+    const pass = mosodium.SecBuf.from(Buffer.from(pin, 'utf8'))
+
+    this._seed.$makeReadable()
+    const seed = await util.pwHash(pass, this._seed._)
+    this._seed.$restoreProtection()
+
+    return new DevicePinSeed(seed.hash)
   }
 }
 
@@ -129,26 +160,15 @@ class RootSeed extends Seed {
 
   /**
    */
-  async getDeviceSeed (index, pin) {
+  async getDeviceSeed (index) {
     if (typeof index !== 'number' || parseInt(index, 10) !== index || index < 1) {
       throw new Error('invalid index')
     }
 
-    pin = Buffer.from(pin, 'utf8')
-    const pass = new mosodium.SecBuf(pin.byteLength)
-    pass.writable(_pass => {
-      pin.copy(_pass)
-      pin.fill(0)
-    })
-
-    const salt = mosodium.kdf.derive(
+    const seed = mosodium.kdf.derive(
       index, Buffer.from('HCDEVICE'), this._seed, this._seed.lockLevel())
 
-    salt.$makeReadable()
-    const seed = await util.pwHash(pass, salt._)
-    salt.$restoreProtection()
-
-    return new DeviceSeed(seed.hash)
+    return new DeviceSeed(seed)
   }
 }
 

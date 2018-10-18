@@ -108,8 +108,7 @@ const CMD = {
 
     const z = await init()
 
-    console.log('generating device seed, this may take a while...')
-    const device = await z.rootSeed.getDeviceSeed(index, pin)
+    const device = await z.rootSeed.getDeviceSeed(index)
 
     console.log('device mnemonic: ' + device.getMnemonic())
 
@@ -119,12 +118,22 @@ const CMD = {
 
     console.log(bundle)
 
+    console.log('generating device pin seed, this may take a while...')
+    const devicePin = await device.getDevicePinSeed(pin)
+
+    console.log('encrypting device pin seed, this may take a while...')
+    const pinBundle = JSON.stringify(await devicePin.getBundle(
+      z.passphrase, 'device pin index ' + index), null, 2)
+
+    console.log(pinBundle)
+
     for (let i = 1; i <= 5; ++i) {
-      const kp = await device.getApplicationKeypair(i)
+      const kp = await devicePin.getApplicationKeypair(i)
       console.log('APP ' + i + ' ID: ' + kp.getId())
       await kp.destroy()
     }
 
+    await devicePin.destroy()
     await device.destroy()
     z.passphrase.free()
   },

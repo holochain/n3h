@@ -8,7 +8,7 @@ const util = require('./util')
 util.pwhashOpslimit = mosodium.pwhash.OPSLIMIT_INTERACTIVE
 util.pwhashMemlimit = mosodium.pwhash.MEMLIMIT_INTERACTIVE
 
-const { Seed, RootSeed, DeviceSeed } = require('./index')
+const { Seed, RootSeed, DeviceSeed, DevicePinSeed } = require('./index')
 
 describe('seed Suite', () => {
   it('should initialize with a SecBuf', async () => {
@@ -54,26 +54,29 @@ describe('seed Suite', () => {
     let seed = null
     let rs = null
     let ds = null
+    let dps = null
 
     beforeEach(async () => {
       seed = new mosodium.SecBuf(32, mosodium.SecBuf.LOCK_NONE)
       rs = await new RootSeed(seed)
-      ds = await rs.getDeviceSeed(384, '123456')
+      ds = await rs.getDeviceSeed(384)
+      dps = await ds.getDevicePinSeed('123456')
     })
 
     afterEach(async () => {
       await Promise.all([
         rs.destroy(),
-        ds.destroy()
+        ds.destroy(),
+        dps.destroy()
       ])
     })
 
     it('should derive device seed', async () => {
-      expect(ds.getMnemonic()).equals('adjust copper neither clap panther bicycle hero pitch daughter pelican judge holiday aisle tooth logic feel urban ranch number deny spin shoe correct hunt')
+      expect(ds.getMnemonic()).equals('cushion surge candy struggle hurry cat dilemma human early when gospel input february shop grant capital input seat autumn cement vicious then code melt')
     })
 
     it('should derive application keypair', async () => {
-      const kp = await ds.getApplicationKeypair(1952)
+      const kp = await dps.getApplicationKeypair(1952)
       expect(kp.getId()).equals('2Q79zxkpezKLNVEtOc-nP_1Gzg8viiVLiSriJ66dnfbIlIX4rPXwRQuGXwuOZ_o9n2diguYVjFYD063iG7wofvKG')
       await kp.destroy()
     })
@@ -88,6 +91,18 @@ describe('seed Suite', () => {
       expect(ds2.getMnemonic()).equals(m)
       expect(ds2 instanceof DeviceSeed).equals(true)
       await ds2.destroy()
+    })
+
+    it('should bundle / restore (pin seed)', async () => {
+      const m = dps.getMnemonic()
+      const b = await dps.getBundle(mosodium.SecBuf.from(Buffer.from('hello')), 'hola')
+      expect(b.hint).equals('hola')
+      expect(b.type).equals('hcDevicePinSeed')
+      const dps2 = await Seed.fromBundle(
+        b, mosodium.SecBuf.from(Buffer.from('hello')))
+      expect(dps2.getMnemonic()).equals(m)
+      expect(dps2 instanceof DevicePinSeed).equals(true)
+      await dps2.destroy()
     })
   })
 })
