@@ -6,9 +6,14 @@ const { Keypair } = require('./keypair')
 const util = require('./util')
 
 /**
+ * Superclass of all other seed types
  */
 class Seed extends AsyncClass {
   /**
+   * Get the proper seed type from a persistence bundle
+   * @param {object} bundle - the persistence bundle
+   * @param {string} passphrase - the decryption passphrase
+   * @return {RootSeed|DeviceSeed|DevicePinSeed}
    */
   static async fromBundle (bundle, passphrase) {
     let Class = null
@@ -30,6 +35,9 @@ class Seed extends AsyncClass {
   }
 
   /**
+   * Initialize this seed class with persistence bundle type and private seed
+   * @param {string} type - the persistence bundle type
+   * @param {SecBuf|string} seed - the private seed data (as a buffer or mnemonic)
    */
   async init (type, seed) {
     await super.init()
@@ -58,6 +66,9 @@ class Seed extends AsyncClass {
   }
 
   /**
+   * generate a persistence bundle with hint info
+   * @param {string} passphrase - the encryption passphrase
+   * @param {string} hint - additional info / description for persistence
    */
   async getBundle (passphrase, hint) {
     if (typeof hint !== 'string') {
@@ -76,6 +87,7 @@ class Seed extends AsyncClass {
   }
 
   /**
+   * generate a bip39 mnemonic based on the private seed entroyp
    */
   getMnemonic () {
     let out = null
@@ -89,15 +101,20 @@ class Seed extends AsyncClass {
 exports.Seed = Seed
 
 /**
+ * This is a device seed that has been PIN derived
  */
 class DevicePinSeed extends Seed {
   /**
+   * delegate to base class
    */
   async init (seed) {
     await super.init('hcDevicePinSeed', seed)
   }
 
   /**
+   * generate an application keypair given an index based on this seed
+   * @param {number} index
+   * @return {Keypair}
    */
   async getApplicationKeypair (index) {
     if (typeof index !== 'number' || parseInt(index, 10) !== index || index < 1) {
@@ -114,15 +131,20 @@ class DevicePinSeed extends Seed {
 exports.DevicePinSeed = DevicePinSeed
 
 /**
+ * This is a device seed that is waiting for PIN derivation
  */
 class DeviceSeed extends Seed {
   /**
+   * delegate to base class
    */
   async init (seed) {
     await super.init('hcDeviceSeed', seed)
   }
 
   /**
+   * generate a device pin seed by applying pwhash of pin with this seed as the salt
+   * @param {string} pin - should be >= 4 characters 1-9
+   * @return {DevicePinSeed}
    */
   async getDevicePinSeed (pin) {
     if (typeof pin !== 'string' || pin.length < 4) {
@@ -142,9 +164,11 @@ class DeviceSeed extends Seed {
 exports.DeviceSeed = DeviceSeed
 
 /**
+ * This root seed should be pure entropy
  */
 class RootSeed extends Seed {
   /**
+   * Get a new, completely random root seed
    */
   static async newRandom () {
     const seed = new mosodium.SecBuf(32)
@@ -153,12 +177,16 @@ class RootSeed extends Seed {
   }
 
   /**
+   * delegate to base class
    */
   async init (seed) {
     await super.init('hcRootSeed', seed)
   }
 
   /**
+   * generate a device seed given an index based on this seed
+   * @param {number} index
+   * @return {DeviceSeed}
    */
   async getDeviceSeed (index) {
     if (typeof index !== 'number' || parseInt(index, 10) !== index || index < 1) {

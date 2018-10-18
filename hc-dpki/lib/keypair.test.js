@@ -44,6 +44,50 @@ describe('keypair Suite', () => {
     expect(pair0.getId()).equals('O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl-7zU1TVtSCIrGpZk6X9sJHt4m')
   })
 
+  it('should throw on bad opt', async () => {
+    try {
+      await new Keypair()
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
+  it('should throw on bad signPriv', async () => {
+    try {
+      await new Keypair({
+        pubkeys: 'O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl-7zU1TVtSCIrGpZk6X9sJHt4m',
+        signPriv: 32
+      })
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
+  it('should throw on bad encPriv', async () => {
+    try {
+      await new Keypair({
+        pubkeys: 'O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl-7zU1TVtSCIrGpZk6X9sJHt4m',
+        encPriv: 32
+      })
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
+  it('should throw on bad pubkeys', async () => {
+    try {
+      await new Keypair({
+        pubkeys: 'O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl-7zU1TVtSCIrGpZk6X9sJHt4n'
+      })
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
   it('should sign / verify', async () => {
     const sig = pair0.sign(Buffer.from('hello'))
     expect(pair0.verify(sig, Buffer.from('hello'))).equals(true)
@@ -87,5 +131,28 @@ describe('keypair Suite', () => {
       b, mosodium.SecBuf.from(Buffer.from('hello')))
     expect(kp2.getId()).equals(pair0.getId())
     await kp2.destroy()
+  })
+
+  it('should throw on no bundle hint', async () => {
+    try {
+      await pair0.getBundle(mosodium.SecBuf.from(Buffer.from('hello')))
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
+  it('should throw on sign with no signpriv', async () => {
+    const p = await new Keypair({
+      pubkeys: 'O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl-7zU1TVtSCIrGpZk6X9sJHt4m'
+    })
+    try {
+      p.sign(Buffer.from('hello'))
+    } catch (e) {
+      await p.destroy()
+      return
+    }
+    await p.destroy()
+    throw new Error('expected exception, got success')
   })
 })

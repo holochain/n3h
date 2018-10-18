@@ -3,6 +3,10 @@ const msgpack = require('msgpack-lite')
 
 /**
  * using base64url encoding (https://tools.ietf.org/html/rfc4648#section-5)
+ * Generate an identity string with a pair of public keys
+ * @param {Buffer} signPub - singing public key
+ * @param {Buffer} encPub - encryption public key
+ * @return {string} - the base64url encoded identity (with checksum)
  */
 function encodeId (signPub, encPub) {
   const hash = mosodium.hash.sha256(Buffer.concat([signPub, encPub]))
@@ -22,6 +26,9 @@ exports.encodeId = encodeId
 
 /**
  * using base64url encoding (https://tools.ietf.org/html/rfc4648#section-5)
+ * break an identity string up into a pair of public keys
+ * @param {string} id - the base64url encoded identity string
+ * @return {object} - { signPub: Buffer, encPub: Buffer }
  */
 function decodeId (id) {
   const tmp = Buffer.from(id.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
@@ -34,6 +41,10 @@ function decodeId (id) {
 exports.decodeId = decodeId
 
 /**
+ * verify a signature given the original data, and the signer's identity string
+ * @param {Buffer} signature - the binary signature
+ * @param {Buffer} data - the binary data to verify
+ * @param {string} signerId - the signer's public identity string
  */
 function verify (signature, data, signerId) {
   const { signPub } = decodeId(signerId)
@@ -42,10 +53,15 @@ function verify (signature, data, signerId) {
 
 exports.verify = verify
 
+// allow overrides for unit-testing purposes
 exports.pwhashOpslimit = mosodium.pwhash.OPSLIMIT_SENSITIVE
 exports.pwhashMemlimit = mosodium.pwhash.MEMLIMIT_SENSITIVE
 
 /**
+ * simplify the api for generating a password hash with our set parameters
+ * @param {SecBuf} pass - the password buffer to hash
+ * @param {Buffer} [salt] - if specified, hash with this salt (otherwise random)
+ * @return {object} - { salt: Buffer, hash: SecBuf }
  */
 async function pwHash (pass, salt) {
   const opt = {
@@ -64,6 +80,10 @@ async function pwHash (pass, salt) {
 exports.pwHash = pwHash
 
 /**
+ * Helper for encrypting a buffer with a pwhash-ed passphrase
+ * @param {Buffer} data
+ * @param {string} passphrase
+ * @return {Buffer} - the encrypted data
  */
 async function pwEnc (data, passphrase) {
   const { salt, hash: secret } = await pwHash(passphrase)
@@ -78,6 +98,10 @@ async function pwEnc (data, passphrase) {
 exports.pwEnc = pwEnc
 
 /**
+ * Helper for decrypting a buffer with a pwhash-ed passphrase
+ * @param {Buffer} data
+ * @param {string} passphrase
+ * @return {Buffer} - the decrypted data
  */
 async function pwDec (data, passphrase) {
   data = msgpack.decode(data)

@@ -26,6 +26,7 @@ Some nodejs buffer accessors may invalidate security.
 * [SecBuf](#SecBuf)
     * [new SecBuf(len, lockLevel)](#new_SecBuf_new)
     * _instance_
+        * [.size()](#SecBuf+size)
         * [.lockLevel()](#SecBuf+lockLevel) ⇒ <code>string</code>
         * [.free()](#SecBuf+free)
         * [.randomize()](#SecBuf+randomize)
@@ -36,6 +37,7 @@ Some nodejs buffer accessors may invalidate security.
         * [.$restoreProtection()](#SecBuf+$restoreProtection)
     * _static_
         * [.readPrompt(promptText)](#SecBuf.readPrompt) ⇒ [<code>SecBuf</code>](#SecBuf)
+        * [.from(buffer, lockLevel)](#SecBuf.from)
 
 <a name="new_SecBuf_new"></a>
 
@@ -55,6 +57,10 @@ const sb = new mosodium.SecBuf(32, SecBuf.LOCK_NONE)
 const sb = new mosodium.SecBuf(32, SecBuf.LOCK_MEM)
 const sb = new mosodium.SecBuf(32, SecBuf.LOCK_ALL)
 ```
+<a name="SecBuf+size"></a>
+
+### secBuf.size()
+**Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
 <a name="SecBuf+lockLevel"></a>
 
 ### secBuf.lockLevel() ⇒ <code>string</code>
@@ -141,6 +147,19 @@ Fetch a buffer from stdin into a SecBuf.
 ```js
 const passphrase = await mosodium.SecBuf.readPrompt('passphrase (no echo): ')
 ```
+<a name="SecBuf.from"></a>
+
+### SecBuf.from(buffer, lockLevel)
+create a new SecBuf based off a source buffer
+attempts to clear the source buffer
+
+**Kind**: static method of [<code>SecBuf</code>](#SecBuf)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| buffer | <code>Buffer</code> | the buffer to copy then destroy |
+| lockLevel | <code>string</code> | the SecBuf.LOCK_* level of output SecBuf |
+
 <a name="LockLevel"></a>
 
 ## LockLevel

@@ -6,10 +6,18 @@ const mosodium = require('mosodium')
 const util = require('./util')
 
 /**
- * Actually, more like 2 keypairs...
+ * Represents two asymmetric cryptography keypairs
+ * - a signing keypair
+ * - an encryption keypair
+ *
+ * base64url encoded identity string to represent the public sides
+ *
+ * can optionally be initialized without the private halves of the pairs
  */
 class Keypair extends AsyncClass {
   /**
+   * derive the pairs from a 32 byte seed buffer
+   * @param {SecBuf} seed - the seed buffer
    */
   static async newFromSeed (seed) {
     const { publicKey: signPub, secretKey: signPriv } =
@@ -25,6 +33,9 @@ class Keypair extends AsyncClass {
   }
 
   /**
+   * initialize the pairs from an encrypted persistence bundle
+   * @param {object} bundle - persistence info
+   * @param {string} passphrase - decryption passphrase
    */
   static async fromBundle (bundle, passphrase) {
     bundle = msgpack.decode(await util.pwDec(
@@ -37,6 +48,11 @@ class Keypair extends AsyncClass {
   }
 
   /**
+   * keypair constructor (you probably want one of the static functions above)
+   * @param {object} opt
+   * @param {string} opt.pubkeys - the keypair identity string
+   * @param {SecBuf} [opt.signPriv] - private signature key
+   * @param {SecBuf} [opt.encPriv] - private encryption key
    */
   async init (opt) {
     await super.init()
@@ -70,6 +86,9 @@ class Keypair extends AsyncClass {
   }
 
   /**
+   * generate an encrypted persistence bundle
+   * @param {string} passphrase - the encryption passphrase
+   * @param {string} hint - additional info / description for the bundle
    */
   async getBundle (passphrase, hint) {
     if (typeof hint !== 'string') {
@@ -93,12 +112,16 @@ class Keypair extends AsyncClass {
   }
 
   /**
+   * get the keypair identifier string
+   * @return {string}
    */
   getId () {
     return this._pubkeys
   }
 
   /**
+   * sign some arbitrary data with the signing private key
+   * @param {Buffer} data - the data to sign
    */
   sign (data) {
     if (!this._signPriv) {
@@ -108,12 +131,19 @@ class Keypair extends AsyncClass {
   }
 
   /**
+   * verify data that was signed with our private signing key
+   * @param {Buffer} signature
+   * @param {Buffer} data
    */
   verify (signature, data) {
     return util.verify(signature, data, this._pubkeys)
   }
 
   /**
+   * encrypt arbitrary data to be readale by potentially multiple recipients
+   * @param {array<string>} recipientIds - multiple recipient identifier strings
+   * @param {Buffer} data - the data to encrypt
+   * @return {Buffer}
    */
   encrypt (recipientIds, data) {
     const symSecret = new mosodium.SecBuf(32)
@@ -143,6 +173,10 @@ class Keypair extends AsyncClass {
   }
 
   /**
+   * attempt to decrypt the cipher buffer (assuming it was targeting us)
+   * @param {string} sourceId - identifier string of who encrypted this data
+   * @param {Buffer} cipher - the encrypted data
+   * @return {Buffer} - the decrypted data
    */
   decrypt (sourceId, cipher) {
     cipher = msgpack.decode(cipher)

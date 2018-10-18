@@ -39,6 +39,56 @@ describe('seed Suite', () => {
     await rs2.destroy()
   })
 
+  it('should throw on bad bundle hint', async () => {
+    const rs = await RootSeed.newRandom()
+    try {
+      await rs.getBundle(mosodium.SecBuf.from(Buffer.from('hello')))
+    } catch (e) {
+      await rs.destroy()
+      return
+    }
+    await rs.destroy()
+    throw new Error('expected exception, got success')
+  })
+
+  it('should throw on bad bundle type', async () => {
+    try {
+      await Seed.fromBundle({
+        type: 'badBundleType'
+      })
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
+  it('should throw on bad init type', async () => {
+    try {
+      await new Seed(2)
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
+  it('should throw on bad mnemonic string', async () => {
+    try {
+      await new Seed('hcRootSeed')
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
+  it('should throw on bad mnemonic string (validate)', async () => {
+    try {
+      await new Seed('hcRootSeed', 'a a a a a a a a a a a a a a a a a a a a a a a a')
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
   it('should work with a mnemonic', async () => {
     const rs1 = await RootSeed.newRandom()
     const mn1 = rs1.getMnemonic()
@@ -75,10 +125,37 @@ describe('seed Suite', () => {
       expect(ds.getMnemonic()).equals('cushion surge candy struggle hurry cat dilemma human early when gospel input february shop grant capital input seat autumn cement vicious then code melt')
     })
 
+    it('should throw on bad device seed index', async () => {
+      try {
+        await rs.getDeviceSeed('a')
+      } catch (e) {
+        return
+      }
+      throw new Error('expected exception, got success')
+    })
+
+    it('should throw on bad device seed pin', async () => {
+      try {
+        await ds.getDevicePinSeed('a')
+      } catch (e) {
+        return
+      }
+      throw new Error('expected exception, got success')
+    })
+
     it('should derive application keypair', async () => {
       const kp = await dps.getApplicationKeypair(1952)
       expect(kp.getId()).equals('2Q79zxkpezKLNVEtOc-nP_1Gzg8viiVLiSriJ66dnfbIlIX4rPXwRQuGXwuOZ_o9n2diguYVjFYD063iG7wofvKG')
       await kp.destroy()
+    })
+
+    it('should throw on bad application keypair index', async () => {
+      try {
+        await dps.getApplicationKeypair('a')
+      } catch (e) {
+        return
+      }
+      throw new Error('expected exception, got success')
     })
 
     it('should bundle / restore', async () => {

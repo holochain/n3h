@@ -4,6 +4,9 @@
 <dt><a href="#keypair">keypair(lockLevel)</a> ⇒ <code>object</code></dt>
 <dd><p>Generate a fresh, random keyexchange keypair</p>
 </dd>
+<dt><a href="#seedKeypair">seedKeypair(seed, lockLevel)</a> ⇒ <code>object</code></dt>
+<dd><p>Generate a fresh, keyexchange keypair, based off a seed</p>
+</dd>
 <dt><a href="#clientSession">clientSession(cliPublic, cliSecret, srvPublic, lockLevel)</a> ⇒ <code>object</code></dt>
 <dd><p>Given a server&#39;s public key, derive shared secrets.</p>
 </dd>
@@ -27,6 +30,23 @@ Generate a fresh, random keyexchange keypair
 **Example**  
 ```js
 const { publicKey, secretKey } = mosodium.kx.keypair()
+```
+<a name="seedKeypair"></a>
+
+## seedKeypair(seed, lockLevel) ⇒ <code>object</code>
+Generate a fresh, keyexchange keypair, based off a seed
+
+**Kind**: global function  
+**Returns**: <code>object</code> - { publicKey, secretKey }  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| seed | <code>SecBuf</code> | the seed to derive a keypair from |
+| lockLevel | <code>string</code> | the SecBuf.LOCK_* level of output SecBuf |
+
+**Example**  
+```js
+const { publicKey, secretKey } = mosodium.kx.seedKeypair(seed)
 ```
 <a name="clientSession"></a>
 
