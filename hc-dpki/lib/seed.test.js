@@ -1,6 +1,7 @@
 const { expect } = require('chai')
 
 const mosodium = require('mosodium')
+mosodium.SecBuf.setLockLevel(mosodium.SecBuf.LOCK_NONE)
 
 const util = require('./util')
 
@@ -12,7 +13,7 @@ const { Seed, RootSeed, DeviceSeed, DevicePinSeed } = require('./index')
 
 describe('seed Suite', () => {
   it('should initialize with a SecBuf', async () => {
-    const seed = new mosodium.SecBuf(32, mosodium.SecBuf.LOCK_NONE)
+    const seed = new mosodium.SecBuf(32)
     seed.randomize()
     const rs = await new RootSeed(seed)
     expect(rs.getMnemonic().split(/\s/g).length).equals(24)
@@ -107,7 +108,7 @@ describe('seed Suite', () => {
     let dps = null
 
     beforeEach(async () => {
-      seed = new mosodium.SecBuf(32, mosodium.SecBuf.LOCK_NONE)
+      seed = new mosodium.SecBuf(32)
       rs = await new RootSeed(seed)
       ds = await rs.getDeviceSeed(384)
       dps = await ds.getDevicePinSeed('123456')

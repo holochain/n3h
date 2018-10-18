@@ -1,14 +1,16 @@
 const { expect } = require('chai')
+
 const mosodium = require('mosodium')
+mosodium.SecBuf.setLockLevel(mosodium.SecBuf.LOCK_NONE)
 
 const { Keypair } = require('./index')
 
-const seed0 = new mosodium.SecBuf(32, mosodium.SecBuf.LOCK_NONE)
-const seed1 = new mosodium.SecBuf(32, mosodium.SecBuf.LOCK_NONE)
+const seed0 = new mosodium.SecBuf(32)
+const seed1 = new mosodium.SecBuf(32)
 seed1.writable(w => {
   w.writeUInt8(1, 0)
 })
-const seed2 = new mosodium.SecBuf(32, mosodium.SecBuf.LOCK_NONE)
+const seed2 = new mosodium.SecBuf(32)
 seed2.writable(w => {
   w.writeUInt8(2, 0)
 })

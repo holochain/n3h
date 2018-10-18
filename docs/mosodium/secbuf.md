@@ -24,7 +24,7 @@ Some nodejs buffer accessors may invalidate security.
 **Kind**: global class  
 
 * [SecBuf](#SecBuf)
-    * [new SecBuf(len, lockLevel)](#new_SecBuf_new)
+    * [new SecBuf(len)](#new_SecBuf_new)
     * _instance_
         * [.size()](#SecBuf+size)
         * [.lockLevel()](#SecBuf+lockLevel) ⇒ <code>string</code>
@@ -36,19 +36,19 @@ Some nodejs buffer accessors may invalidate security.
         * [.$makeWritable()](#SecBuf+$makeWritable)
         * [.$restoreProtection()](#SecBuf+$restoreProtection)
     * _static_
+        * [.setLockLevel(lockLevel)](#SecBuf.setLockLevel)
         * [.readPrompt(promptText)](#SecBuf.readPrompt) ⇒ [<code>SecBuf</code>](#SecBuf)
-        * [.from(buffer, lockLevel)](#SecBuf.from)
+        * [.from(buffer)](#SecBuf.from)
 
 <a name="new_SecBuf_new"></a>
 
-### new SecBuf(len, lockLevel)
+### new SecBuf(len)
 create a new SecBuf with specified length
 
 
 | Param | Type | Description |
 | --- | --- | --- |
 | len | <code>number</code> | the byteLength of the new SecBuf |
-| lockLevel | <code>string</code> | the SecBuf.LOCK_* level of output SecBuf |
 
 **Example**  
 ```js
@@ -132,6 +132,15 @@ make buffer writable indefinately... prefer #writable()
 restore memory protection `mprotect_noaccess`
 
 **Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
+<a name="SecBuf.setLockLevel"></a>
+
+### SecBuf.setLockLevel(lockLevel)
+**Kind**: static method of [<code>SecBuf</code>](#SecBuf)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| lockLevel | <code>string</code> | the SecBuf.LOCK_* level for all generated SecBufs |
+
 <a name="SecBuf.readPrompt"></a>
 
 ### SecBuf.readPrompt(promptText) ⇒ [<code>SecBuf</code>](#SecBuf)
@@ -149,7 +158,7 @@ const passphrase = await mosodium.SecBuf.readPrompt('passphrase (no echo): ')
 ```
 <a name="SecBuf.from"></a>
 
-### SecBuf.from(buffer, lockLevel)
+### SecBuf.from(buffer)
 create a new SecBuf based off a source buffer
 attempts to clear the source buffer
 
@@ -158,7 +167,6 @@ attempts to clear the source buffer
 | Param | Type | Description |
 | --- | --- | --- |
 | buffer | <code>Buffer</code> | the buffer to copy then destroy |
-| lockLevel | <code>string</code> | the SecBuf.LOCK_* level of output SecBuf |
 
 <a name="LockLevel"></a>
 

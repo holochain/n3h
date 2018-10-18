@@ -11,10 +11,9 @@ const CONTEXTBYTES = sodium.crypto_kdf_CONTEXTBYTES
  * @param {number} index - subkey index
  * @param {Buffer} context - eight bytes context
  * @param {SecBuf} parent - the parent key to derive from
- * @param {string} lockLevel - the SecBuf.LOCK_* level of output SecBuf
  * @return {SecBuf}
  */
-exports.derive = function kdfDerive (index, context, parent, lockLevel) {
+exports.derive = function kdfDerive (index, context, parent) {
   if (typeof index !== 'number' || parseInt(index) !== index) {
     throw new Error('index must be an integer')
   }
@@ -24,7 +23,7 @@ exports.derive = function kdfDerive (index, context, parent, lockLevel) {
   if (!(parent instanceof SecBuf)) {
     throw new Error('parent must be a SecBuf')
   }
-  const out = new SecBuf(32, lockLevel)
+  const out = new SecBuf(32)
   out.writable(_out => {
     parent.readable(_parent => {
       sodium.crypto_kdf_derive_from_key(_out, index, context, _parent)

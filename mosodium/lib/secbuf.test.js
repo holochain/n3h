@@ -11,6 +11,7 @@ describe('SecBuf Suite', () => {
       beforeEach(() => {
         toSend = []
 
+        sodium.SecBuf.setLockLevel(memLockType)
         sodium.SecBuf._stdin = {
           setRawMode: () => {},
           setEncoding: () => {},
@@ -35,21 +36,45 @@ describe('SecBuf Suite', () => {
         sodium.SecBuf._stderr = process.stderr
       })
 
+      it('should report correct lockLevel', () => {
+        const r = new sodium.SecBuf(1)
+        expect(r.lockLevel()).equals(memLockType)
+        r.free()
+      })
+
       it('should be able to generate random', () => {
-        const r = new sodium.SecBuf(1, memLockType)
+        const r = new sodium.SecBuf(1)
         // should not throw any exceptions
         r.randomize()
+        r.free()
+      })
+
+      it('should init from buffer', () => {
+        const r = sodium.SecBuf.from(Buffer.from('hello'))
+        expect(r.size()).equals(5)
+        r.free()
+      })
+
+      it('should throw on bad from', () => {
+        try {
+          sodium.SecBuf.from(2)
+        } catch (e) {
+          return
+        }
+        throw new Error('expected exception, got success')
       })
 
       it('should be able to query size', () => {
-        const r = new sodium.SecBuf(1, memLockType)
+        const r = new sodium.SecBuf(1)
         expect(r.size()).equals(1)
-        const r2 = new sodium.SecBuf(12, memLockType)
+        const r2 = new sodium.SecBuf(12)
         expect(r2.size()).equals(12)
+        r.free()
+        r2.free()
       })
 
       it('readable should propagate throw', () => {
-        const sb = new sodium.SecBuf(1, memLockType)
+        const sb = new sodium.SecBuf(1)
         expect(() => {
           sb.readable(() => { throw new Error('e') })
         }).throws()
@@ -57,7 +82,7 @@ describe('SecBuf Suite', () => {
       })
 
       it('writable should propagate throw', () => {
-        const sb = new sodium.SecBuf(1, memLockType)
+        const sb = new sodium.SecBuf(1)
         expect(() => {
           sb.writable(() => { throw new Error('e') })
         }).throws()
@@ -66,7 +91,7 @@ describe('SecBuf Suite', () => {
 
       it('should readPrompt', async () => {
         toSend = ['h', 'i', '\u0004']
-        const p = await sodium.SecBuf.readPrompt('test: ', memLockType)
+        const p = await sodium.SecBuf.readPrompt('test: ')
         p.readable(_p => {
           expect(_p.toString('base64')).equals('aGk=')
         })
@@ -75,7 +100,7 @@ describe('SecBuf Suite', () => {
 
       it('should readPrompt with backspace', async () => {
         toSend = ['h', 'i', 'o', String.fromCharCode(127), '\u0004']
-        const p = await sodium.SecBuf.readPrompt('test: ', memLockType)
+        const p = await sodium.SecBuf.readPrompt('test: ')
         p.readable(_p => {
           expect(_p.toString('base64')).equals('aGk=')
         })
@@ -85,7 +110,7 @@ describe('SecBuf Suite', () => {
       it('should throw on readPrompt ctrl-c', async () => {
         toSend = ['h', 'i', '\u0003']
         try {
-          await sodium.SecBuf.readPrompt('test: ', memLockType)
+          await sodium.SecBuf.readPrompt('test: ')
         } catch (e) {
           // yay, exception
           return
@@ -96,7 +121,7 @@ describe('SecBuf Suite', () => {
       it('should throw if not a tty', async () => {
         delete sodium.SecBuf._stdin.setRawMode
         try {
-          await sodium.SecBuf.readPrompt('test: ', memLockType)
+          await sodium.SecBuf.readPrompt('test: ')
         } catch (e) {
           // yay, exception
           return
@@ -109,7 +134,7 @@ describe('SecBuf Suite', () => {
           toSend.push('u')
         }
         try {
-          await sodium.SecBuf.readPrompt('test: ', memLockType)
+          await sodium.SecBuf.readPrompt('test: ')
         } catch (e) {
           // yay, exception
           return

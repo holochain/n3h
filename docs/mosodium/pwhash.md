@@ -13,7 +13,6 @@ Calculate a password hash
 | opts.opslimit | <code>number</code> | operation scaling for hashing algorithm |
 | opts.memlimit | <code>number</code> | memory scaling for hashing algorithm |
 | opts.algorithm | <code>number</code> | which hashing algorithm |
-| [opts.lockLevel] | <code>string</code> | the SecBuf.LOCK_* level of output SecBuf |
 | [opts.salt] | <code>Buffer</code> | predefined salt (random if not included) |
 
 **Example**  

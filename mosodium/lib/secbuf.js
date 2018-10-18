@@ -16,6 +16,10 @@ const LockLevel = {
   LOCK_ALL: 'all'
 }
 
+const C = {
+  lockLevel: LockLevel.LOCK_ALL
+}
+
 /**
  * Wrap libsodium memory lock and protect functions.
  * Some nodejs buffer accessors may invalidate security.
@@ -27,6 +31,13 @@ const LockLevel = {
  */
 class SecBuf {
   /**
+   * @param {string} lockLevel - the SecBuf.LOCK_* level for all generated SecBufs
+   */
+  static setLockLevel (lockLevel) {
+    C.lockLevel = lockLevel
+  }
+
+  /**
    * Fetch a buffer from stdin into a SecBuf.
    * @example
    * const passphrase = await mosodium.SecBuf.readPrompt('passphrase (no echo): ')
@@ -34,7 +45,7 @@ class SecBuf {
    * @param {string} promptText - displayed to stderr before awaiting input
    * @return {SecBuf}
    */
-  static readPrompt (promptText, lockLevel) {
+  static readPrompt (promptText) {
     return new Promise((resolve, reject) => {
       try {
         const stdin = SecBuf._stdin
@@ -46,7 +57,7 @@ class SecBuf {
         stdin.setEncoding('utf8')
         stdin.resume()
         stdin.setRawMode(true)
-        const outbuf = new SecBuf(MAX_PROMPT, lockLevel)
+        const outbuf = new SecBuf(MAX_PROMPT)
         const finalize = () => {
           try {
             stdin.removeListener('data', fn)
@@ -66,7 +77,7 @@ class SecBuf {
               case '\u0004':
               case '\r':
               case '\n':
-                const result = new SecBuf(curIndex, lockLevel)
+                const result = new SecBuf(curIndex)
                 outbuf.readable(_outbuf => {
                   result.writable(_result => {
                     _outbuf.copy(_result, 0, 0, curIndex)
@@ -105,13 +116,12 @@ class SecBuf {
    * create a new SecBuf based off a source buffer
    * attempts to clear the source buffer
    * @param {Buffer} buffer - the buffer to copy then destroy
-   * @param {string} lockLevel - the SecBuf.LOCK_* level of output SecBuf
    */
-  static from (buffer, lockLevel) {
+  static from (buffer) {
     if (!(buffer instanceof Buffer)) {
       throw new Error('buffer must be a Buffer')
     }
-    const out = new SecBuf(buffer.byteLength, lockLevel)
+    const out = new SecBuf(buffer.byteLength)
     out.writable(w => {
       buffer.copy(out._)
       sodium.randombytes_buf(buffer)
@@ -122,14 +132,13 @@ class SecBuf {
   /**
    * create a new SecBuf with specified length
    * @param {number} len - the byteLength of the new SecBuf
-   * @param {string} lockLevel - the SecBuf.LOCK_* level of output SecBuf
    */
-  constructor (len, lockLevel) {
+  constructor (len) {
     try {
       this._lockLevel = 2
-      if (lockLevel === LockLevel.LOCK_NONE) {
+      if (C.lockLevel === LockLevel.LOCK_NONE) {
         this._lockLevel = 0
-      } else if (lockLevel === LockLevel.LOCK_MEM) {
+      } else if (C.lockLevel === LockLevel.LOCK_MEM) {
         this._lockLevel = 1
       }
 
