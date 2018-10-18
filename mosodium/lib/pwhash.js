@@ -46,7 +46,6 @@ function _fixOpts (opts) {
  * @param {number} opts.opslimit - operation scaling for hashing algorithm
  * @param {number} opts.memlimit - memory scaling for hashing algorithm
  * @param {number} opts.algorithm - which hashing algorithm
- * @param {string} [opts.lockLevel] - the SecBuf.LOCK_* level of output SecBuf
  * @param {Buffer} [opts.salt] - predefined salt (random if not included)
  * @return {object} - { salt / the salt used /, hash / the hash generated / }
  */
@@ -60,7 +59,7 @@ exports.hash = function pwhash (password, opts) {
     opts.salt = random.bytes(SALTBYTES)
   }
 
-  const hash = new SecBuf(HASHBYTES, opts.lockLevel)
+  const hash = new SecBuf(HASHBYTES)
 
   return new Promise((resolve, reject) => {
     const finalize = () => {

@@ -2,6 +2,12 @@
 
 ## projects
 
+### hc-dpki
+
+- [keypair](hc-dpki/keypair.md)
+- [seed](hc-dpki/seed.md)
+- [util](hc-dpki/util.md)
+
 ### ipc
 
 - [client](ipc/client.md)

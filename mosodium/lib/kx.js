@@ -6,15 +6,42 @@ const { SecBuf } = require('./secbuf')
  * @example
  * const { publicKey, secretKey } = mosodium.kx.keypair()
  *
- * @param {string} lockLevel - the SecBuf.LOCK_* level of output SecBuf
  * @return {object} { publicKey, secretKey }
  */
-exports.keypair = function kxKeypair (lockLevel) {
+exports.keypair = function kxKeypair () {
   const pk = Buffer.alloc(sodium.crypto_kx_PUBLICKEYBYTES)
-  const sk = new SecBuf(sodium.crypto_kx_SECRETKEYBYTES, lockLevel)
+  const sk = new SecBuf(sodium.crypto_kx_SECRETKEYBYTES)
 
   sk.writable((_sk) => {
     sodium.crypto_kx_keypair(pk, _sk)
+  })
+
+  return {
+    publicKey: pk,
+    secretKey: sk
+  }
+}
+
+/**
+ * Generate a fresh, keyexchange keypair, based off a seed
+ * @example
+ * const { publicKey, secretKey } = mosodium.kx.seedKeypair(seed)
+ *
+ * @param {SecBuf} seed - the seed to derive a keypair from
+ * @return {object} { publicKey, secretKey }
+ */
+exports.seedKeypair = function kxSeedKeypair (seed) {
+  if (!(seed instanceof SecBuf)) {
+    throw new Error('seed must be a SecBuf')
+  }
+
+  const pk = Buffer.alloc(sodium.crypto_kx_PUBLICKEYBYTES)
+  const sk = new SecBuf(sodium.crypto_kx_SECRETKEYBYTES)
+
+  seed.readable(_seed => {
+    sk.writable((_sk) => {
+      sodium.crypto_kx_seed_keypair(pk, _sk, _seed)
+    })
   })
 
   return {
@@ -31,10 +58,9 @@ exports.keypair = function kxKeypair (lockLevel) {
  * @param {Buffer} cliPublic - client's public key
  * @param {SecBuf} cliSecret - client's secret key
  * @param {Buffer} srvPublic - server's public key
- * @param {string} lockLevel - the SecBuf.LOCK_* level of output SecBuf
  * @return {object} { rx /receive key/, tx /transmit key/ }
  */
-exports.clientSession = function kxClientSession (cliPublic, cliSecret, srvPublic, lockLevel) {
+exports.clientSession = function kxClientSession (cliPublic, cliSecret, srvPublic) {
   if (!(cliPublic instanceof Buffer)) {
     throw new Error('cliPublic must be a Buffer')
   }
@@ -45,8 +71,8 @@ exports.clientSession = function kxClientSession (cliPublic, cliSecret, srvPubli
     throw new Error('cliSecret must be a SecBuf')
   }
 
-  const rx = new SecBuf(sodium.crypto_kx_SESSIONKEYBYTES, lockLevel)
-  const tx = new SecBuf(sodium.crypto_kx_SESSIONKEYBYTES, lockLevel)
+  const rx = new SecBuf(sodium.crypto_kx_SESSIONKEYBYTES)
+  const tx = new SecBuf(sodium.crypto_kx_SESSIONKEYBYTES)
 
   rx.writable((_rx) => {
     tx.writable((_tx) => {
@@ -68,10 +94,9 @@ exports.clientSession = function kxClientSession (cliPublic, cliSecret, srvPubli
  * @param {Buffer} srvPublic - server's public key
  * @param {SecBuf} srvSecret - server's secret key
  * @param {Buffer} cliPublic - client's public key
- * @param {string} lockLevel - the SecBuf.LOCK_* level of output SecBuf
  * @return {object} { rx /receive key/, tx /transmit key/ }
  */
-exports.serverSession = function kxServerSession (srvPublic, srvSecret, cliPublic, lockLevel) {
+exports.serverSession = function kxServerSession (srvPublic, srvSecret, cliPublic) {
   if (!(srvPublic instanceof Buffer)) {
     throw new Error('srvPublic must be a Buffer')
   }
@@ -82,8 +107,8 @@ exports.serverSession = function kxServerSession (srvPublic, srvSecret, cliPubli
     throw new Error('srvSecret must be a SecBuf')
   }
 
-  const rx = new SecBuf(sodium.crypto_kx_SESSIONKEYBYTES, lockLevel)
-  const tx = new SecBuf(sodium.crypto_kx_SESSIONKEYBYTES, lockLevel)
+  const rx = new SecBuf(sodium.crypto_kx_SESSIONKEYBYTES)
+  const tx = new SecBuf(sodium.crypto_kx_SESSIONKEYBYTES)
 
   rx.writable((_rx) => {
     tx.writable((_tx) => {

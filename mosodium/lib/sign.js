@@ -11,16 +11,15 @@ const SIGNBYTES = sodium.crypto_sign_BYTES
  * const { publicKey, secretKey } = mosodium.sign.seedKeypair(seed)
  *
  * @param {SecBuf} seed - the seed to derive a keypair from
- * @param {string} lockLevel - the SecBuf.LOCK_* level of output SecBuf
  * @retun {object} - { publicKey, privateKey }
  */
-exports.seedKeypair = function signSeedKeypair (seed, lockLevel) {
+exports.seedKeypair = function signSeedKeypair (seed) {
   if (!(seed instanceof SecBuf)) {
     throw new Error('seed must be a SecBuf')
   }
 
   const publicKey = Buffer.alloc(PUBLICKEYBYTES)
-  const secretKey = new SecBuf(SECRETKEYBYTES, lockLevel)
+  const secretKey = new SecBuf(SECRETKEYBYTES)
 
   seed.readable(_seed => {
     secretKey.writable(_secretKey => {
