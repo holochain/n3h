@@ -6,20 +6,16 @@ IPC control api server
 **Kind**: global class  
 
 * [IpcServer](#IpcServer)
-    * [new IpcServer()](#new_IpcServer_new)
+    * [.init()](#IpcServer+init)
     * [.bind(bindArray)](#IpcServer+bind) ⇒ <code>Promise</code>
-    * [.call(data)](#IpcServer+call) ⇒ <code>array</code>
+    * [.send()](#IpcServer+send)
 
-<a name="new_IpcServer_new"></a>
+<a name="IpcServer+init"></a>
 
-### new IpcServer()
+### ipcServer.init()
 create a new ipc server instance
 
-**Example**  
-```js
-const srv = new IpcServer()
-await srv.bind(['ipc://my-socket.ipc', 'tcp://*:12345'])
-```
+**Kind**: instance method of [<code>IpcServer</code>](#IpcServer)  
 <a name="IpcServer+bind"></a>
 
 ### ipcServer.bind(bindArray) ⇒ <code>Promise</code>
@@ -32,15 +28,9 @@ Bind / create a listening socket for clients to connect to
 | --- | --- | --- |
 | bindArray | <code>array</code> \| <code>string</code> | list of zmq endpoints to bind |
 
-<a name="IpcServer+call"></a>
+<a name="IpcServer+send"></a>
 
-### ipcServer.call(data) ⇒ <code>array</code>
-Transmit a `call` message to all ipc clients
+### ipcServer.send()
+broadcast an event to all clients
 
 **Kind**: instance method of [<code>IpcServer</code>](#IpcServer)  
-**Returns**: <code>array</code> - array of response data from all clients  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| data | <code>Buffer</code> | the message content |
-

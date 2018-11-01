@@ -121,6 +121,12 @@ class AsyncClass {
   }
 
   /**
+   */
+  $isDestroyed () {
+    return this._destroyed
+  }
+
+  /**
    * throws an error if this instance has already been destroyed
    */
   $checkDestroyed () {
