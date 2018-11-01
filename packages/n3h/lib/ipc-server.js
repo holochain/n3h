@@ -1,5 +1,5 @@
 const { AsyncClass, Moduleit } = require('n3h-common')
-const { IpcServer: RawIpcServer } = require('ipc')
+const { IpcServer: RawIpcServer } = require('n3h-ipc')
 
 /**
  */

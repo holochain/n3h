@@ -8,11 +8,6 @@
 - [seed](hc-dpki/seed.md)
 - [util](hc-dpki/util.md)
 
-### ipc
-
-- [client](ipc/client.md)
-- [server](ipc/server.md)
-
 ### mosodium
 
 - [aead](mosodium/aead.md)
@@ -23,4 +18,9 @@
 - [random](mosodium/random.md)
 - [secbuf](mosodium/secbuf.md)
 - [sign](mosodium/sign.md)
+
+### n3h-ipc
+
+- [client](n3h-ipc/client.md)
+- [server](n3h-ipc/server.md)
 

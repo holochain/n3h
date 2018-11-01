@@ -1,6 +1,6 @@
 
 const { AsyncClass } = require('n3h-common')
-const { IpcClient } = require('ipc')
+const { IpcClient } = require('n3h-ipc')
 
 /**
  */
