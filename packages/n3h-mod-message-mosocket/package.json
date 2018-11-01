@@ -1,7 +1,7 @@
 {
-  "name": "test-suite-executor",
+  "name": "n3h-mod-message-mosocket",
   "version": "0.0.1",
-  "description": "integration test suite for exercising a holochain networking/p2p node",
+  "description": "nodejs implementation of the lib3h p2p protocol",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
@@ -20,9 +20,10 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "ipc": "file:../ipc",
-    "n3h-common": "file:../n3h-common",
-    "tmp": "0.0.33"
+    "mosodium": "^0.0.1",
+    "mosocket": "^0.0.1",
+    "msgpack-lite": "^0.1.26",
+    "ipc": "^0.0.1"
   },
   "standard": {
     "env": {

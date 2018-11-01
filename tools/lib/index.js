@@ -1,32 +1,8 @@
 const fs = require('fs')
 const path = require('path')
-const childProcess = require('child_process')
 const jsdoc2md = require('jsdoc-to-markdown')
 
 const handlebars = require('handlebars')
-
-/**
- */
-exports.install = async function install () {
-  // XXX - huge kluge!!
-  // npm doesn't like `file:` dependency references...
-  // we have to:
-  //   - go through, delete all `file:` references
-  //   - npm install everything
-  //   - go through, add the `file:` references back
-  //   - npm install everything again
-
-  const orig = await _deleteFileRefs()
-  await _execAll('npm install')
-  await _restoreFileRefs(orig)
-  await _execAll('npm install')
-}
-
-/**
- */
-exports.test = async function test () {
-  await _execAll('npm test')
-}
 
 /**
  */
@@ -52,9 +28,8 @@ exports.buildTemplate = async function buildTemplate (opts) {
     projectName: opts.projectName,
     projectDesc: opts.projectDesc,
     baseDir,
-    pkgJson: path.resolve(path.join(baseDir, 'package.json')),
-    template: path.resolve(path.join(baseDir, '_templates_', opts.template)),
-    target: path.resolve(path.join(baseDir, opts.projectName))
+    template: path.resolve(path.join(baseDir, 'templates', opts.template)),
+    target: path.resolve(path.join(baseDir, 'packages', opts.projectName))
   }
 
   console.log(JSON.stringify(config, null, 2))
@@ -69,11 +44,6 @@ exports.buildTemplate = async function buildTemplate (opts) {
   }
 
   _recTplGen(config.template, config.target, config)
-
-  const pkg = JSON.parse(fs.readFileSync(
-    config.pkgJson).toString())
-  pkg.projects.push(config.projectName)
-  fs.writeFileSync(config.pkgJson, JSON.stringify(pkg, null, 2))
 }
 
 /**
@@ -100,42 +70,6 @@ function _recTplGen (srcDir, destDir, config) {
 
 /**
  */
-async function _execAll (cmd) {
-  const baseDir = path.resolve(path.join(__dirname, '..', '..'))
-  const pkgJson = path.resolve(path.join(baseDir, 'package.json'))
-  const projects = JSON.parse(fs.readFileSync(pkgJson).toString()).projects
-  for (let project of projects) {
-    await _execCmd(path.join(baseDir, project), cmd)
-  }
-}
-
-/**
- */
-function _execCmd (dir, cmd) {
-  return new Promise((resolve, reject) => {
-    try {
-      const args = cmd.split(/\s+/)
-      cmd = args.shift()
-      console.log(dir, cmd, JSON.stringify(args))
-      const proc = childProcess.spawn(cmd, args, {
-        cwd: dir,
-        shell: true,
-        stdio: 'inherit'
-      })
-      proc.on('close', (code) => {
-        if (code === 0) {
-          return resolve()
-        }
-        reject(new Error('process exited ' + code))
-      })
-    } catch (e) {
-      reject(e)
-    }
-  })
-}
-
-/**
- */
 async function _genAllDocs () {
   let alldocs = `# documentation
 
@@ -143,11 +77,10 @@ async function _genAllDocs () {
 
 `
   const baseDir = path.resolve(path.join(__dirname, '..', '..'))
-  const pkgJson = path.resolve(path.join(baseDir, 'package.json'))
-  const projects = JSON.parse(fs.readFileSync(pkgJson).toString()).projects
+  const projects = fs.readdirSync(path.join(baseDir, 'packages'))
   projects.sort()
   for (let project of projects) {
-    const ret = await _genDocs(path.join(baseDir, project), project)
+    const ret = await _genDocs(path.join(baseDir, 'packages', project), project)
     if (typeof ret === 'string' && ret.length) {
       alldocs += `### ${project}
 
@@ -206,47 +139,5 @@ async function _assertDir (dir) {
     }
   } catch (e) {
     fs.mkdirSync(dir)
-  }
-}
-
-/**
- */
-async function _deleteFileRefs () {
-  const baseDir = path.resolve(path.join(__dirname, '..', '..'))
-  const pkgJsonFile = path.resolve(path.join(baseDir, 'package.json'))
-  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonFile).toString())
-
-  const projects = pkgJson.projects
-
-  const out = {}
-  for (let project of projects) {
-    const file = path.join(baseDir, project, 'package.json')
-    out[file] = fs.readFileSync(file)
-
-    const data = JSON.parse(out[file].toString())
-    for (let depName in data.devDependencies) {
-      let dep = data.devDependencies[depName]
-      if (dep.startsWith('file:')) {
-        delete data.devDependencies[depName]
-      }
-    }
-    for (let depName in data.dependencies) {
-      let dep = data.dependencies[depName]
-      if (dep.startsWith('file:')) {
-        delete data.dependencies[depName]
-      }
-    }
-
-    fs.writeFileSync(file, JSON.stringify(data, null, 2))
-  }
-
-  return out
-}
-
-/**
- */
-async function _restoreFileRefs (orig) {
-  for (let file in orig) {
-    fs.writeFileSync(file, orig[file])
   }
 }
