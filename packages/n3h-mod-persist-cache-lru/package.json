@@ -1,12 +1,12 @@
 {
-  "name": "n3h-mod-message-libp2p",
+  "name": "n3h-mod-persist-cache-lru",
   "version": "0.0.1",
-  "description": "libp2p n3h message prototype module",
+  "description": "n3h lru persist-cache module",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
     "mocha": "mocha 'lib/**/*.test.js' 'bin/**/*.test.js'",
-    "nyc": "nyc npm run mocha || true",
+    "nyc": "nyc npm run mocha",
     "test": "npm run lint && npm run nyc",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
   },
@@ -20,14 +20,7 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "@nodeutils/defaults-deep": "^1.1.0",
-    "libp2p": "^0.23.1",
-    "libp2p-kad-dht": "^0.10.5",
-    "libp2p-mplex": "^0.8.2",
-    "libp2p-tcp": "^0.13.0",
-    "msgpack-lite": "^0.1.26",
-    "n3h-common": "file:../n3h-common",
-    "pull-stream": "^3.6.9"
+    "n3h-common": "^0.0.1"
   },
   "standard": {
     "env": {

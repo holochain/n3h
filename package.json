@@ -1,36 +1,19 @@
 {
-  "name": "n3h-monorepo-manager",
+  "name": "n3h",
   "version": "0.0.1",
-  "description": "this top-level is just tools for helping manage the monorepo",
-  "main": "n3h-monorepo-manager/lib/index.js",
+  "description": "this top-level lerna project is just tools for helping manage the monorepo",
   "scripts": {
-    "this-lint": "standard --fix 'n3h-monorepo-manager/lib/**/*.js' 'n3h-monorepo-manager/bin/**/*.js'",
-    "new": "node n3h-monorepo-manager/bin/monoman.js new",
-    "install-all": "node n3h-monorepo-manager/bin/monoman.js install",
-    "test-all": "node n3h-monorepo-manager/bin/monoman.js test",
-    "docs-all": "node n3h-monorepo-manager/bin/monoman.js docs",
-    "test": "npm run this-lint && npm run test-all && npm run docs-all"
+    "tools-lint": "standard --fix 'tools/lib/**/*.js' 'tools/bin/**/*.js'",
+    "docs": "node tools/bin/monoman.js docs",
+    "test": "npm run tools-lint && lerna run test && npm run docs",
+    "bootstrap": "lerna bootstrap --hoist"
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "standard": "^11.0.1"
-  },
-  "dependencies": {
     "handlebars": "^4.0.12",
     "jsdoc-to-markdown": "^4.0.1",
-    "prompt": "^1.0.0"
-  },
-  "projects": [
-    "n3h-common",
-    "mosodium",
-    "hc-dpki",
-    "mosocket",
-    "ipc",
-    "test-suite-executor",
-    "n3h-mod-nv-persist-sqlite3",
-    "n3h-mod-persist-cache-lru",
-    "n3h-mod-message-libp2p",
-    "n3h-mod-message-mosocket",
-    "n3h"
-  ]
+    "lerna": "^3.4.3",
+    "prompt": "^1.0.0",
+    "standard": "^11.0.1"
+  }
 }

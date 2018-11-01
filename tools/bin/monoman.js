@@ -45,12 +45,6 @@ async function main () {
     case 'new':
       await monoman.buildTemplate(await getPrompts())
       break
-    case 'install':
-      await monoman.install()
-      break
-    case 'test':
-      await monoman.test()
-      break
     case 'docs':
       await monoman.docs()
       break
@@ -58,8 +52,7 @@ async function main () {
       console.error('UNEXPECTED COMMAND:', process.argv[2])
       console.error('monoman.js usage:')
       console.error('  `monoman.js new` - create a new repo from template')
-      console.error('  `monoman.js install` - `npm install` all projects')
-      console.error('  `monoman.js test` - `npm test` all projects')
+      console.error('  `monoman.js docs` - generate docs for all projects')
       process.exit(1)
   }
 }

@@ -1,7 +1,7 @@
 {
-  "name": "n3h",
+  "name": "mosocket",
   "version": "0.0.1",
-  "description": "nodejs holochain networking library with swapable / configurable modules",
+  "description": "peer to peer networking protocol abstraction",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
@@ -20,14 +20,8 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "ipc": "file:../ipc",
-    "n3h-common": "file:../n3h-common",
-    "n3h-mod-message-libp2p": "file:../n3h-mod-message-libp2p",
-    "n3h-mod-nv-persist-sqlite3": "file:../n3h-mod-nv-persist-sqlite3",
-    "n3h-mod-persist-cache-lru": "file:../n3h-mod-persist-cache-lru",
-    "peer-id": "^0.11.0",
-    "peer-info": "^0.14.1",
-    "test-suite-executor": "file:../test-suite-executor"
+    "msgpack-lite": "^0.1.26",
+    "mosodium": "^0.0.1"
   },
   "standard": {
     "env": {

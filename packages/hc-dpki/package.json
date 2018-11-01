@@ -1,7 +1,7 @@
 {
-  "name": "n3h-mod-nv-persist-sqlite3",
+  "name": "hc-dpki",
   "version": "0.0.1",
-  "description": "n3h sqlite3 nv-persist module",
+  "description": "holochain key management libraries and utilities",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
@@ -20,8 +20,11 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "n3h-common": "file:../n3h-common",
-    "sqlite3": "^4.0.2"
+    "bip39": "^2.5.0",
+    "mosodium": "^0.0.1",
+    "msgpack-lite": "^0.1.26",
+    "n3h-common": "^0.0.1",
+    "prompt": "^1.0.0"
   },
   "standard": {
     "env": {
@@ -43,5 +46,10 @@
       "lcov",
       "text-summary"
     ]
+  },
+  "generate-docs": {
+    "util": "lib/util.js",
+    "keypair": "lib/keypair.js",
+    "seed": "lib/seed.js"
   }
 }

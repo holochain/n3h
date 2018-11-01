@@ -1,12 +1,12 @@
 {
-  "name": "n3h",
+  "name": "n3h-mod-nv-persist-sqlite3",
   "version": "0.0.1",
-  "description": "nodejs implementation of the lib3h p2p protocol",
+  "description": "n3h sqlite3 nv-persist module",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
     "mocha": "mocha 'lib/**/*.test.js' 'bin/**/*.test.js'",
-    "nyc": "nyc npm run mocha || true",
+    "nyc": "nyc npm run mocha",
     "test": "npm run lint && npm run nyc",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
   },
@@ -20,10 +20,8 @@
     "standard": "^11.0.1"
   },
   "dependencies": {
-    "mosodium": "file:../mosodium",
-    "mosocket": "file:../mosocket",
-    "msgpack-lite": "^0.1.26",
-    "ipc": "file:../ipc"
+    "n3h-common": "^0.0.1",
+    "sqlite3": "^4.0.2"
   },
   "standard": {
     "env": {

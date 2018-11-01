@@ -3,5 +3,5 @@ node_js:
   - "8"
   - "10"
 before_script:
-  - npm install
-  - npm run install-all
+  - npm install lerna
+  - npm run bootstrap
