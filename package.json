@@ -6,7 +6,7 @@
     "tools-lint": "standard --fix 'tools/lib/**/*.js' 'tools/bin/**/*.js'",
     "docs": "node tools/bin/monoman.js docs",
     "test": "npm run tools-lint && lerna run test && npm run docs",
-    "bootstrap": "lerna bootstrap --hoist"
+    "bootstrap": "lerna bootstrap --hoist --no-ci"
   },
   "license": "Apache-2.0",
   "devDependencies": {
