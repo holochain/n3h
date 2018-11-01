@@ -2,8 +2,8 @@ const path = require('path')
 const os = require('os')
 const { URL } = require('url')
 
-const { AsyncClass, mkdirp } = require('n3h-common')
-const { IpcServer } = require('./ipc-server')
+const { AsyncClass, mkdirp, Moduleit } = require('n3h-common')
+const { IpcServer } = require('n3h-ipc')
 
 const DEFAULT_MODULES = [
   require('n3h-mod-nv-persist-sqlite3'),
@@ -57,6 +57,8 @@ class N3hNode extends AsyncClass {
       }
     })
 
+    this._handlers = []
+
     this.$pushDestructor(async () => {
       await Promise.all([
         this._ipc.destroy()
@@ -67,6 +69,7 @@ class N3hNode extends AsyncClass {
       }
       this._resolve = null
       this._reject = null
+      this._handlers = null
     })
 
     await this._startupServices(modules)
@@ -86,11 +89,88 @@ class N3hNode extends AsyncClass {
   /**
    */
   async _startupServices (modules) {
-    this._ipc = await new IpcServer(this._ipcUri, modules)
-    console.log('#IPC-READY#')
-    this._ipc.on('configReady', async () => {
-      console.log('@@ modules initialized!!')
+    this._modules = await new Moduleit()
+    this._moduleTmp = this._modules.loadModuleGroup(modules)
+    this._defaultConfig = JSON.stringify(
+      this._moduleTmp.defaultConfig, null, 2)
+
+    this._state = 'need_config'
+
+    this._ipc = await new IpcServer()
+
+    // hack for module init
+    this._ipc.start = () => {}
+
+    // hack for module init
+    this._ipc.registerHandler = fn => {
+      this._handlers.push(fn)
+    }
+
+    // hack for module init
+    this._ipc.handleSend = (toAddress, fromAddress, data) => {
+      this._ipc.send('json', {
+        method: 'handleSend',
+        toAddress,
+        fromAddress,
+        data
+      })
+    }
+
+    this._ipc.on('clientAdd', id => {
+      console.log('@@ clientAdd', id)
     })
+    this._ipc.on('clientRemove', id => {
+      console.log('@@ clientRemove', id)
+    })
+    this._ipc.on('message', opt => this._handleMessage( opt.name, opt.data ))
+    await this._ipc.bind(this._ipcUri)
+
+    console.log('bound to', this._ipcUri)
+    console.log('#IPC-READY#')
+  }
+
+  /**
+   */
+  async _handleMessage (name, data) {
+    if (this.$isDestroyed()) {
+      return
+    }
+    if (name !== 'json') {
+      return
+    }
+    console.log('@@ got message', name, data)
+    if (data.method === 'requestState') {
+      this._ipc.send('json', {
+        method: 'state',
+        state: this._state
+      })
+    } else if (data.method === 'requestDefaultConfig') {
+      this._ipc.send('json', {
+        method: 'defaultConfig',
+        config: this._defaultConfig
+      })
+    } else if (data.method === 'setConfig') {
+      this._state = 'pending'
+
+      await this._moduleTmp.createGroup(data.config)
+      this._moduleTmp = null
+
+      this._state = 'ready'
+      this._ipc.send('json', {
+        method: 'state',
+        state: this._state
+      })
+    } else {
+      for (let handler of this._handlers) {
+        if (await handler(data, (name, data) => {
+          this._ipc.send('json', data)
+        })) {
+          return
+        }
+      }
+
+      throw new Error('unhandled method: ' + data.method)
+    }
   }
 }
 

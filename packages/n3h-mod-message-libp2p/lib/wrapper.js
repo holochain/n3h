@@ -61,27 +61,34 @@ class Wrapper extends AsyncClass {
       process.exit(1)
     }
 
-    this._modules.ipc.registerHandler(async (call, opt) => {
-      switch (call.method) {
+    this._modules.ipc.registerHandler(async (data, send) => {
+      switch (data.method) {
         case 'getId':
-          opt.resolve(this.getId())
+          send('json', {
+            method: 'id',
+            id: this.getId()
+          })
           return true
-        case 'getBindings':
-          opt.resolve(this.getBindings())
+        case 'requestBindings':
+          send('json', {
+            method: 'bindings',
+            bindings: this.getBindings()
+          })
           return true
         case 'connect':
-          // can take a while
-          opt.resetTimeout(10000)
-
-          await this.connect(call.address)
-          opt.resolve()
+          await this.connect(data.address)
+          send('json', {
+            method: 'connect',
+            address: data.address
+          })
           return true
         case 'send':
-          // can take a while
-          opt.resetTimeout(10000)
-
-          const result = await this.send(call.toAddress, call.data)
-          opt.resolve(result)
+          const result = await this.send(data.toAddress, data.data)
+          send('json', {
+            method: 'sendResult',
+            result,
+            id: data.id
+          })
           return true
       }
       return false
