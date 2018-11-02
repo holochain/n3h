@@ -129,15 +129,11 @@ class TestSuiteExecutor extends AsyncClass {
     wait = []
     for (let node of this._nodes) {
       wait.push((async () => {
-        try {
-          const state = await node.ipcClient.requestState()
-          node.$id = state.id
-          if (!hubAddr) {
-            hubId = state.id
-            hubAddr = state.bindings[0]
-          }
-        } catch (e) {
-          reject(e)
+        const state = await node.ipcClient.requestState()
+        node.$id = state.id
+        if (!hubAddr) {
+          hubId = state.id
+          hubAddr = state.bindings[0]
         }
       })())
     }

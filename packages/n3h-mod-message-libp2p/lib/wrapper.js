@@ -49,7 +49,7 @@ class Wrapper extends AsyncClass {
 
     this._node.on('handleSend', async opt => {
       console.log('@@ handleSend @@', opt.from, opt.data)
-      const result = await this._modules.ipc.handleSend({
+      await this._modules.ipc.handleSend({
         toAddress: this.getId(),
         fromAddress: opt.from,
         data: opt.data,

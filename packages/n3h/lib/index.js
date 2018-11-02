@@ -122,7 +122,7 @@ class N3hNode extends AsyncClass {
         resolve: (...args) => {
           delete this._sendHandlerIdWait[id]
           opt.resolve(...args)
-        },
+        }
       }
       this._ipc.send('json', {
         method: 'handleSend',
@@ -139,7 +139,7 @@ class N3hNode extends AsyncClass {
     this._ipc.on('clientRemove', id => {
       console.log('@@ clientRemove', id)
     })
-    this._ipc.on('message', opt => this._handleMessage( opt.name, opt.data ))
+    this._ipc.on('message', opt => this._handleMessage(opt.name, opt.data))
     await this._ipc.bind(this._ipcUri)
 
     console.log('bound to', this._ipcUri)

@@ -69,7 +69,7 @@ class IpcWrapper extends AsyncClass {
 
   // -- private -- //
 
-  _postGenericWait(eventName, timeoutMs) {
+  _postGenericWait (eventName, timeoutMs) {
     timeoutMs || (timeoutMs = 2000)
     const innerStack = (new Error('stack')).stack
     return new Promise((resolve, reject) => {
