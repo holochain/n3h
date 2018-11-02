@@ -59,6 +59,8 @@ class N3hNode extends AsyncClass {
 
     this._handlers = []
 
+    this._sendHandlerIdWait = {}
+
     this.$pushDestructor(async () => {
       await Promise.all([
         this._ipc.destroy()
@@ -70,6 +72,7 @@ class N3hNode extends AsyncClass {
       this._resolve = null
       this._reject = null
       this._handlers = null
+      this._sendHandlerIdWait = null
     })
 
     await this._startupServices(modules)
@@ -85,6 +88,12 @@ class N3hNode extends AsyncClass {
   }
 
   // -- private -- //
+
+  _getNextId () {
+    this._lastId || (this._lastId = Math.random())
+    this._lastId += 1 + Math.random()
+    return this._lastId.toString(36)
+  }
 
   /**
    */
@@ -107,12 +116,20 @@ class N3hNode extends AsyncClass {
     }
 
     // hack for module init
-    this._ipc.handleSend = (toAddress, fromAddress, data) => {
+    this._ipc.handleSend = opt => {
+      const id = this._getNextId()
+      this._sendHandlerIdWait[id] = {
+        resolve: (...args) => {
+          delete this._sendHandlerIdWait[id]
+          opt.resolve(...args)
+        },
+      }
       this._ipc.send('json', {
         method: 'handleSend',
-        toAddress,
-        fromAddress,
-        data
+        id,
+        toAddress: opt.toAddress,
+        fromAddress: opt.fromAddress,
+        data: opt.data
       })
     }
 
@@ -138,7 +155,31 @@ class N3hNode extends AsyncClass {
     if (name !== 'json') {
       return
     }
-    console.log('@@ got message', name, data)
+
+    if (this._state !== 'ready') {
+      await this._handleUnreadyMessage(name, data)
+      return
+    }
+
+    if (data.method === 'sendResult' && data.id in this._sendHandlerIdWait) {
+      this._sendHandlerIdWait[data.id].resolve(data.data)
+      return
+    }
+
+    for (let handler of this._handlers) {
+      if (await handler(data, (name, data) => {
+        this._ipc.send('json', data)
+      })) {
+        return
+      }
+    }
+
+    throw new Error('unhandled method: ' + data.method)
+  }
+
+  /**
+   */
+  async _handleUnreadyMessage (name, data) {
     if (data.method === 'requestState') {
       this._ipc.send('json', {
         method: 'state',
@@ -161,15 +202,7 @@ class N3hNode extends AsyncClass {
         state: this._state
       })
     } else {
-      for (let handler of this._handlers) {
-        if (await handler(data, (name, data) => {
-          this._ipc.send('json', data)
-        })) {
-          return
-        }
-      }
-
-      throw new Error('unhandled method: ' + data.method)
+      throw new Error('unhandled method: "' + data.method + '" (may be invalid for state: "' + this._state + '"')
     }
   }
 }

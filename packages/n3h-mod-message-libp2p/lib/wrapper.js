@@ -49,11 +49,13 @@ class Wrapper extends AsyncClass {
 
     this._node.on('handleSend', async opt => {
       console.log('@@ handleSend @@', opt.from, opt.data)
-      const result = await this._modules.ipc.handleSend(
-        this.getId(),
-        opt.from,
-        opt.data)
-      opt.resolve(result)
+      const result = await this._modules.ipc.handleSend({
+        toAddress: this.getId(),
+        fromAddress: opt.from,
+        data: opt.data,
+        resolve: opt.resolve,
+        reject: opt.reject
+      })
     })
 
     for (let connect of this._config.connectList) {
@@ -63,15 +65,11 @@ class Wrapper extends AsyncClass {
 
     this._modules.ipc.registerHandler(async (data, send) => {
       switch (data.method) {
-        case 'getId':
+        case 'requestState':
           send('json', {
-            method: 'id',
-            id: this.getId()
-          })
-          return true
-        case 'requestBindings':
-          send('json', {
-            method: 'bindings',
+            method: 'state',
+            state: 'ready',
+            id: this.getId(),
             bindings: this.getBindings()
           })
           return true
@@ -79,6 +77,7 @@ class Wrapper extends AsyncClass {
           await this.connect(data.address)
           send('json', {
             method: 'connect',
+            id: data.id,
             address: data.address
           })
           return true
@@ -86,8 +85,8 @@ class Wrapper extends AsyncClass {
           const result = await this.send(data.toAddress, data.data)
           send('json', {
             method: 'sendResult',
-            result,
-            id: data.id
+            id: data.id,
+            result
           })
           return true
       }

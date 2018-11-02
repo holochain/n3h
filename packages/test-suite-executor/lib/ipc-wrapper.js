@@ -5,14 +5,8 @@ class IpcWrapper extends AsyncClass {
   async init (ipcUri) {
     await super.init()
 
-    this._waitBuckets = {
-      state: [],
-      defConfig: [],
-      getId: [],
-      bindings: [],
-      connect: [],
-      send: []
-    }
+    this._genericWait = {}
+    this._idWait = {}
 
     this._ipc = await new IpcClient()
     this._ipc.on('message', opt => this._handleMessage(opt.name, opt.data))
@@ -21,28 +15,25 @@ class IpcWrapper extends AsyncClass {
     this.$pushDestructor(async () => {
       await this._ipc.destroy()
       this._ipc = null
-      this._waitBuckets = null
+      this._genericWait = null
+      this._idWait = null
     })
   }
 
   requestState () {
     this.$checkDestroyed()
-    return new Promise((resolve, reject) => {
-      this._waitBuckets.state.push({ resolve, reject })
-      this._ipc.send('json', {
-        method: 'requestState'
-      })
+    this._ipc.send('json', {
+      method: 'requestState'
     })
+    return this._postGenericWait('state')
   }
 
   requestDefaultConfig () {
     this.$checkDestroyed()
-    return new Promise((resolve, reject) => {
-      this._waitBuckets.defConfig.push({ resolve, reject })
-      this._ipc.send('json', {
-        method: 'requestDefaultConfig'
-      })
+    this._ipc.send('json', {
+      method: 'requestDefaultConfig'
     })
+    return this._postGenericWait('defaultConfig')
   }
 
   setConfig (config) {
@@ -53,51 +44,100 @@ class IpcWrapper extends AsyncClass {
     })
   }
 
-  getId () {
-    this.$checkDestroyed()
-    return new Promise((resolve, reject) => {
-      this._waitBuckets.getId.push({ resolve, reject })
-      this._ipc.send('json', {
-        method: 'getId'
-      })
-    })
-  }
-
-  requestBindings () {
-    this.$checkDestroyed()
-    return new Promise((resolve, reject) => {
-      this._waitBuckets.bindings.push({ resolve, reject })
-      this._ipc.send('json', {
-        method: 'requestBindings'
-      })
-    })
-  }
-
   connect (address) {
     this.$checkDestroyed()
-    return new Promise((resolve, reject) => {
-      this._waitBuckets.connect.push({ resolve, reject })
-      this._ipc.send('json', {
-        method: 'connect',
-        address
-      })
+    const { id, promise } = this._postIdWait()
+    this._ipc.send('json', {
+      method: 'connect',
+      id,
+      address
     })
+    return promise
   }
 
   send (data) {
     this.$checkDestroyed()
-    return new Promise((resolve, reject) => {
-      this._waitBuckets.send.push({ resolve, reject })
-      this._ipc.send('json', {
-        method: 'send',
-        toAddress: data.toAddress,
-        id: data.id,
-        data: data.data
-      })
+    const { id, promise } = this._postIdWait()
+    this._ipc.send('json', {
+      method: 'send',
+      id,
+      toAddress: data.toAddress,
+      data: data.data
     })
+    return promise
   }
 
   // -- private -- //
+
+  _postGenericWait(eventName, timeoutMs) {
+    timeoutMs || (timeoutMs = 2000)
+    const innerStack = (new Error('stack')).stack
+    return new Promise((resolve, reject) => {
+      try {
+        const timer = setTimeout(() => {
+          cleanup()
+          reject(new Error('timeout: ' + innerStack))
+        }, timeoutMs)
+        const cleanup = () => {
+          clearTimeout(timer)
+        }
+        try {
+          if (!(eventName in this._genericWait)) {
+            this._genericWait[eventName] = []
+          }
+          this._genericWait[eventName].push({
+            resolve: (...args) => {
+              cleanup()
+              resolve(...args)
+            }
+          })
+        } catch (e) {
+          cleanup()
+          reject(e)
+        }
+      } catch (e) {
+        reject(e)
+      }
+    })
+  }
+
+  _getNextId () {
+    this._lastId || (this._lastId = Math.random())
+    this._lastId += 1 + Math.random()
+    return this._lastId.toString(36)
+  }
+
+  _postIdWait (timeoutMs) {
+    const id = this._getNextId()
+    timeoutMs || (timeoutMs = 2000)
+    const innerStack = (new Error('stack')).stack
+    let promise = new Promise((resolve, reject) => {
+      try {
+        const timer = setTimeout(() => {
+          cleanup()
+          reject(new Error('timeout: ' + innerStack))
+        }, timeoutMs)
+        const cleanup = () => {
+          delete this._idWait[id]
+          clearTimeout(timer)
+        }
+        try {
+          this._idWait[id] = {
+            resolve: (...args) => {
+              cleanup()
+              resolve(...args)
+            }
+          }
+        } catch (e) {
+          cleanup()
+          reject(e)
+        }
+      } catch (e) {
+        reject(e)
+      }
+    })
+    return { id, promise }
+  }
 
   async _handleMessage (name, data) {
     if (this.$isDestroyed()) {
@@ -106,43 +146,27 @@ class IpcWrapper extends AsyncClass {
     if (name !== 'json') {
       return
     }
-    if (data.method === 'state') {
-      for (let i of this._waitBuckets.state) {
+
+    if (data.id && data.id in this._idWait) {
+      this._idWait[data.id].resolve(data)
+      return
+    }
+
+    if (data.method in this._genericWait) {
+      for (let i of this._genericWait[data.method]) {
         i.resolve(data)
       }
-      this._waitBuckets.state = []
-    } else if (data.method === 'defaultConfig') {
-      for (let i of this._waitBuckets.defConfig) {
-        i.resolve(data)
-      }
-      this._waitBuckets.defConfig = []
-    } else if (data.method === 'id') {
-      for (let i of this._waitBuckets.getId) {
-        i.resolve(data)
-      }
-      this._waitBuckets.bindings = []
-    } else if (data.method === 'bindings') {
-      for (let i of this._waitBuckets.bindings) {
-        i.resolve(data)
-      }
-      this._waitBuckets.bindings = []
-    } else if (data.method === 'connect') {
-      for (let i of this._waitBuckets.connect) {
-        i.resolve(data)
-      }
-      this._waitBuckets.connect = []
-    } else if (data.method === 'sendResult') {
-      for (let i of this._waitBuckets.send) {
-        i.resolve(data)
-      }
-      this._waitBuckets.send = []
-    } else if (data.method === 'handleSend') {
-      const out = 'echo: ' + data.data
+      this._genericWait[data.method] = []
+      return
+    }
+
+    if (data.method === 'handleSend') {
+      const message = 'echo: ' + data.data
       this._ipc.send('json', {
-        method: 'send',
+        method: 'sendResult',
         toAddress: data.fromAddress,
-        id: out,
-        data: out
+        id: data.id,
+        data: message
       })
     }
   }

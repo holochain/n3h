@@ -123,44 +123,35 @@ class TestSuiteExecutor extends AsyncClass {
     await Promise.all(wait)
     console.log('@@ setComplete')
 
-    wait = []
-    for (let node of this._nodes) {
-      wait.push(node.ipcClient.requestState())
-    }
-
-    console.log('@@', await Promise.all(wait))
+    let hubId = null
+    let hubAddr = null
 
     wait = []
     for (let node of this._nodes) {
-      wait.push(node.ipcClient.requestBindings())
-    }
-
-    wait = await Promise.all(wait)
-    console.log('@@', wait)
-
-    const hubAddr = wait[0].bindings[0]
-
-    console.log('@@ using as hub:', hubAddr)
-
-    wait = []
-    for (let i = 1; i < this._nodes.length; ++i) {
-      const node = this._nodes[i]
-      wait.push(node.ipcClient.connect(hubAddr))
-    }
-
-    console.log('@@', await Promise.all(wait))
-
-    wait = []
-    for (let node of this._nodes) {
-      wait.push(new Promise(async (resolve, reject) => {
+      wait.push((async () => {
         try {
-          const id = await node.ipcClient.getId()
-          node.$id = id.id
-          resolve(id.id)
+          const state = await node.ipcClient.requestState()
+          node.$id = state.id
+          if (!hubAddr) {
+            hubId = state.id
+            hubAddr = state.bindings[0]
+          }
         } catch (e) {
           reject(e)
         }
-      }))
+      })())
+    }
+
+    await Promise.all(wait)
+
+    wait = []
+    for (let node of this._nodes) {
+      if (node.$id === hubId) {
+        console.log('hub address:', hubAddr)
+      } else {
+        console.log('connect', node.$id, 'to hub')
+        wait.push(node.ipcClient.connect(hubAddr))
+      }
     }
 
     console.log('@@', await Promise.all(wait))
@@ -173,13 +164,12 @@ class TestSuiteExecutor extends AsyncClass {
         }
         console.log('message from', fromNode.$id, 'to', toNode.$id)
         wait.push((async () => {
-          const magic = Math.random().toString(36).substr(2, 6)
+          const message = 'message # ' + (wait.length + 1)
           const result = await fromNode.ipcClient.send({
             toAddress: toNode.$id,
-            id: magic,
-            data: magic
+            data: message
           })
-          if (result !== 'echo: ' + magic) {
+          if (result.result !== 'echo: ' + message) {
             throw new Error('unexpected result: ' + JSON.stringify(result))
           }
           return result
