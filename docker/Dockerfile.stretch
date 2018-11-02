@@ -1,0 +1,7 @@
+FROM node:10-stretch
+
+RUN apt-get update && apt-get dist-upgrade -y
+
+COPY n3h.tar /n3h.tar
+RUN tar xf n3h.tar
+RUN cd n3h && npm install lerna && npm run bootstrap

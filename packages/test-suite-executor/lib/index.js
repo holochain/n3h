@@ -89,8 +89,8 @@ class TestSuiteExecutor extends AsyncClass {
       wait.push(node.ipcClient.requestDefaultConfig())
     }
 
-    const defConfig = JSON.parse((await Promise.all(wait))[0].config)
-    console.log('@@config@@', JSON.stringify(defConfig, null, 2))
+    const defConfig = (await Promise.all(wait))[0].config
+    console.log('@@config@@', defConfig)
 
     for (let node of this._nodes) {
       node.ipcClient.setConfig(defConfig)
