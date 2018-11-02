@@ -6,7 +6,7 @@
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
     "mocha": "mocha 'lib/**/*.test.js' 'bin/**/*.test.js'",
-    "nyc": "nyc npm run mocha || true",
+    "nyc": "nyc npm run mocha",
     "test": "npm run lint && npm run nyc",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
   },
@@ -35,7 +35,7 @@
     }
   },
   "nyc": {
-    "check-coverage": true,
+    "check-coverage": false,
     "per-file": false,
     "lines": 80,
     "statements": 80,

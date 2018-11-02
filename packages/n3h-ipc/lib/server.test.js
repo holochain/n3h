@@ -25,31 +25,33 @@ describe('IpcServer Suite', () => {
   })
 
   it('should bind and close without errors', async () => {
-    const srv = new IpcServer()
+    const srv = await new IpcServer()
     await srv.bind(['bla'])
-    srv.destroy()
+    await srv.destroy()
   })
 
   it('should send pong on ping', (done) => {
     (async () => {
-      const srv = new IpcServer()
+      const srv = await new IpcServer()
       await srv.bind(['bla'])
-      const myDone = (msg) => {
-        srv.destroy()
+      const myDone = async (msg) => {
+        await srv.destroy()
         done(msg)
       }
       srv._socket.on('_test_send', (data) => {
         try {
-          expect(data[2].readUInt8(0)).equals(msg.Message.PONG)
+          const dec = msg.decode(data[2], data[3])
+          expect(dec.name).equals('pong')
+          expect(dec.data.orig).equals(42)
           myDone()
         } catch (e) {
           myDone(e)
         }
       })
-      srv._socket.emit('message', Buffer.alloc(0), Buffer.alloc(0), Buffer.from([
-        msg.Message.PING,
-        0
-      ]))
+      const { name, data } = msg.encode('ping', {
+        sent: 42
+      })
+      srv._socket.emit('message', Buffer.alloc(0), Buffer.alloc(0), name, data)
     })().then(() => {}, done)
   })
 })

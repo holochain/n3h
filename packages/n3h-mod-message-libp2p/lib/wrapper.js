@@ -49,11 +49,13 @@ class Wrapper extends AsyncClass {
 
     this._node.on('handleSend', async opt => {
       console.log('@@ handleSend @@', opt.from, opt.data)
-      const result = await this._modules.ipc.handleSend(
-        this.getId(),
-        opt.from,
-        opt.data)
-      opt.resolve(result)
+      await this._modules.ipc.handleSend({
+        toAddress: this.getId(),
+        fromAddress: opt.from,
+        data: opt.data,
+        resolve: opt.resolve,
+        reject: opt.reject
+      })
     })
 
     for (let connect of this._config.connectList) {
@@ -61,27 +63,31 @@ class Wrapper extends AsyncClass {
       process.exit(1)
     }
 
-    this._modules.ipc.registerHandler(async (call, opt) => {
-      switch (call.method) {
-        case 'getId':
-          opt.resolve(this.getId())
-          return true
-        case 'getBindings':
-          opt.resolve(this.getBindings())
+    this._modules.ipc.registerHandler(async (data, send) => {
+      switch (data.method) {
+        case 'requestState':
+          send('json', {
+            method: 'state',
+            state: 'ready',
+            id: this.getId(),
+            bindings: this.getBindings()
+          })
           return true
         case 'connect':
-          // can take a while
-          opt.resetTimeout(10000)
-
-          await this.connect(call.address)
-          opt.resolve()
+          await this.connect(data.address)
+          send('json', {
+            method: 'connect',
+            id: data.id,
+            address: data.address
+          })
           return true
         case 'send':
-          // can take a while
-          opt.resetTimeout(10000)
-
-          const result = await this.send(call.toAddress, call.data)
-          opt.resolve(result)
+          const result = await this.send(data.toAddress, data.data)
+          send('json', {
+            method: 'sendResult',
+            id: data.id,
+            result
+          })
           return true
       }
       return false

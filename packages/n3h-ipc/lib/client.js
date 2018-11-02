@@ -3,10 +3,9 @@ IPC Client represents an ipc listening socket designed to connect to a running p
 */
 
 const zmq = require('zeromq')
-const msgpack = require('msgpack-lite')
 
 const msg = require('./msg-types')
-const common = require('./common')
+const { AsyncClass } = require('n3h-common')
 
 /**
  * IPC connection client helper
@@ -16,12 +15,13 @@ const common = require('./common')
  * // or
  * await cli.connect('tcp://127.0.0.1:12345')
  */
-class IpcClient extends common.EventClass {
+class IpcClient extends AsyncClass {
   /**
    * create a new IpcClient instance
    */
-  constructor () {
-    super(() => {
+  async init () {
+    await super.init()
+    this.$pushDestructor(() => {
       if (typeof this._stopHeartbeatTimers === 'function') {
         this._stopHeartbeatTimers()
         this._stopHeartbeatTimers = null
@@ -89,7 +89,9 @@ class IpcClient extends common.EventClass {
 
         setConnectTimeout()
 
-        this.ping()
+        this._send('ping', {
+          sent: Date.now()
+        })
 
         heartbeatTimer = setTimeout(() => {
           nextPoll()
@@ -113,34 +115,9 @@ class IpcClient extends common.EventClass {
     })
   }
 
-  /**
-   * Send an extra ping to the server, you probably don't need to call this.
-   */
-  ping () {
+  send (name, data) {
     this.$checkDestroyed()
-    this._send(msg.Message.PING, [Date.now()])
-  }
-
-  /**
-   * Transmit a `call` message to the ipc server
-   * @param {Buffer} data - the message content
-   * @return {Buffer} the response data
-   */
-  call (data, timeout) {
-    this.$checkDestroyed()
-    timeout || (timeout = 2000)
-    if (!(data instanceof Buffer)) {
-      throw new Error('data must be a Buffer')
-    }
-    const messageId = this.$nextId()
-    const promise = this.$trackMessage(messageId, timeout)
-
-    this._send(msg.Message.CALL, [
-      messageId,
-      data
-    ])
-
-    return promise
+    this._send(name, data)
   }
 
   // -- private -- //
@@ -150,101 +127,35 @@ class IpcClient extends common.EventClass {
    * @private
    */
   _handleMessage (...args) {
-    if (this._destroyed) return
-    if (args.length !== 3) {
+    if (this.$isDestroyed()) return
+    if (args.length !== 4) {
       throw new Error('wrong msg size: ' + args.length)
     }
-    const type = args[2].readUInt8(0)
-    switch (type) {
-      case msg.Message.PONG:
-        this._handlePong(msgpack.decode(args[2].slice(1)))
-        break
-      case msg.Message.CALL:
-        this._handleCall(msgpack.decode(args[2].slice(1)))
-        break
-      case msg.Message.CALL_OK:
-        this._handleCallOk(msgpack.decode(args[2].slice(1)))
-        break
-      case msg.Message.CALL_FAIL:
-        this._handleCallFail(msgpack.decode(args[2].slice(1)))
-        break
-      default:
-        throw new Error('unhandled message type: ' + type)
+    const { name, data } = msg.decode(args[2], args[3])
+    if (name === 'ping') {
+      this._send('pong', {
+        orig: data.sent,
+        recv: Date.now()
+      })
     }
-  }
-
-  /**
-   * we received a pong message... don't do anything for now
-   * @private
-   */
-  _handlePong (msg) {
-    // if (this._destroyed) return
-    // console.log('got pong', {
-    //   toServerMs: msg[1] - msg[0],
-    //   roundTripMs: Date.now() - msg[0]
-    // })
-  }
-
-  /**
-   * we have received a `call` respond to it
-   * @private
-   */
-  async _handleCall (data) {
-    if (this._destroyed) return
-    try {
-      const result = await this.$timeoutPromise((resolve, reject) => {
-        this.emit('call', {
-          data: Buffer.from(data[1]),
-          resolve,
-          reject
-        })
-      }, 2000)
-      this._send(msg.Message.CALL_OK, [
-        data[0],
-        result
-      ])
-    } catch (e) {
-      this._send(msg.Message.CALL_FAIL, [
-        data[0],
-        e.stack || e.toString()
-      ])
-    }
-  }
-
-  /**
-   * we received a success response
-   * @private
-   */
-  _handleCallOk (msg) {
-    this.$resolveWaiting(msg[0], msg[1])
-  }
-
-  /**
-   * we received a failed response
-   * @private
-   */
-  _handleCallFail (msg) {
-    this.$rejectWaiting(msg[0], msg[1])
+    this.emit('message', {
+      name,
+      data
+    })
   }
 
   /**
    * Actually send data out to the server
    * @private
    */
-  _send (type, data) {
-    if (this._destroyed) return
-    if (data) {
-      data = Buffer.concat([
-        Buffer.from([type]),
-        msgpack.encode(data)
-      ])
-    } else {
-      data = Buffer.from([type])
-    }
+  _send (name, data) {
+    if (this.$isDestroyed()) return
+    const enc = msg.encode(name, data)
     this._socket.send([
       msg.SRV_ID,
       Buffer.alloc(0),
-      data
+      enc.name,
+      enc.data
     ])
   }
 }
