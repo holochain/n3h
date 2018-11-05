@@ -5,6 +5,7 @@
   "scripts": {
     "tools-lint": "standard --fix 'tools/lib/**/*.js' 'tools/bin/**/*.js'",
     "docs": "node tools/bin/monoman.js docs",
+    "new": "node tools/bin/monoman.js new",
     "test": "npm run tools-lint && lerna run test && npm run docs",
     "bootstrap": "lerna bootstrap --hoist --no-ci"
   },
