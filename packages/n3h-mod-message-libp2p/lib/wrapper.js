@@ -64,6 +64,7 @@ class Wrapper extends AsyncClass {
     }
 
     this._modules.ipc.registerHandler(async (data, send) => {
+      console.log('@@ libp2p check', data)
       switch (data.method) {
         case 'requestState':
           send('json', {

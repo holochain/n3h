@@ -1,10 +1,10 @@
 # n3h-monorepo-manager
 
-This top-level is just tools for helping manage the monorepo.
+This top-level is just tools for helping manage the monorepo. Monorepo managed by [Lerna](https://www.npmjs.com/package/lerna)
 
 To relieve some of the overhead of mananging node dependencies, putting all prototyping projects related to holochain networking / p2p in this single repository for now.
 
-See the [Documentation](docs/index.md)!
+See the [API Documentation](docs/index.md)!
 
 ### Usage
 
@@ -14,10 +14,10 @@ First, make sure our own dependencies are installed:
 npm install
 ```
 
-Next, install all project dependencies:
+Next, install all project dependencies (through lerna monorepo manager):
 
 ```shell
-npm run install-all
+npm run bootstrap
 ```
 
 Now, test all projects:

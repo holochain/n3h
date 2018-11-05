@@ -156,11 +156,6 @@ class N3hNode extends AsyncClass {
       return
     }
 
-    if (this._state !== 'ready') {
-      await this._handleUnreadyMessage(name, data)
-      return
-    }
-
     if (data.method === 'sendResult' && data.id in this._sendHandlerIdWait) {
       this._sendHandlerIdWait[data.id].resolve(data.data)
       return
@@ -174,7 +169,7 @@ class N3hNode extends AsyncClass {
       }
     }
 
-    throw new Error('unhandled method: ' + data.method)
+    await this._handleUnreadyMessage(name, data)
   }
 
   /**
@@ -193,14 +188,8 @@ class N3hNode extends AsyncClass {
     } else if (data.method === 'setConfig') {
       this._state = 'pending'
 
-      await this._moduleTmp.createGroup(data.config)
+      await this._moduleTmp.createGroup(JSON.parse(data.config))
       this._moduleTmp = null
-
-      this._state = 'ready'
-      this._ipc.send('json', {
-        method: 'state',
-        state: this._state
-      })
     } else {
       throw new Error('unhandled method: "' + data.method + '" (may be invalid for state: "' + this._state + '"')
     }
