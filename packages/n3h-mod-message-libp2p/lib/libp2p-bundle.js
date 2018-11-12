@@ -83,21 +83,26 @@ class LibP2pBundle extends AsyncClass {
     })
 
     this._node.on('peer:connect', async (peer) => {
-      console.log('new peer', peer.id.toB58String())
+      peer = peer.id.toB58String()
+
+      console.log('new peer', peer)
 
       // side effect: adds this to our peer cache
       const result = msgpack.decode(await this._p2pSend(
-        peer.id.toB58String(), msgpack.encode({
+        peer, msgpack.encode({
           type: 'ping',
           now: Date.now()
         })))
 
       console.log(' -- ping round trip -- ' + (
         Date.now() - result.originTime) + ' ms')
+
+      this.emit('peerConnected', peer)
     })
 
     this._node.on('peer:disconnect', (peer) => {
       peer = peer.id.toB58String()
+      this.emit('peerDisconnected', peer)
       console.log('lost peer', peer)
       this._peerCache.delete(peer)
     })
@@ -123,12 +128,36 @@ class LibP2pBundle extends AsyncClass {
   /**
    */
   async connect (multiaddr) {
-    await $p(this._node.dial.bind(this._node, multiaddr))
+    if (multiaddr.indexOf(this.getId()) > -1) {
+      // XXX Hack for debugging connect workflow
+      // libp2p doesn't like us connecting to ourselves
+      // let's send back a fake `peerConnected` message
+      this.emit('peerConnected', this.getId())
+      return
+    }
+
+    const res = await $p(this._node.dial.bind(this._node, multiaddr))
+    console.log('@@ connected @@', res)
   }
 
   /**
    */
   async send (id, message) {
+    if (id === this.getId()) {
+      // XXX Hack - another short circuit...
+      // pass the handle back to ourselves, then pass back the response too
+      const result = await new Promise((resolve, reject) => {
+        this.emit('handleSend', {
+          from: this.getId(),
+          data: message,
+          resolve,
+          reject
+        })
+      })
+
+      return result
+    }
+
     return msgpack.decode(await this._p2pSend(id, msgpack.encode({
       type: 'send',
       data: message

@@ -140,17 +140,34 @@ class TestSuiteExecutor extends AsyncClass {
 
     await Promise.all(wait)
 
-    wait = []
     for (let node of this._nodes) {
       if (node.$id === hubId) {
         console.log('hub address:', hubAddr)
       } else {
         console.log('connect', node.$id, 'to hub')
-        wait.push(node.ipcClient.connect(hubAddr))
+        node.ipcClient.connect(hubAddr)
       }
     }
 
-    console.log('@@', await Promise.all(wait))
+    let peerConnectedCount = 0
+    for (;;) {
+      await $sleep(100)
+      let done = false
+      for (let node of this._nodes) {
+        const uh = node.ipcClient.getUnhandled()
+        if (uh && uh.method === 'peerConnected') {
+          ++peerConnectedCount
+          console.log('@@ new peer count', peerConnectedCount, uh.id)
+          if (peerConnectedCount >= 4) {
+            done = true
+            break
+          }
+        }
+      }
+      if (done) {
+        break
+      }
+    }
 
     wait = []
     for (let fromNode of this._nodes) {
@@ -165,7 +182,7 @@ class TestSuiteExecutor extends AsyncClass {
             toAddress: toNode.$id,
             data: message
           })
-          if (result.result !== 'echo: ' + message) {
+          if (result.data !== 'echo: ' + message) {
             throw new Error('unexpected result: ' + JSON.stringify(result))
           }
           return result

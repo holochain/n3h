@@ -58,6 +58,20 @@ class Wrapper extends AsyncClass {
       })
     })
 
+    this._node.on('peerConnected', async id => {
+      this._modules.ipc.send('json', {
+        method: 'peerConnected',
+        id
+      })
+    })
+
+    this._node.on('peerDisconnected', async id => {
+      this._modules.ipc.send('json', {
+        method: 'peerDisconnected',
+        id
+      })
+    })
+
     for (let connect of this._config.connectList) {
       console.error('connectlist not yet implemented', connect)
       process.exit(1)
@@ -76,18 +90,13 @@ class Wrapper extends AsyncClass {
           return true
         case 'connect':
           await this.connect(data.address)
-          send('json', {
-            method: 'connect',
-            id: data.id,
-            address: data.address
-          })
           return true
         case 'send':
           const result = await this.send(data.toAddress, data.data)
           send('json', {
             method: 'sendResult',
-            id: data.id,
-            result
+            _id: data._id,
+            data: result
           })
           return true
       }

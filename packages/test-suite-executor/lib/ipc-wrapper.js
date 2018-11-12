@@ -5,6 +5,8 @@ class IpcWrapper extends AsyncClass {
   async init (ipcUri) {
     await super.init()
 
+    this._unhandledMessages = []
+
     this._genericWait = {}
     this._idWait = {}
 
@@ -15,9 +17,14 @@ class IpcWrapper extends AsyncClass {
     this.$pushDestructor(async () => {
       await this._ipc.destroy()
       this._ipc = null
+      this._unhandledMessages = null
       this._genericWait = null
       this._idWait = null
     })
+  }
+
+  getUnhandled () {
+    return this._unhandledMessages.shift()
   }
 
   requestState () {
@@ -46,13 +53,10 @@ class IpcWrapper extends AsyncClass {
 
   connect (address) {
     this.$checkDestroyed()
-    const { id, promise } = this._postIdWait()
     this._ipc.send('json', {
       method: 'connect',
-      id,
       address
     })
-    return promise
   }
 
   send (data) {
@@ -60,7 +64,7 @@ class IpcWrapper extends AsyncClass {
     const { id, promise } = this._postIdWait()
     this._ipc.send('json', {
       method: 'send',
-      id,
+      _id: id,
       toAddress: data.toAddress,
       data: data.data
     })
@@ -147,8 +151,8 @@ class IpcWrapper extends AsyncClass {
       return
     }
 
-    if (data.id && data.id in this._idWait) {
-      this._idWait[data.id].resolve(data)
+    if (data._id && data._id in this._idWait) {
+      this._idWait[data._id].resolve(data)
       return
     }
 
@@ -163,12 +167,14 @@ class IpcWrapper extends AsyncClass {
     if (data.method === 'handleSend') {
       const message = 'echo: ' + data.data
       this._ipc.send('json', {
-        method: 'sendResult',
-        toAddress: data.fromAddress,
-        id: data.id,
+        method: 'handleSendResult',
+        _id: data._id,
         data: message
       })
+      return
     }
+
+    this._unhandledMessages.push(data)
   }
 }
 

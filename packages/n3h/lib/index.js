@@ -126,7 +126,7 @@ class N3hNode extends AsyncClass {
       }
       this._ipc.send('json', {
         method: 'handleSend',
-        id,
+        _id: id,
         toAddress: opt.toAddress,
         fromAddress: opt.fromAddress,
         data: opt.data
@@ -156,8 +156,8 @@ class N3hNode extends AsyncClass {
       return
     }
 
-    if (data.method === 'sendResult' && data.id in this._sendHandlerIdWait) {
-      this._sendHandlerIdWait[data.id].resolve(data.data)
+    if (data.method === 'handleSendResult' && data._id in this._sendHandlerIdWait) {
+      this._sendHandlerIdWait[data._id].resolve(data.data)
       return
     }
 
