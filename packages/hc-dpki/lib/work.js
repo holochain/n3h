@@ -1,13 +1,19 @@
 const mosodium = require('mosodium')
 
-const WORK_TARGET = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 180, 0])
+const DEF_WORK_TARGET = Buffer.from('000000000000000000000000000000000000000000000000000000000000b400', 'hex')
 
 /**
  * verify that a given nonce is below our WORK_TARGET threshold
+ * @param {object} opt
+ * @param {Buffer} opt.key
+ * @param {SecBuf} opt.nonce
+ * @param {Buffer} [opt.workTarget]
  */
-exports.verify = async function workVerify (key, nonce) {
-  const res = await mosodium.pwhash.hash(nonce, {
-    salt: key,
+exports.verify = async function workVerify (opt) {
+  opt.workTarget || (opt.workTarget = DEF_WORK_TARGET)
+
+  const res = await mosodium.pwhash.hash(opt.nonce, {
+    salt: opt.key,
     opslimit: mosodium.pwhash.OPSLIMIT_INTERACTIVE,
     memlimit: mosodium.pwhash.MEMLIMIT_MODERATE
   })
@@ -15,7 +21,7 @@ exports.verify = async function workVerify (key, nonce) {
   let out = false
   res.hash.readable(h => {
     h = mosodium.hash.sha256(h)
-    out = mosodium.util.compare(h, WORK_TARGET) < 0
+    out = mosodium.util.compare(h, opt.workTarget) < 0
   })
 
   return out
@@ -23,15 +29,20 @@ exports.verify = async function workVerify (key, nonce) {
 
 /**
  * search for a nonce that satisfies our WORK_TARGET threshold
+ * @param {object} opt
+ * @param {Buffer} opt.key
+ * @param {function} [opt.progress]
+ * @param {string} [opt.startNonce]
+ * @param {Buffer} [opt.workTarget]
  */
-exports.search = async function workSearch (key, progress, startNonce) {
-  if (typeof progress !== 'function') {
-    progress = () => {}
+exports.search = async function workSearch (opt) {
+  if (typeof opt.progress !== 'function') {
+    opt.progress = () => {}
   }
 
   let nonce
-  if (typeof startNonce === 'string') {
-    nonce = mosodium.SecBuf.from(Buffer.from(startNonce, 'hex'))
+  if (typeof opt.startNonce === 'string') {
+    nonce = mosodium.SecBuf.from(Buffer.from(opt.startNonce, 'hex'))
   } else {
     nonce = new mosodium.SecBuf(32)
     nonce.randomize()
@@ -39,7 +50,11 @@ exports.search = async function workSearch (key, progress, startNonce) {
 
   let opCount = 0
   for (;;) {
-    const done = await exports.verify(key, nonce)
+    const done = await exports.verify({
+      key: opt.key,
+      nonce,
+      workTarget: opt.workTarget
+    })
     if (done) {
       let out
       nonce.readable(n => {
@@ -51,6 +66,6 @@ exports.search = async function workSearch (key, progress, startNonce) {
     nonce.writable(n => mosodium.util.increment(n))
     opCount += 1
 
-    progress(opCount)
+    opt.progress(opCount)
   }
 }
