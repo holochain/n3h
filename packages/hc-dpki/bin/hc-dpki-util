@@ -9,7 +9,7 @@ const { mkdirp } = require('n3h-common')
 const mosodium = require('mosodium')
 const prompt = require('prompt')
 
-const { RootSeed, Seed } = require('../lib/index')
+const { RootSeed, Seed, work } = require('../lib/index')
 
 function getp (opt) {
   if (typeof opt === 'string') {
@@ -101,6 +101,33 @@ async function init () {
 }
 
 const CMD = {
+  work: async (workTarget) => {
+    mosodium.SecBuf.setLockLevel(mosodium.SecBuf.LOCK_NONE)
+    const key = mosodium.random.bytes(32)
+    console.log('for key ' + key.toString('hex'))
+    console.log('searching for nonce...')
+    const nonce = await work.search({
+      key,
+      progress: ops => {
+        if (ops % 10 === 0) {
+          console.log(ops)
+        }
+      },
+      workTarget: Buffer.from(workTarget, 'hex')
+    })
+    console.log('generated nonce: ' + nonce)
+    const tmp = mosodium.hash.sha256(Buffer.concat([
+      key,
+      Buffer.from(nonce, 'hex')
+    ]))
+    console.log('tmp hash: ' + tmp.toString('hex'))
+    let tag = tmp.readInt32LE(0)
+    for (let i = 4; i < 32; i += 4) {
+      tag = tag ^ tmp.readInt32LE(i)
+    }
+    console.log('rrdht location: ' + tag)
+  },
+
   device: async (index, pin) => {
     if (typeof pin !== 'string' || pin.length < 4) {
       throw new Error('pin must be a string >= 4 characters')
@@ -157,6 +184,7 @@ const CMD = {
 
   help: async () => {
     console.log('hc-dpki-util [command] [args]')
+    console.log('  work /workTarget/ - demo work generation for RRDHT tag')
     console.log('  device /index/ /pin/ - generate password encrypted device seed')
   }
 }
