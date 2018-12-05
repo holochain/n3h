@@ -12,18 +12,18 @@
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "chai": "^4.1.2",
+    "chai": "^4.2.0",
     "mocha": "^5.2.0",
     "nyc": "^12.0.2",
-    "opn": "^5.3.0",
-    "sinon": "^6.1.4",
-    "standard": "^11.0.1"
+    "opn": "^5.4.0",
+    "sinon": "^7.1.1",
+    "standard": "^12.0.1"
   },
   "dependencies": {
     "@nodeutils/defaults-deep": "^1.1.0",
-    "libp2p": "^0.23.1",
-    "libp2p-kad-dht": "^0.10.5",
-    "libp2p-mplex": "^0.8.2",
+    "libp2p": "^0.24.2",
+    "libp2p-kad-dht": "^0.13.0",
+    "libp2p-mplex": "^0.8.4",
     "libp2p-tcp": "^0.13.0",
     "msgpack-lite": "^0.1.26",
     "n3h-common": "^0.0.1",

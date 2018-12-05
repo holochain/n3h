@@ -80,7 +80,11 @@ async function _genAllDocs () {
   const projects = fs.readdirSync(path.join(baseDir, 'packages'))
   projects.sort()
   for (let project of projects) {
-    const ret = await _genDocs(path.join(baseDir, 'packages', project), project)
+    const fn = path.join(baseDir, 'packages', project)
+    if (!fs.lstatSync(fn).isDirectory()) {
+      continue
+    }
+    const ret = await _genDocs(fn, project)
     if (typeof ret === 'string' && ret.length) {
       alldocs += `### ${project}
 
