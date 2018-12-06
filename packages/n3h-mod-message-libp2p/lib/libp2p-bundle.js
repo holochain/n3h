@@ -136,8 +136,7 @@ class LibP2pBundle extends AsyncClass {
       return
     }
 
-    const res = await $p(this._node.dial.bind(this._node, multiaddr))
-    console.log('@@ connected @@', res)
+    await $p(this._node.dial.bind(this._node, multiaddr))
   }
 
   /**

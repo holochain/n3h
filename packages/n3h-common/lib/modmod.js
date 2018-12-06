@@ -1,25 +1,47 @@
 const { AsyncClass } = require('./index')
 
+const BAN = [
+  '_',
+  'destroy',
+  'then',
+  'Symbol(util.inspect.custom)',
+  'inspect',
+  'Symbol(Symbol.iterator)',
+  'Symbol(Symbol.toStringTag)'
+]
+
 function _x () {
   throw new Error('bad proxy call')
 }
 
 class ModMod extends AsyncClass {
-  async init () {
+  async init (api) {
     await super.init()
 
+    this.api = api
     this.cls = {}
   }
 
-  register (Cls) {
-    const def = Cls.getDefinition()
-    const spot = def.type + '.' + def.name
-    if (spot in this.cls) {
-      throw new Error(spot + ' already registered')
+  register (clsList) {
+    if (!Array.isArray(clsList)) {
+      clsList = [clsList]
     }
-    this.cls[spot] = {
-      Cls,
-      def
+    for (let Cls of clsList) {
+      const def = Cls.getDefinition()
+      if (BAN.indexOf(def.type) > -1) {
+        throw new Error('invalid type: ' + def.type)
+      }
+      if (!(def.type in this.api)) {
+        throw new Error('cannot register type ' + def.type + ', not in api')
+      }
+      const spot = def.type + '.' + def.name
+      if (spot in this.cls) {
+        throw new Error(spot + ' already registered')
+      }
+      this.cls[spot] = {
+        Cls,
+        def
+      }
     }
   }
 
@@ -47,25 +69,25 @@ class ModMod extends AsyncClass {
   async launch (config) {
     const instances = new Map()
 
+    const destroy = () => {
+      console.error('destroy is unimplemented.')
+    }
+
     const proxy = new Proxy(Object.create(null), {
       has: (_, prop) => {
         return instances.has(prop)
       },
       get: (_, prop) => {
+        if (prop.toString() === 'destroy') {
+          return destroy
+        }
         // it's hard to return a proxy from an async function in nodejs...
-        switch (prop.toString()) {
-          case 'then':
-          case 'Symbol(util.inspect.custom)':
-          case 'inspect':
-          case 'Symbol(Symbol.iterator)':
-          case 'Symbol(Symbol.toStringTag)':
-            return
-          default:
-            break
+        if (BAN.indexOf(prop.toString()) > -1) {
+          return
         }
         const out = instances.get(prop)
         if (!out) {
-          throw new Error(prop.toString() + ' module not found, is it loaded?')
+          throw new Error(prop.toString() + ' module not found, is it loaded? ' + JSON.stringify(Array.from(instances.keys())))
         }
         return out
       },
@@ -84,11 +106,38 @@ class ModMod extends AsyncClass {
         if (config[type][name].enabled) {
           if (!found) {
             found = true
-            wait.push(async () => {
+            wait.push((async () => {
               const i = await new this.cls[type + '.' + name].Cls(
                 config[type][name].config, proxy)
-              instances[type] = i
-            })
+              const api = this.api[type]
+              api.push('_')
+              instances.set(type, new Proxy(Object.create(null), {
+                has: (_, prop) => {
+                  prop = prop.toString()
+                  return api.indexOf(prop) > -1
+                },
+                get: (_, prop) => {
+                  prop = prop.toString()
+                  if (prop === '_') {
+                    return i
+                  }
+                  if (api.indexOf(prop) < 0 || !(prop in i)) {
+                    throw new Error(prop + ' not found for ' + type + '.' + name + ', not in api?')
+                  }
+                  if (typeof i[prop] === 'function') {
+                    return i[prop].bind(i)
+                  } else {
+                    return i[prop]
+                  }
+                },
+                ownKeys: (_) => {
+                  return api.slice(0)
+                },
+                defineProperty: _x,
+                deleteProperty: _x,
+                set: _x
+              }))
+            })())
           } else {
             throw new Error('two enabled configs for type ' + type)
           }
@@ -101,8 +150,11 @@ class ModMod extends AsyncClass {
     await Promise.all(wait)
 
     wait = []
-    for (let type in instances) {
-      wait.push(instances[type].ready(proxy))
+    for (let i of instances.values()) {
+      if (!('ready' in i._)) {
+        throw new Error(i._.constructor + ' is missing a "ready" function')
+      }
+      wait.push(i._.ready(proxy))
     }
     await Promise.all(wait)
 

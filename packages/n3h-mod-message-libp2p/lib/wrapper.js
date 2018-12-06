@@ -8,19 +8,35 @@ const { LibP2pBundle } = require('./libp2p-bundle')
 /**
  */
 class Wrapper extends AsyncClass {
+  static getDefinition () {
+    return {
+      type: 'message',
+      name: 'libp2p',
+      defaultConfig: {
+        '#bindList': 'array of multiaddr network interfaces to listen on (can be empty)',
+        bindList: [
+          '/ip4/0.0.0.0/tcp/0'
+        ],
+        '#connectList': 'array of initial outgoing bootstrap connections to make (can be empty)',
+        connectList: [
+        ]
+      }
+    }
+  }
+
   /**
    */
-  async init (modules, config) {
+  async init (config, system) {
     await super.init()
 
-    this._modules = modules
+    this._system = system
     this._config = config
   }
 
   /**
    */
-  async start () {
-    this.persistCache = this._modules.persistCache
+  async ready () {
+    this.persistCache = this._system.persistCache
       .getNsAsStringJson('libp2p')
 
     let nodeInfo = await this.persistCache.get('nodeInfo')
@@ -49,7 +65,7 @@ class Wrapper extends AsyncClass {
 
     this._node.on('handleSend', async opt => {
       console.log('@@ handleSend @@', opt.from, opt.data)
-      await this._modules.ipc.handleSend({
+      await this._system.ipc.handleSend({
         toAddress: this.getId(),
         fromAddress: opt.from,
         data: opt.data,
@@ -59,14 +75,14 @@ class Wrapper extends AsyncClass {
     })
 
     this._node.on('peerConnected', async id => {
-      this._modules.ipc.send('json', {
+      this._system.ipc.send('json', {
         method: 'peerConnected',
         id
       })
     })
 
     this._node.on('peerDisconnected', async id => {
-      this._modules.ipc.send('json', {
+      this._system.ipc.send('json', {
         method: 'peerDisconnected',
         id
       })
@@ -77,7 +93,7 @@ class Wrapper extends AsyncClass {
       process.exit(1)
     }
 
-    this._modules.ipc.registerHandler(async (data, send) => {
+    this._system.ipc.registerHandler(async (data, send) => {
       console.log('@@ libp2p check', data)
       switch (data.method) {
         case 'requestState':

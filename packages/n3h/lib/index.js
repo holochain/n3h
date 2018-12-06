@@ -2,13 +2,13 @@ const path = require('path')
 const os = require('os')
 const { URL } = require('url')
 
-const { AsyncClass, mkdirp, Moduleit } = require('n3h-common')
+const { AsyncClass, mkdirp, ModMod } = require('n3h-common')
 const { IpcServer } = require('n3h-ipc')
 
 const DEFAULT_MODULES = [
-  require('n3h-mod-nv-persist-sqlite3'),
-  require('n3h-mod-persist-cache-lru'),
-  require('n3h-mod-message-libp2p')
+  require('n3h-mod-nv-persist-sqlite3').NvPersistSqlite3,
+  require('n3h-mod-persist-cache-lru').PersistCacheLru,
+  require('n3h-mod-message-libp2p').MessageLibP2p
 ]
 
 /**
@@ -46,14 +46,18 @@ class N3hNode extends AsyncClass {
     if (!Array.isArray(modules)) {
       throw new Error('modules must be an array')
     }
-    modules.push({
-      moduleitRegister: (register) => {
-        register({
+    const giveIpc = () => this._ipc
+    modules.push(class {
+      static getDefinition () {
+        return {
           type: 'ipc',
           name: '_builtin_',
-          defaultConfig: {},
-          construct: async () => this._ipc
-        })
+          defaultConfig: {}
+        }
+      }
+
+      constructor () {
+        return giveIpc()
       }
     })
 
@@ -98,17 +102,21 @@ class N3hNode extends AsyncClass {
   /**
    */
   async _startupServices (modules) {
-    this._modules = await new Moduleit()
-    this._moduleTmp = this._modules.loadModuleGroup(modules)
-    this._defaultConfig = JSON.stringify(
-      this._moduleTmp.defaultConfig, null, 2)
+    this._modules = await new ModMod({
+      nvPersist: ['get', 'set'],
+      persistCache: ['getNsAsStringJson', 'get', 'set', 'prune'],
+      message: ['getId', 'getBindings', 'connect', 'send'],
+      ipc: ['registerHandler', 'send', 'handleSend']
+    })
+    this._modules.register(modules)
+    this._defaultConfig = this._modules.getDefaultConfig()
 
     this._state = 'need_config'
 
     this._ipc = await new IpcServer()
 
     // hack for module init
-    this._ipc.start = () => {}
+    this._ipc.ready = () => {}
 
     // hack for module init
     this._ipc.registerHandler = fn => {
@@ -188,8 +196,7 @@ class N3hNode extends AsyncClass {
     } else if (data.method === 'setConfig') {
       this._state = 'pending'
 
-      await this._moduleTmp.createGroup(JSON.parse(data.config))
-      this._moduleTmp = null
+      await this._modules.launch(JSON.parse(data.config))
     } else {
       throw new Error('unhandled method: "' + data.method + '" (may be invalid for state: "' + this._state + '"')
     }
