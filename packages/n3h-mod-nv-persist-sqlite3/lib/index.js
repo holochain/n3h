@@ -5,9 +5,20 @@ const { AsyncClass } = require('n3h-common')
  * sqlite3 persistence engine for hashcache
  */
 class NvPersistSqlite3 extends AsyncClass {
+  static getDefinition () {
+    return {
+      type: 'nvPersist',
+      name: 'sqlite3',
+      defaultConfig: {
+        '#file': 'what sqlite3 file should we use for persistence? (don\'t use \':memory:\' except for testing/debugging',
+        file: 'n3h-persist.sqlite3'
+      }
+    }
+  }
+
   /**
    */
-  async init (modules, config) {
+  async init (config, system) {
     await super.init()
 
     this._config = config
@@ -29,7 +40,7 @@ class NvPersistSqlite3 extends AsyncClass {
 
   /**
    */
-  async start () {
+  async ready () {
     /* pass - we just initialize in init (no dependencies) */
   }
 
@@ -106,16 +117,4 @@ class NvPersistSqlite3 extends AsyncClass {
   }
 }
 
-exports.moduleitRegister = (register) => {
-  register({
-    type: 'nvPersist',
-    name: 'sqlite3',
-    defaultConfig: {
-      '#file': 'what sqlite3 file should we use for persistence? (don\'t use \':memory:\' except for testing/debugging',
-      file: 'n3h-persist.sqlite3'
-    },
-    construct: (...args) => {
-      return new NvPersistSqlite3(...args)
-    }
-  })
-}
+exports.NvPersistSqlite3 = NvPersistSqlite3

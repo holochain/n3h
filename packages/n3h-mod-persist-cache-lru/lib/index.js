@@ -15,6 +15,17 @@ function _timeSort (a, b) {
 /**
  */
 class PersistCacheLru extends AsyncClass {
+  static getDefinition () {
+    return {
+      type: 'persistCache',
+      name: 'lru',
+      defaultConfig: {
+        '#cacheSize': 'size in bytes to limit contents in memory (e.g. 1024 * 1024 * 20 === 20 MiB)',
+        cacheSize: 1024 * 1024 * 20
+      }
+    }
+  }
+
   /**
    */
   getNsAsStringJson (ns) {
@@ -39,21 +50,21 @@ class PersistCacheLru extends AsyncClass {
 
   /**
    */
-  async init (modules, config) {
+  async init (config, system) {
     await super.init()
 
     this._currentSize = 0
 
-    this._modules = modules
     this._config = config
+    this._system = system
 
     this._data = new Map()
   }
 
   /**
    */
-  async start () {
-    this._persist = this._modules.nvPersist
+  async ready () {
+    this._persist = this._system.nvPersist
   }
 
   /**
@@ -137,16 +148,4 @@ class PersistCacheLru extends AsyncClass {
   }
 }
 
-exports.moduleitRegister = (register) => {
-  register({
-    type: 'persistCache',
-    name: 'lru',
-    defaultConfig: {
-      '#cacheSize': 'size in bytes to limit contents in memory (e.g. 1024 * 1024 * 20 === 20 MiB)',
-      cacheSize: 1024 * 1024 * 20
-    },
-    construct: (...args) => {
-      return new PersistCacheLru(...args)
-    }
-  })
-}
+exports.PersistCacheLru = PersistCacheLru

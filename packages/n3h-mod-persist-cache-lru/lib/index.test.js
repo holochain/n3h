@@ -2,8 +2,8 @@ const crypto = require('crypto')
 
 const { expect } = require('chai')
 
-const { Moduleit } = require('n3h-common')
-const persistCacheLru = require('./index')
+const { ModMod } = require('n3h-common')
+const PersistCacheLru = require('./index').PersistCacheLru
 
 const NS = 'test'
 
@@ -30,7 +30,8 @@ const nvStub = {
     key instanceof Buffer || bail('key type')
     data instanceof Buffer || bail('data type')
     stubData[Buffer.concat([Buffer.from(nv), zero, key])] = data
-  }
+  },
+  ready: () => {}
 }
 
 async function addRand (cache, keyIdx, size) {
@@ -40,28 +41,37 @@ async function addRand (cache, keyIdx, size) {
 
 describe('PersistCacheLRU Suite', () => {
   let m = null
+  let i = null
   let c = null
 
   beforeEach(async () => {
-    m = await new Moduleit()
-    const tmp = m.loadModuleGroup([
-      persistCacheLru,
-      {
-        moduleitRegister: (r) => {
-          r({
+    stubData = {}
+    m = await new ModMod({
+      nvPersist: ['get', 'set'],
+      persistCache: ['get', 'set', 'getNsAsStringJson']
+    })
+    m.register([
+      PersistCacheLru,
+      class {
+        static getDefinition () {
+          return {
             type: 'nvPersist',
             name: 'testStub',
-            defaultConfig: {},
-            construct: () => nvStub
-          })
+            defaultConfig: {}
+          }
+        }
+
+        constructor () {
+          return nvStub
         }
       }
     ])
 
-    tmp.defaultConfig.persistCache.lru.config.cacheSize = 500
+    const defaultConfig = JSON.parse(m.getDefaultConfig())
+    defaultConfig.persistCache.lru.config.cacheSize = 500
 
-    await tmp.createGroup(tmp.defaultConfig)
-    c = m.getProxy().persistCache
+    i = await m.launch(defaultConfig)
+    c = i.persistCache
   })
 
   afterEach(async () => {
@@ -101,7 +111,7 @@ describe('PersistCacheLRU Suite', () => {
   it('should drop LRU', async () => {
     for (let i = 0; i < 10; ++i) {
       await addRand(c, i, 101)
-      expect(c._currentSize).lessThan(500)
+      expect(c._._currentSize).lessThan(500)
     }
   })
 
@@ -110,7 +120,7 @@ describe('PersistCacheLRU Suite', () => {
     await _sleep(5)
     await addRand(c, 1, 499)
     await addRand(c, 2, 499)
-    expect(c._currentSize).lessThan(500)
+    expect(c._._currentSize).lessThan(500)
     expect((await c.get(NS, Buffer.from('bla'))).toString()).equals('hello')
   })
 
@@ -122,7 +132,7 @@ describe('PersistCacheLRU Suite', () => {
       // get the first one to update the timestamp
       await c.get(NS, Buffer.from((1).toString()))
 
-      expect(c._currentSize).lessThan(500)
+      expect(c._._currentSize).lessThan(500)
     }
   })
 })
