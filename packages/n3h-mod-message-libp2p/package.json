@@ -27,6 +27,7 @@
     "libp2p-tcp": "^0.13.0",
     "msgpack-lite": "^0.1.26",
     "@holochain/n3h-common": "^0.0.1",
+    "@holochain/tweetlog": "^0.0.1",
     "pull-stream": "^3.6.9"
   },
   "standard": {

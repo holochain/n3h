@@ -1,3 +1,2 @@
-const { Wrapper } = require('./wrapper')
-
-exports.MessageLibP2p = Wrapper
+exports.MessageLibP2p = require('./wrapper').Wrapper
+exports.LibP2pBundle = require('./libp2p-bundle').LibP2pBundle
