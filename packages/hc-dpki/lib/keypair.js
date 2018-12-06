@@ -1,7 +1,7 @@
 const msgpack = require('msgpack-lite')
 
-const { AsyncClass } = require('n3h-common')
-const mosodium = require('mosodium')
+const { AsyncClass } = require('@holochain/n3h-common')
+const mosodium = require('@holochain/mosodium')
 
 const util = require('./util')
 

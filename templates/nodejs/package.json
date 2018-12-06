@@ -1,5 +1,5 @@
 {
-  "name": "{{projectName}}",
+  "name": "@holochain/{{projectName}}",
   "version": "0.0.1",
   "description": "{{projectDesc}}",
   "main": "lib/index.js",
@@ -12,12 +12,12 @@
   },
   "license": "Apache-2.0",
   "devDependencies": {
-    "chai": "^4.1.2",
+    "chai": "^4.2.0",
     "mocha": "^5.2.0",
     "nyc": "^12.0.2",
-    "opn": "^5.3.0",
-    "sinon": "^6.1.4",
-    "standard": "^11.0.1"
+    "opn": "^5.4.0",
+    "sinon": "^7.1.1",
+    "standard": "^12.0.1"
   },
   "dependencies": {},
   "standard": {

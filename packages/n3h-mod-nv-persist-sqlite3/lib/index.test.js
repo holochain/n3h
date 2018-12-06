@@ -1,5 +1,5 @@
 const NvPersistSqlite3 = require('./index').NvPersistSqlite3
-const { ModMod } = require('n3h-common')
+const { ModMod } = require('@holochain/n3h-common')
 const { expect } = require('chai')
 const crypto = require('crypto')
 

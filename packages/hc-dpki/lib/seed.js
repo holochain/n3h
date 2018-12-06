@@ -1,5 +1,5 @@
-const { AsyncClass } = require('n3h-common')
-const mosodium = require('mosodium')
+const { AsyncClass } = require('@holochain/n3h-common')
+const mosodium = require('@holochain/mosodium')
 const bip39 = require('bip39')
 
 const { Keypair } = require('./keypair')

@@ -7,7 +7,7 @@ Clients should connect to this._socket to send / receive messages from the p2p n
 const zmq = require('zeromq')
 
 const msg = require('./msg-types')
-const { AsyncClass } = require('n3h-common')
+const { AsyncClass } = require('@holochain/n3h-common')
 
 /**
  * IPC control api server

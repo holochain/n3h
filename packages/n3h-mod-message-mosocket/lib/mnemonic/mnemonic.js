@@ -1,4 +1,4 @@
-const mosodium = require('mosodium')
+const mosodium = require('@holochain/mosodium')
 
 const words = require('./words')
 

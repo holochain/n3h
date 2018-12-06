@@ -2,7 +2,7 @@ const crypto = require('crypto')
 
 const { expect } = require('chai')
 
-const { ModMod } = require('n3h-common')
+const { ModMod } = require('@holochain/n3h-common')
 const PersistCacheLru = require('./index').PersistCacheLru
 
 const NS = 'test'

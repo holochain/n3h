@@ -3,7 +3,7 @@
 const path = require('path')
 const childProcess = require('child_process')
 
-const { TestSuiteExecutor } = require('test-suite-executor')
+const { TestSuiteExecutor } = require('@holochain/test-suite-executor')
 
 async function main () {
   const n3hCmd = path.resolve(path.join(__dirname, 'n3h'))

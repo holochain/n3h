@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
-const { N3hNode } = require('../lib/index')
+const { N3hNode, N3hHackMode } = require('../lib/index')
 
 async function main () {
-  const n3hNode = await N3hNode.constructDefault()
+  const n3hNode = 'N3H_HACK_MODE' in process.env
+    ? await new N3hHackMode()
+    : await N3hNode.constructDefault()
 
   let terminated = false
   const terminate = async () => {

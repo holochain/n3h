@@ -2,7 +2,7 @@ const path = require('path')
 
 const tmp = require('tmp')
 
-const { AsyncClass, mkdirp, $sleep } = require('n3h-common')
+const { AsyncClass, mkdirp, $sleep } = require('@holochain/n3h-common')
 
 const { IpcWrapper } = require('./ipc-wrapper')
 

@@ -1,5 +1,5 @@
 {
-  "name": "n3h-mod-persist-cache-lru",
+  "name": "@holochain/n3h-mod-persist-cache-lru",
   "version": "0.0.1",
   "description": "n3h lru persist-cache module",
   "main": "lib/index.js",
@@ -20,7 +20,7 @@
     "standard": "^12.0.1"
   },
   "dependencies": {
-    "n3h-common": "^0.0.1"
+    "@holochain/n3h-common": "^0.0.1"
   },
   "standard": {
     "env": {

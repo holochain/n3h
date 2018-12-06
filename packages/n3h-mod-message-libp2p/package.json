@@ -1,5 +1,5 @@
 {
-  "name": "n3h-mod-message-libp2p",
+  "name": "@holochain/n3h-mod-message-libp2p",
   "version": "0.0.1",
   "description": "libp2p n3h message prototype module",
   "main": "lib/index.js",
@@ -26,7 +26,7 @@
     "libp2p-mplex": "^0.8.2",
     "libp2p-tcp": "^0.13.0",
     "msgpack-lite": "^0.1.26",
-    "n3h-common": "^0.0.1",
+    "@holochain/n3h-common": "^0.0.1",
     "pull-stream": "^3.6.9"
   },
   "standard": {

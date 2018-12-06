@@ -1,5 +1,5 @@
 const sqlite3 = require('./sqlite3')
-const { AsyncClass } = require('n3h-common')
+const { AsyncClass } = require('@holochain/n3h-common')
 
 /**
  * sqlite3 persistence engine for hashcache

@@ -1,6 +1,6 @@
 const { expect } = require('chai')
 
-const mosodium = require('mosodium')
+const mosodium = require('@holochain/mosodium')
 mosodium.SecBuf.setLockLevel(mosodium.SecBuf.LOCK_NONE)
 
 const { Keypair } = require('./index')

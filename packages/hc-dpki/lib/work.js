@@ -1,4 +1,4 @@
-const mosodium = require('mosodium')
+const mosodium = require('@holochain/mosodium')
 
 const DEF_WORK_TARGET = Buffer.from('000000000000000000000000000000000000000000000000000000000000b400', 'hex')
 

@@ -1,5 +1,5 @@
 {
-  "name": "hc-dpki",
+  "name": "@holochain/hc-dpki",
   "version": "0.0.1",
   "description": "holochain key management libraries and utilities",
   "main": "lib/index.js",
@@ -21,9 +21,9 @@
   },
   "dependencies": {
     "bip39": "^2.5.0",
-    "mosodium": "^0.0.1",
+    "@holochain/mosodium": "^0.0.1",
     "msgpack-lite": "^0.1.26",
-    "n3h-common": "^0.0.1",
+    "@holochain/n3h-common": "^0.0.1",
     "prompt": "^1.0.0"
   },
   "standard": {

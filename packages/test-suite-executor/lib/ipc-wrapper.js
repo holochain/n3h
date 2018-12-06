@@ -1,5 +1,5 @@
-const { AsyncClass } = require('n3h-common')
-const { IpcClient } = require('n3h-ipc')
+const { AsyncClass } = require('@holochain/n3h-common')
+const { IpcClient } = require('@holochain/n3h-ipc')
 
 class IpcWrapper extends AsyncClass {
   async init (ipcUri) {

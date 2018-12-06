@@ -1,7 +1,7 @@
 const expect = require('chai').expect
 
 const config = require('./config')
-const { SecBuf } = require('mosodium')
+const { SecBuf } = require('@holochain/mosodium')
 
 describe('config Suite', () => {
   it('should be a function', () => {

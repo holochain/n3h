@@ -5,7 +5,7 @@ IPC Client represents an ipc listening socket designed to connect to a running p
 const zmq = require('zeromq')
 
 const msg = require('./msg-types')
-const { AsyncClass } = require('n3h-common')
+const { AsyncClass } = require('@holochain/n3h-common')
 
 /**
  * IPC connection client helper

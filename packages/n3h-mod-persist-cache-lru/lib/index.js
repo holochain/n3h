@@ -1,4 +1,4 @@
-const { AsyncClass } = require('n3h-common')
+const { AsyncClass } = require('@holochain/n3h-common')
 
 /**
  * used to sort LRU items

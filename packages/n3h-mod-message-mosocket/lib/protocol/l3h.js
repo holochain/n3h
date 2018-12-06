@@ -1,9 +1,9 @@
 const crypto = require('crypto')
 const msgpack = require('msgpack-lite')
 
-const mosodium = require('mosodium')
+const mosodium = require('@holochain/mosodium')
 
-const { MoSocket } = require('mosocket')
+const { MoSocket } = require('@holochain/mosocket')
 
 exports.install = function installProtocolValidate (node) {
   return node._socket.installProtocol({

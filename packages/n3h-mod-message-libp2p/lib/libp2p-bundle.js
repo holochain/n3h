@@ -7,7 +7,7 @@ const pull = require('pull-stream/pull')
 const msgpack = require('msgpack-lite')
 const PeerId = require('peer-id')
 
-const { $p, $sleep, AsyncClass } = require('n3h-common')
+const { $p, $sleep, AsyncClass } = require('@holochain/n3h-common')
 
 class RawLibP2p extends libp2p {
   constructor (_options) {

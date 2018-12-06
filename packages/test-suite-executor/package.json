@@ -1,5 +1,5 @@
 {
-  "name": "test-suite-executor",
+  "name": "@holochain/test-suite-executor",
   "version": "0.0.1",
   "description": "integration test suite for exercising a holochain networking/p2p node",
   "main": "lib/index.js",
@@ -20,8 +20,8 @@
     "standard": "^12.0.1"
   },
   "dependencies": {
-    "n3h-ipc": "^0.0.1",
-    "n3h-common": "^0.0.1",
+    "@holochain/n3h-ipc": "^0.0.1",
+    "@holochain/n3h-common": "^0.0.1",
     "tmp": "0.0.33"
   },
   "standard": {

@@ -7,6 +7,6 @@ describe('$sleep Suite', () => {
     const first = Date.now()
     await $sleep(10)
     const second = Date.now()
-    expect(second - first).greaterThan(9)
+    expect(second - first).greaterThan(8)
   })
 })

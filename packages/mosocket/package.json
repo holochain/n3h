@@ -1,5 +1,5 @@
 {
-  "name": "mosocket",
+  "name": "@holochain/mosocket",
   "version": "0.0.1",
   "description": "peer to peer networking protocol abstraction",
   "main": "lib/index.js",
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "msgpack-lite": "^0.1.26",
-    "mosodium": "^0.0.1"
+    "@holochain/mosodium": "^0.0.1"
   },
   "standard": {
     "env": {

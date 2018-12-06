@@ -2,8 +2,8 @@ const EventEmitter = require('events')
 // const crypto = require('crypto')
 
 // const msgpack = require('msgpack-lite')
-const { MoSocket } = require('mosocket')
-const { IpcServer } = require('ipc')
+const { MoSocket } = require('@holochain/mosocket')
+const { IpcServer } = require('@holochain/n3h-ipc')
 
 const mnemonic = require('./mnemonic/mnemonic')
 

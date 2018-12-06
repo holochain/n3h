@@ -1,7 +1,7 @@
 {
-  "name": "@holochain/n3h-mod-nv-persist-sqlite3",
+  "name": "@holochain/hackmode",
   "version": "0.0.1",
-  "description": "n3h sqlite3 nv-persist module",
+  "description": "just need to get an mvp running",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
@@ -20,8 +20,16 @@
     "standard": "^12.0.1"
   },
   "dependencies": {
+    "@nodeutils/defaults-deep": "^1.1.0",
+    "libp2p": "^0.23.1",
+    "libp2p-kad-dht": "^0.10.5",
+    "libp2p-mplex": "^0.8.2",
+    "libp2p-tcp": "^0.13.0",
+    "msgpack-lite": "^0.1.26",
     "@holochain/n3h-common": "^0.0.1",
-    "sqlite3": "^4.0.4"
+    "@holochain/n3h-ipc": "^0.0.1",
+    "pull-stream": "^3.6.9",
+    "zeromq": "^5.1.0"
   },
   "standard": {
     "env": {
@@ -29,7 +37,7 @@
     }
   },
   "nyc": {
-    "check-coverage": true,
+    "check-coverage": false,
     "per-file": false,
     "lines": 80,
     "statements": 80,

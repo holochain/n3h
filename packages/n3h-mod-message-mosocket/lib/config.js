@@ -1,9 +1,9 @@
 const os = require('os')
 const path = require('path')
 
-const mosodium = require('mosodium')
+const mosodium = require('@holochain/mosodium')
 
-const mosocketConfig = require('mosocket').config
+const mosocketConfig = require('@holochain/mosocket').config
 
 class EphemeralNode {
   constructor () {

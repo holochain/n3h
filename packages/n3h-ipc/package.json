@@ -1,5 +1,5 @@
 {
-  "name": "n3h-ipc",
+  "name": "@holochain/n3h-ipc",
   "version": "0.0.1",
   "description": "IPC connector socket abstraction for holochain p2p messaging",
   "main": "lib/index.js",
@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "msgpack-lite": "^0.1.26",
-    "n3h-common": "^0.0.1",
+    "@holochain/n3h-common": "^0.0.1",
     "zeromq": "^5.1.0"
   },
   "standard": {

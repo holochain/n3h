@@ -1,5 +1,5 @@
 {
-  "name": "n3h-common",
+  "name": "@holochain/n3h-common",
   "version": "0.0.1",
   "description": "some utilities to share among n3h subprojects",
   "main": "lib/index.js",

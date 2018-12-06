@@ -2,14 +2,16 @@ const path = require('path')
 const os = require('os')
 const { URL } = require('url')
 
-const { AsyncClass, mkdirp, ModMod } = require('n3h-common')
-const { IpcServer } = require('n3h-ipc')
+const { AsyncClass, mkdirp, ModMod } = require('@holochain/n3h-common')
+const { IpcServer } = require('@holochain/n3h-ipc')
 
 const DEFAULT_MODULES = [
-  require('n3h-mod-nv-persist-sqlite3').NvPersistSqlite3,
-  require('n3h-mod-persist-cache-lru').PersistCacheLru,
-  require('n3h-mod-message-libp2p').MessageLibP2p
+  require('@holochain/n3h-mod-nv-persist-sqlite3').NvPersistSqlite3,
+  require('@holochain/n3h-mod-persist-cache-lru').PersistCacheLru,
+  require('@holochain/n3h-mod-message-libp2p').MessageLibP2p
 ]
+
+exports.N3hHackMode = require('@holochain/hackmode').N3hHackMode
 
 /**
  */

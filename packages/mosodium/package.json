@@ -1,5 +1,5 @@
 {
-  "name": "mosodium",
+  "name": "@holochain/mosodium",
   "version": "0.0.1",
   "description": "light wrapper around sodium-native",
   "main": "lib/index.js",

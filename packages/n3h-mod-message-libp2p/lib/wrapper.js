@@ -1,4 +1,4 @@
-const { $p, AsyncClass } = require('n3h-common')
+const { $p, AsyncClass } = require('@holochain/n3h-common')
 
 const PeerInfo = require('peer-info')
 const PeerId = require('peer-id')

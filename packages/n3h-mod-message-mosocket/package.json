@@ -1,5 +1,5 @@
 {
-  "name": "n3h-mod-message-mosocket",
+  "name": "@holochain/n3h-mod-message-mosocket",
   "version": "0.0.1",
   "description": "nodejs implementation of the lib3h p2p protocol",
   "main": "lib/index.js",
@@ -20,10 +20,10 @@
     "standard": "^12.0.1"
   },
   "dependencies": {
-    "mosodium": "^0.0.1",
-    "mosocket": "^0.0.1",
+    "@holochain/mosodium": "^0.0.1",
+    "@holochain/mosocket": "^0.0.1",
     "msgpack-lite": "^0.1.26",
-    "n3h-ipc": "^0.0.1"
+    "@holochain/n3h-ipc": "^0.0.1"
   },
   "standard": {
     "env": {

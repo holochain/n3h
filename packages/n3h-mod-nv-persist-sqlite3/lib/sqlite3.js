@@ -3,7 +3,7 @@ const sqlite3 = require('sqlite3')
 const {
   AsyncClass,
   $p
-} = require('n3h-common')
+} = require('@holochain/n3h-common')
 
 /**
  * Represents a prepared sqlite3 statement
