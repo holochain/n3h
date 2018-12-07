@@ -6,6 +6,7 @@ const defaultsDeep = require('@nodeutils/defaults-deep')
 const pull = require('pull-stream/pull')
 const msgpack = require('msgpack-lite')
 const PeerId = require('peer-id')
+const log = require('@holochain/tweetlog')('libp2p')
 
 const { $p, $sleep, AsyncClass } = require('@holochain/n3h-common')
 
@@ -41,6 +42,9 @@ class LibP2pBundle extends AsyncClass {
 
     this._node = new RawLibP2p(opts)
 
+    const tmp = this._node.peerInfo.id.toB58String()
+    this._shortId = tmp.substr(0, 6) + '..' + tmp.substr(tmp.length - 4, 4)
+
     this._peerCache = new Map()
 
     this.$pushDestructor(async () => {
@@ -57,7 +61,7 @@ class LibP2pBundle extends AsyncClass {
         const query = msgpack.decode(data)
         switch (query.type) {
           case 'ping':
-            console.log('got ping, sending pong')
+            log.i(this.shortId(), 'got ping, sending pong')
             pull(makeGen(msgpack.encode({
               type: 'pong',
               originTime: query.now,
@@ -76,7 +80,7 @@ class LibP2pBundle extends AsyncClass {
             pull(makeGen(msgpack.encode(result)), conn)
             break
           default:
-            console.error('bad msg type', query.type)
+            log.e('bad msg type', query.type)
             process.exit(1)
         }
       }))
@@ -85,7 +89,7 @@ class LibP2pBundle extends AsyncClass {
     this._node.on('peer:connect', async (peer) => {
       peer = peer.id.toB58String()
 
-      console.log('new peer', peer)
+      log.i(this.shortId(), 'new peer', peer)
 
       // side effect: adds this to our peer cache
       const result = msgpack.decode(await this._p2pSend(
@@ -94,8 +98,8 @@ class LibP2pBundle extends AsyncClass {
           now: Date.now()
         })))
 
-      console.log(' -- ping round trip -- ' + (
-        Date.now() - result.originTime) + ' ms')
+      log.i(this.shortId(), 'ping round trip',
+        (Date.now() - result.originTime) + ' ms')
 
       this.emit('peerConnected', peer)
     })
@@ -103,7 +107,7 @@ class LibP2pBundle extends AsyncClass {
     this._node.on('peer:disconnect', (peer) => {
       peer = peer.id.toB58String()
       this.emit('peerDisconnected', peer)
-      console.log('lost peer', peer)
+      log.i(this.shortId(), 'lost peer', peer)
       this._peerCache.delete(peer)
     })
 
@@ -116,6 +120,12 @@ class LibP2pBundle extends AsyncClass {
    */
   getId () {
     return this._node.peerInfo.id.toB58String()
+  }
+
+  /**
+   */
+  shortId () {
+    return this._shortId
   }
 
   /**
@@ -197,10 +207,10 @@ class LibP2pBundle extends AsyncClass {
       }
     }
     if (!peer) {
-      console.error('giving up finding peer')
+      log.e(this.shortId(), 'giving up finding peer', peerId)
       throw new Error('could not find peer')
     }
-    console.log('found peer in', Date.now() - start, 'ms')
+    log.i(this.shortId(), 'found', peerId, 'in', Date.now() - start, 'ms')
     if (peer.id.toB58String() !== peerId) {
       throw new Error('wtf')
     }
@@ -223,7 +233,7 @@ class LibP2pBundle extends AsyncClass {
       })
       return result
     } catch (e) {
-      console.error(e)
+      log.e(e)
       process.exit(1)
     }
   }

@@ -43,7 +43,7 @@ class IpcServer extends AsyncClass {
       process.exit(1)
     })
     this._socket.on('bind', b => {
-      this._handleBind(b)
+      this._handleBind(b, this._socket.last_endpoint)
     })
 
     this._pruneClientsTimer = setInterval(() => {
@@ -114,12 +114,12 @@ class IpcServer extends AsyncClass {
    * @param {string} the bind endpoint that was bound
    * @private
    */
-  _handleBind (bind) {
+  _handleBind (bind, endpoint) {
     if (this.$isDestroyed()) return
     const ref = this._awaitBind.get(bind)
     if (!ref) return
     clearTimeout(ref.timeout)
-    ref.resolve()
+    ref.resolve(endpoint)
   }
 
   /**
