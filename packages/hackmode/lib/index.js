@@ -6,6 +6,8 @@ const { AsyncClass, mkdirp, $p } = require('@holochain/n3h-common')
 const { IpcServer } = require('@holochain/n3h-ipc')
 const { LibP2pBundle } = require('@holochain/n3h-mod-message-libp2p')
 
+const { Mem } = require('./mem')
+
 const PeerInfo = require('peer-info')
 const PeerId = require('peer-id')
 
@@ -22,6 +24,14 @@ const log = tweetlog('@hackmode@')
 class N3hHackMode extends AsyncClass {
   async init () {
     await super.init()
+
+    this._memory = {}
+    this._peerBook = {}
+
+    this._gossipState = {
+      lastPeerIndex: 0,
+      pauseUntil: 0
+    }
 
     this._workDir = 'N3H_WORK_DIR' in process.env
       ? process.env.N3H_WORK_DIR
@@ -52,6 +62,8 @@ class N3hHackMode extends AsyncClass {
       console.log('#P2P-BINDING#:' + binding)
     }
     console.log('#IPC-READY#')
+
+    this._gossipTimer = setInterval(() => this._checkGossip(), 200)
   }
 
   async run () {
@@ -86,13 +98,24 @@ class N3hHackMode extends AsyncClass {
     })
 
     this._p2p.on('peerConnected', id => {
+      this._peerBookInsert(id)
       this._ipc.send('json', {
         method: 'peerConnected',
         id: id
       })
     })
 
+    this._p2p.on('handleSend', opt => this._handleP2pMessage(opt))
+
     log.i('p2p bound', JSON.stringify(this._p2p.getBindings(), null, 2))
+  }
+
+  _peerBookInsert (id) {
+    if (!(id in this._peerBook)) {
+      this._peerBook[id] = {
+        lastGossip: 0
+      }
+    }
   }
 
   _handleIpcMessage (opt) {
@@ -113,10 +136,232 @@ class N3hHackMode extends AsyncClass {
         case 'connect':
           this._p2p.connect(opt.data.address)
           return
+        case 'trackApp':
+          this._track(opt.data.dnaHash, opt.data.agentId)
+          return
       }
     }
 
     throw new Error('unexpected input ' + JSON.stringify(opt))
+  }
+
+  _handleP2pMessage (opt) {
+    // log.w('@@@@', opt.data.type, JSON.stringify(opt.data))
+    switch (opt.data.type) {
+      case 'gossipHashHash':
+        this._processGossipHashHash(opt.from, opt.data.gossipHashHash)
+
+        const gossipHashHash = this._fullGossipHashHash()
+
+        // log.t('gossip (resp) with', opt.from, JSON.stringify(gossipHashHash))
+
+        this._p2p.send(opt.from, {
+          type: 'gossipHashHashResp',
+          gossipHashHash
+        })
+        return
+      case 'gossipHashHashResp':
+        this._processGossipHashHash(opt.from, opt.data.gossipHashHash)
+        return
+      case 'gossipRequestLocHashes':
+        this._processRequestLocHashes(opt.from, opt.data.locList)
+        return
+      case 'gossipHashList':
+        this._processGossipHashList(opt.from, opt.data.hashList)
+        return
+      case 'getData':
+        this._processGetData(opt.from, opt.data.dnaHash, opt.data.hash)
+        return
+      case 'getDataResp':
+        this._processGetDataResp(opt.data.dnaHash, opt.data.data)
+        return
+    }
+
+    throw new Error('unexpected message ' + opt.from + ' ' + JSON.stringify(
+      opt.data))
+  }
+
+  _processGossipHashHash (fromId, gossipHashHash) {
+    // we got a gossip response! push back next step 2 seconds
+    this._pauseGossip(null, 2000)
+
+    const locList = []
+    for (let hh of gossipHashHash) {
+      if (hh.dnaHash in this._memory) {
+        const ref = this._memory[hh.dnaHash].mem
+        const ll = ref.getGossipLocListForGossipHashHash(hh.gossipHashHash)
+        if (ll.length > 0) {
+          locList.push({
+            dnaHash: hh.dnaHash,
+            locList: ll
+          })
+        }
+      }
+    }
+
+    if (locList.length < 1) {
+      return
+    }
+
+    this._p2p.send(fromId, {
+      type: 'gossipRequestLocHashes',
+      locList
+    })
+  }
+
+  _processRequestLocHashes (fromId, locList) {
+    // log.t('requestLocHashes', fromId, JSON.stringify(locList))
+
+    // we got a gossip response! push back next step 2 seconds
+    this._pauseGossip(null, 2000)
+
+    const hashList = []
+    for (let ll of locList) {
+      if (ll.dnaHash in this._memory) {
+        const ref = this._memory[ll.dnaHash].mem
+        const hl = ref.getGossipHashesForGossipLocList(ll.locList)
+        if (hl.length > 0) {
+          hashList.push({
+            dnaHash: ll.dnaHash,
+            hashList: hl
+          })
+        }
+      }
+    }
+
+    this._p2p.send(fromId, {
+      type: 'gossipHashList',
+      hashList
+    })
+  }
+
+  _processGossipHashList (fromId, hashList) {
+    // log.t('hashList', fromId, JSON.stringify(hashList))
+
+    // we got a gossip response! push back next step 2 seconds
+    this._pauseGossip(null, 2000)
+
+    for (let hl of hashList) {
+      if (hl.dnaHash in this._memory) {
+        const ref = this._memory[hl.dnaHash].mem
+        for (let hash of hl.hashList) {
+          if (!ref.has(hash)) {
+            this._p2p.send(fromId, {
+              type: 'getData',
+              dnaHash: hl.dnaHash,
+              hash
+            })
+          }
+        }
+      }
+    }
+  }
+
+  _processGetData (fromId, dnaHash, hash) {
+    // log.t('getData', fromId, dnaHash, hash)
+    if (dnaHash in this._memory) {
+      const ref = this._memory[dnaHash].mem
+      if (ref.has(hash)) {
+        const data = ref.get(hash)
+        this._p2p.send(fromId, {
+          type: 'getDataResp',
+          dnaHash: dnaHash,
+          data
+        })
+      }
+    }
+  }
+
+  _processGetDataResp (dnaHash, data) {
+    if (dnaHash in this._memory) {
+      const ref = this._memory[dnaHash].mem
+      if (ref.insert(data)) {
+        log.t('newGossip', dnaHash, JSON.stringify(data))
+      }
+    }
+  }
+
+  _getMemRef (dnaHash) {
+    if (!(dnaHash in this._memory)) {
+      this._memory[dnaHash] = {
+        mem: new Mem()
+      }
+    }
+    return this._memory[dnaHash]
+  }
+
+  _track (dnaHash, agentId) {
+    const ref = this._getMemRef(dnaHash)
+    ref.mem.insert({
+      type: 'agent',
+      dnaHash: dnaHash,
+      agentId: agentId,
+      transportId: this._p2p.getId()
+    })
+  }
+
+  _fullGossipHashHash () {
+    const out = []
+    for (let dnaHash in this._memory) {
+      out.push({
+        dnaHash,
+        gossipHashHash: this._memory[dnaHash].mem.getGossipHashHash()
+      })
+    }
+    return out
+  }
+
+  _pauseGossip (msg, ms) {
+    if (msg) {
+      log.i(msg)
+    }
+    const until = Date.now() + ms
+    if (this._gossipState.pauseUntil < until) {
+      this._gossipState.pauseUntil = until
+    }
+  }
+
+  _checkGossip () {
+    setImmediate(() => {
+      if (this._gossipState.pauseUntil < Date.now()) {
+        this._gossip()
+      }
+    })
+  }
+
+  async _gossip () {
+    // give the next step 2 seconds
+    this._pauseGossip(null, 2000)
+
+    const peerCount = Object.keys(this._peerBook).length
+    if (peerCount < 1) {
+      this._pauseGossip('no peers, pausing gossip for 2 seconds', 2000)
+      return
+    }
+
+    const gs = this._gossipState
+    if (gs.lastPeerIndex >= peerCount) {
+      gs.lastPeerIndex = 0
+      this._pauseGossip('circled the peerBook, pausing gossip for 2 seconds', 2000)
+      return
+    }
+
+    const thisGossipPeer = Object.keys(this._peerBook)[gs.lastPeerIndex++]
+    const peerRef = this._peerBook[thisGossipPeer]
+    if (Date.now() - peerRef.lastGossip < 5000) {
+      this._pauseGossip('peer too recent, pauing gossip for 2 seconds', 2000)
+      return
+    }
+    peerRef.lastGossip = Date.now()
+
+    const gossipHashHash = this._fullGossipHashHash()
+
+    // log.t('gossip with', thisGossipPeer, JSON.stringify(gossipHashHash))
+
+    this._p2p.send(thisGossipPeer, {
+      type: 'gossipHashHash',
+      gossipHashHash
+    })
   }
 }
 
