@@ -16,7 +16,7 @@ tweetlog.set('t')
 
 /// in hackmode, we need to always output on stderr
 tweetlog.listen((l, t, ...a) => {
-  console.error(`(${t}) [${l}] ${a.map(a => a.stack || a.toString()).join(' ')}`)
+  console.error(`(${t}) [${l}] ${a.map(a => a.stack || (Array.isArray(a) || typeof a === 'object') ? JSON.stringify(a) : a.toString()).join(' ')}`)
 })
 
 const log = tweetlog('@hackmode@')
@@ -99,10 +99,6 @@ class N3hHackMode extends AsyncClass {
 
     this._p2p.on('peerConnected', id => {
       this._peerBookInsert(id)
-      this._ipc.send('json', {
-        method: 'peerConnected',
-        id: id
-      })
     })
 
     this._p2p.on('handleSend', opt => this._handleP2pMessage(opt))
@@ -123,6 +119,8 @@ class N3hHackMode extends AsyncClass {
       return
     }
 
+    let ref
+    let tId
     if (opt.name === 'json' && typeof opt.data.method === 'string') {
       switch (opt.data.method) {
         case 'requestState':
@@ -138,6 +136,87 @@ class N3hHackMode extends AsyncClass {
           return
         case 'trackApp':
           this._track(opt.data.dnaHash, opt.data.agentId)
+          return
+        case 'send':
+          ref = this._getMemRef(opt.data.dnaHash)
+          if (!(opt.data.toAgentId in ref.agentToTransportId)) {
+            this._ipc.send('json', {
+              method: 'failureResult',
+              dnaHash: opt.data.dnaHash,
+              toAgentId: opt.data.fromAgentId,
+              errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting send'
+            })
+            return
+          }
+          tId = ref.agentToTransportId[opt.data.toAgentId]
+          this._p2p.send(tId, {
+            type: 'handleSend',
+            _id: opt.data._id,
+            dnaHash: opt.data.dnaHash,
+            toAgentId: opt.data.toAgentId,
+            fromAgentId: opt.data.fromAgentId,
+            data: opt.data.data
+          })
+          return
+        case 'handleSendResult':
+          ref = this._getMemRef(opt.data.dnaHash)
+          if (!(opt.data.toAgentId in ref.agentToTransportId)) {
+            this._ipc.send('json', {
+              method: 'failureResult',
+              dnaHash: opt.data.dnaHash,
+              toAgentId: opt.data.fromAgentId,
+              errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting handleSendResult'
+            })
+            return
+          }
+          tId = ref.agentToTransportId[opt.data.toAgentId]
+          this._p2p.send(tId, {
+            type: 'sendResult',
+            _id: opt.data._id,
+            dnaHash: opt.data.dnaHash,
+            toAgentId: opt.data.toAgentId,
+            fromAgentId: opt.data.fromAgentId,
+            data: opt.data.data
+          })
+          return
+        case 'publishDht':
+          this._getMemRef(opt.data.dnaHash).mem.insert({
+            type: 'dht',
+            _id: opt.data._id,
+            agentId: opt.data.agentId,
+            address: opt.data.address,
+            content: opt.data.content
+          })
+          return
+        case 'publishDhtMeta':
+          this._getMemRef(opt.data.dnaHash).mem.insert({
+            type: 'dhtMeta',
+            _id: opt.data._id,
+            agentId: opt.data.agentId,
+            address: opt.data.address,
+            attribute: opt.data.attribute,
+            content: opt.data.content
+          })
+          return
+        case 'getDht':
+          // erm... since we're fully connected,
+          // just redirect this back to itself for now...
+          this._ipc.send('json', opt.data)
+          return
+        case 'getDhtResult':
+          // erm... since we're fully connected,
+          // just redirect this back to itself for now...
+          this._ipc.send('json', opt.data)
+          return
+        case 'getDhtMeta':
+          // erm... since we're fully connected,
+          // just redirect this back to itself for now...
+          this._ipc.send('json', opt.data)
+          return
+        case 'getDhtMetaResult':
+          // erm... since we're fully connected,
+          // just redirect this back to itself for now...
+          this._ipc.send('json', opt.data)
           return
       }
     }
@@ -174,6 +253,26 @@ class N3hHackMode extends AsyncClass {
         return
       case 'getDataResp':
         this._processGetDataResp(opt.data.dnaHash, opt.data.data)
+        return
+      case 'handleSend':
+        this._ipc.send('json', {
+          method: 'handleSend',
+          _id: opt.data._id,
+          dnaHash: opt.data.dnaHash,
+          toAgentId: opt.data.toAgentId,
+          fromAgentId: opt.data.fromAgentId,
+          data: opt.data.data
+        })
+        return
+      case 'sendResult':
+        this._ipc.send('json', {
+          method: 'sendResult',
+          _id: opt.data._id,
+          dnaHash: opt.data.dnaHash,
+          toAgentId: opt.data.toAgentId,
+          fromAgentId: opt.data.fromAgentId,
+          data: opt.data.data
+        })
         return
     }
 
@@ -283,8 +382,45 @@ class N3hHackMode extends AsyncClass {
 
   _getMemRef (dnaHash) {
     if (!(dnaHash in this._memory)) {
+      const mem = new Mem()
+      mem.registerIndexer((store, hash, data) => {
+        if (data && data.type === 'dht') {
+          this._ipc.send('json', {
+            method: 'storeDht',
+            _id: data._id,
+            dnaHash,
+            agentId: data.agentId,
+            address: data.address,
+            content: data.content
+          })
+        }
+      })
+      mem.registerIndexer((store, hash, data) => {
+        if (data && data.type === 'dhtMeta') {
+          log.e('got dhtMeta', data)
+          this._ipc.send('json', {
+            method: 'storeDhtMeta',
+            _id: data._id,
+            dnaHash,
+            agentId: data.agentId,
+            address: data.address,
+            attribute: data.attribute,
+            content: data.content
+          })
+        }
+      })
       this._memory[dnaHash] = {
-        mem: new Mem()
+        mem,
+        agentToTransportId: mem.registerIndexer((store, hash, data) => {
+          if (data && data.type === 'agent') {
+            store[data.agentId] = data.transportId
+            this._ipc.send('json', {
+              method: 'peerConnected',
+              dnaHash: dnaHash,
+              agentId: data.agentId
+            })
+          }
+        })
       }
     }
     return this._memory[dnaHash]
@@ -313,7 +449,7 @@ class N3hHackMode extends AsyncClass {
 
   _pauseGossip (msg, ms) {
     if (msg) {
-      log.i(msg)
+      // log.i(msg)
     }
     const until = Date.now() + ms
     if (this._gossipState.pauseUntil < until) {
@@ -330,26 +466,26 @@ class N3hHackMode extends AsyncClass {
   }
 
   async _gossip () {
-    // give the next step 2 seconds
-    this._pauseGossip(null, 2000)
+    // give the next step some space
+    this._pauseGossip(null, 1000)
 
     const peerCount = Object.keys(this._peerBook).length
     if (peerCount < 1) {
-      this._pauseGossip('no peers, pausing gossip for 2 seconds', 2000)
+      this._pauseGossip('no peers, pausing gossip for .5 seconds', 500)
       return
     }
 
     const gs = this._gossipState
     if (gs.lastPeerIndex >= peerCount) {
       gs.lastPeerIndex = 0
-      this._pauseGossip('circled the peerBook, pausing gossip for 2 seconds', 2000)
+      this._pauseGossip('circled the peerBook, pausing gossip for .5 seconds', 500)
       return
     }
 
     const thisGossipPeer = Object.keys(this._peerBook)[gs.lastPeerIndex++]
     const peerRef = this._peerBook[thisGossipPeer]
-    if (Date.now() - peerRef.lastGossip < 5000) {
-      this._pauseGossip('peer too recent, pauing gossip for 2 seconds', 2000)
+    if (Date.now() - peerRef.lastGossip < 1000) {
+      this._pauseGossip('peer too recent, pauing gossip for .5 seconds', 500)
       return
     }
     peerRef.lastGossip = Date.now()

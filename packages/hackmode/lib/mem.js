@@ -29,6 +29,13 @@ const getEntry = exports.getEntry = function getEntry (data) {
 class Mem {
   constructor () {
     this._data = {}
+    this._indexers = []
+  }
+
+  registerIndexer (fn) {
+    const store = {}
+    this._indexers.push([store, fn])
+    return store
   }
 
   insert (data) {
@@ -40,6 +47,9 @@ class Mem {
       return false
     }
     this._data[entry.loc][entry.hash] = entry
+    for (let idx of this._indexers) {
+      idx[1](idx[0], entry.hash, data)
+    }
     return true
   }
 
