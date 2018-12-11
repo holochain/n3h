@@ -2,6 +2,10 @@ const expect = require('chai').expect
 const sodium = require('./index')
 
 describe('aead Suite', () => {
+  before(() => {
+    sodium.SecBuf.setLockLevel(sodium.SecBuf.LOCK_NONE)
+  })
+
   it('should fail with bad enc message', () => {
     expect(() => {
       sodium.aead.enc()

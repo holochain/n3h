@@ -2,6 +2,10 @@ const expect = require('chai').expect
 const sodium = require('./index')
 
 describe('pwhash Suite', () => {
+  before(() => {
+    sodium.SecBuf.setLockLevel(sodium.SecBuf.LOCK_NONE)
+  })
+
   it('should throw if bad pw', async () => {
     try {
       await sodium.pwhash.hash()
