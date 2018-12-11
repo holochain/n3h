@@ -3,6 +3,7 @@ jobs:
     - name: "windows"
       os: windows
       language: node_js
+      node_js: "8"
       install:
       before_script:
         - npm install lerna
@@ -10,6 +11,7 @@ jobs:
     - name: "linux"
       os: linux
       language: node_js
+      node_js: "8"
       install:
       before_script:
         - npm install lerna
@@ -17,6 +19,7 @@ jobs:
     - name: "osx"
       os: osx
       language: node_js
+      node_js: "8"
       install:
       before_script:
         - npm install lerna
