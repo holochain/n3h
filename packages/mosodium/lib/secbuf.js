@@ -145,7 +145,6 @@ class SecBuf {
       if (this._lockLevel > 0) {
         this._ = sodium.sodium_malloc(len)
         sodium.sodium_memzero(this._)
-        //sodium.sodium_mlock(this._, this._.byteLength)
         this._lockLevel > 1 && sodium.sodium_mprotect_noaccess(this._)
       } else {
         this._ = Buffer.alloc(len)
@@ -178,17 +177,12 @@ class SecBuf {
 
   /**
    * zero out the memory and release the memory protection / lock
-   * note:  Function body is commented out because it turns out libsodium will automatically unlock everything in its
-   * internal free function. Otherwise this cause "Error no error" on windows.
    */
   free () {
     this._lockLevel > 1 && sodium.sodium_mprotect_readwrite(this._)
-    if (this._lockLevel > 0) {
-      sodium.sodium_memzero(this._)
-    } else {
+    if (this._lockLevel === 0) {
       this._.fill(0)
     }
-    // this._lockLevel > 0 && sodium.sodium_munlock(this._)
     this._ = null
   }
 
