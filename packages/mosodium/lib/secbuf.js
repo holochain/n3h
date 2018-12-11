@@ -188,7 +188,7 @@ class SecBuf {
     //   this._.fill(0)
     // }
     // this._lockLevel > 0 && sodium.sodium_munlock(this._)
-    // this._ = null
+    this._ = null
   }
 
   /**
