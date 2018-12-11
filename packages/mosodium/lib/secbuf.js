@@ -145,7 +145,7 @@ class SecBuf {
       if (this._lockLevel > 0) {
         this._ = sodium.sodium_malloc(len)
         sodium.sodium_memzero(this._)
-        sodium.sodium_mlock(this._, this._.byteLength)
+        //sodium.sodium_mlock(this._, this._.byteLength)
         this._lockLevel > 1 && sodium.sodium_mprotect_noaccess(this._)
       } else {
         this._ = Buffer.alloc(len)
