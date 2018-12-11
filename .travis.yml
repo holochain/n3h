@@ -15,7 +15,17 @@ jobs:
       language: node_js
       node_js:
         - "8"
-        - "10"      
+        - "10"
+      install:
+      before_script:
+        - npm install lerna
+        - npm run bootstrap
+    - name: "osx"
+      os: osx
+      language: node_js
+      node_js:
+        - "8"
+        - "10"
       install:
       before_script:
         - npm install lerna
