@@ -2,6 +2,10 @@ const expect = require('chai').expect
 const sodium = require('./index')
 
 describe('hash Suite', () => {
+  before(() => {
+    sodium.SecBuf.setLockLevel(sodium.SecBuf.LOCK_NONE)
+  })
+
   it('should throw on bad sha256 input', () => {
     expect(() => sodium.hash.sha256('yo')).throws()
   })

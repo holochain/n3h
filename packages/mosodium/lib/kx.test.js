@@ -13,6 +13,10 @@ function unsecret (secbuf, free) {
 }
 
 describe('kx Suite', () => {
+  before(() => {
+    sodium.SecBuf.setLockLevel(sodium.SecBuf.LOCK_NONE)
+  })
+
   it('should generate keypair', () => {
     const { publicKey, secretKey } = sodium.kx.keypair()
     expect(publicKey.byteLength).equals(32)
@@ -24,7 +28,7 @@ describe('kx Suite', () => {
     const seed = new sodium.SecBuf(32)
     const { publicKey, secretKey } = sodium.kx.seedKeypair(seed)
     expect(secretKey.size()).equals(32)
-    expect(publicKey.toString('base64')).equals('+zJ0mojXbOsOf+1xyWrMB0ewCwtNKWcCPenXn8/d/XA=')
+    expect(publicKey.toString('base64')).equals('VX4j1zRvIT7FojcTsqJJfu81NU1bUgiKxqWZOl/bCR4=')
     seed.free()
     secretKey.free()
   })
