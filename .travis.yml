@@ -1,12 +1,31 @@
-os:
- - windows
- - linux
- - osx
-language: node_js
-node_js:
-  - "8"
-  - "10"
-install:
-before_script:
-  - npm install lerna
-  - npm run bootstrap
+jobs:
+  include:
+    - name: "windows n8"
+      os: windows
+      language: node_js
+      node_js: "8"
+      install:
+      before_script:
+        - npm run bootstrap
+    - name: "windows n10"
+      os: windows
+      language: node_js
+      node_js: "10"
+      install:
+      before_script:
+        - npm install lerna
+        - npm run bootstrap
+    - name: "linux"
+      os: linux
+      language: node_js
+      install:
+      before_script:
+        - npm install lerna
+        - npm run bootstrap
+    - name: "osx"
+      os: osx
+      language: node_js
+      install:
+      before_script:
+        - npm install lerna
+        - npm run bootstrap
