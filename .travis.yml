@@ -1,48 +1,22 @@
 jobs:
   include:
-    - name: "windows - node 8"
+    - name: "windows"
       os: windows
       language: node_js
-      node_js: "8"
-      install:
-      before_script:
-        - npm run bootstrap
-    - name: "windows - node 10"
-      os: windows
-      language: node_js
-      node_js: "10"
       install:
       before_script:
         - npm install lerna
         - npm run bootstrap
-    - name: "linux - node 8"
+    - name: "linux"
       os: linux
       language: node_js
-      node_js: "8"
       install:
       before_script:
         - npm install lerna
         - npm run bootstrap
-    - name: "linux - node 10"
-      os: linux
-      language: node_js
-      node_js: "10"
-      install:
-      before_script:
-        - npm install lerna
-        - npm run bootstrap
-    - name: "osx - node 8"
+    - name: "osx"
       os: osx
       language: node_js
-      node_js: "8"
-      install:
-      before_script:
-        - npm install lerna
-        - npm run bootstrap
-    - name: "osx - node 10"
-      os: osx
-      language: node_js
-      node_js: "10"
       install:
       before_script:
         - npm install lerna
