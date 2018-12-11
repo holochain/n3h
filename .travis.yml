@@ -2,7 +2,17 @@ language: node_js
 node_js:
   - "8"
   - "10"
-install:
-before_script:
-  - npm install lerna
-  - npm run bootstrap
+jobs:
+  include:
+    - name: "windows"
+      os: windows
+      install:
+      before_script:
+        - npm install lerna
+        - npm run bootstrap
+    - name: "linux"
+      os: linux
+      install:
+      before_script:
+        - npm install lerna
+        - npm run bootstrap
