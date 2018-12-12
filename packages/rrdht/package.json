@@ -20,7 +20,8 @@
     "standard": "^12.0.1"
   },
   "dependencies": {
-    "@holochain/mosodium": "^0.0.1"
+    "@holochain/mosodium": "^0.0.1",
+    "@holochain/n3h-common": "^0.0.1"
   },
   "standard": {
     "env": {

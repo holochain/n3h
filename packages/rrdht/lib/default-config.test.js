@@ -18,6 +18,24 @@ describe('defaultConfig Suite', () => {
     conf.agentLocWorkTarget = defTgt
   })
 
+  it('bad buf throws', async () => {
+    try {
+      await conf.hashFn(conf, 42)
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
+  it('bad buf len throws', async () => {
+    try {
+      await conf.dataLocFn(conf, Buffer.alloc(2))
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
   it('hashFn', async () => {
     expect((await conf.hashFn(conf, Buffer.from('test'))).toString('base64'))
       .equals('n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=')
@@ -45,21 +63,8 @@ describe('defaultConfig Suite', () => {
     expect(loc.toString('base64')).equals('oaY8ew==')
   })
 
-  it('bad buf throws', async () => {
-    try {
-      await conf.hashFn(conf, 42)
-    } catch (e) {
-      return
-    }
-    throw new Error('expected exception, got success')
-  })
-
-  it('bad buf len throws', async () => {
-    try {
-      await conf.dataLocFn(conf, Buffer.alloc(2))
-    } catch (e) {
-      return
-    }
-    throw new Error('expected exception, got success')
+  it('cache set and get', async () => {
+    await conf.persistCacheSet(conf, 'testNs', 'testKey', 'testVal')
+    expect(await conf.persistCacheGet(conf, 'testNs', 'testKey')).equals('testVal')
   })
 })

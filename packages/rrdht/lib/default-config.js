@@ -1,29 +1,28 @@
 const mosodium = require('@holochain/mosodium')
+const { PersistCacheMem } = require('./persist-cache-mem')
+
+// -- configuration parameters -- //
 
 /**
- * helper checks if a buffer is the correct length
+ * set this if you would like to change the default agent location work target
  */
-function assertBuffer (b, l) {
-  if (!(b instanceof Buffer)) {
-    throw new Error(typeof b + ' required to be a Buffer')
-  }
-  if (l && b.byteLength !== l) {
-    throw new Error('Buffer.byteLength was ' + b.byteLength + ' but ' + l + ' was required')
-  }
-}
+exports.agentLocWorkTarget = Buffer.from('000000000000000000000000000000000000000000000000000000000000b400', 'hex')
 
 /**
- * helper compresses a buffer into 4 bytes using xor
+ * The class to use for persistence (if you use the default
+ * persistCacheGet and persistCacheSet methods)
  */
-function bufCompress (b) {
-  let tmp = b.readInt32LE(0)
-  for (let i = 4; i < b.byteLength; i += 4) {
-    tmp = tmp ^ b.readInt32LE(i)
-  }
-  const out = Buffer.alloc(4)
-  out.writeInt32LE(tmp, 0)
-  return out
-}
+exports.PersistCache = PersistCacheMem
+
+// -- debug configuration parameters -- //
+
+/**
+ * set this if you always want the nonce to start at a certain point
+ * (mostly used for unit testing)
+ */
+exports.debugAgentLocSearchStartNonce = null
+
+// -- configuration functions -- //
 
 /**
  * hash function powered by sha256
@@ -86,11 +85,6 @@ exports.agentLocFn = async function agentLocFn (config, hash, nonce) {
 }
 
 /**
- * set this if you would like to change the default agent location work target
- */
-exports.agentLocWorkTarget = Buffer.from('000000000000000000000000000000000000000000000000000000000000b400', 'hex')
-
-/**
  * @param {object} config - reference to config object
  */
 exports.agentLocVerifyFn = async function agentLocVerifyFn (config, locHash) {
@@ -100,12 +94,6 @@ exports.agentLocVerifyFn = async function agentLocVerifyFn (config, locHash) {
 
   throw new Error('invalid location nonce; bad work verification')
 }
-
-/**
- * set this if you always want the nonce to start at a certain point
- * (mostly used for unit testing)
- */
-exports.debugAgentLocSearchStartNonce = null
 
 /**
  * @param {object} config - reference to config object
@@ -139,5 +127,60 @@ exports.agentLocSearchFn = async function agentLocSearchFn (config, hash) {
     out = Buffer.from(n)
   })
 
+  return out
+}
+
+/**
+ */
+exports.persistCacheGet = async function persistCacheGet (config, ns, key) {
+  const cache = await getPersistCacheSingleton(config)
+
+  return cache.get(ns, key)
+}
+
+/**
+ */
+exports.persistCacheSet = async function persistCacheSet (config, ns, key, data) {
+  const cache = await getPersistCacheSingleton(config)
+
+  return cache.set(ns, key, data)
+}
+
+// -- helper functions -- //
+
+let persistCacheSingleton = null
+
+/**
+ * helper get the persistCache singleton
+ */
+async function getPersistCacheSingleton (config) {
+  if (!persistCacheSingleton) {
+    persistCacheSingleton = await new config.PersistCache()
+  }
+  return persistCacheSingleton
+}
+
+/**
+ * helper checks if a buffer is the correct length
+ */
+function assertBuffer (b, l) {
+  if (!(b instanceof Buffer)) {
+    throw new Error(typeof b + ' required to be a Buffer')
+  }
+  if (l && b.byteLength !== l) {
+    throw new Error('Buffer.byteLength was ' + b.byteLength + ' but ' + l + ' was required')
+  }
+}
+
+/**
+ * helper compresses a buffer into 4 bytes using xor
+ */
+function bufCompress (b) {
+  let tmp = b.readInt32LE(0)
+  for (let i = 4; i < b.byteLength; i += 4) {
+    tmp = tmp ^ b.readInt32LE(i)
+  }
+  const out = Buffer.alloc(4)
+  out.writeInt32LE(tmp, 0)
   return out
 }
