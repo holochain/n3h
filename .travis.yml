@@ -24,3 +24,4 @@ jobs:
       before_script:
         - npm install lerna
         - npm run bootstrap
+        
