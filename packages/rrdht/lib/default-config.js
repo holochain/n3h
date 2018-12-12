@@ -1,5 +1,8 @@
-const mosodium = require('mosodium')
+const mosodium = require('@holochain/mosodium')
 
+/**
+ * helper checks if a buffer is the correct length
+ */
 function assertBuffer (b, l) {
   if (!(b instanceof Buffer)) {
     throw new Error(typeof b + ' required to be a Buffer')
@@ -9,10 +12,13 @@ function assertBuffer (b, l) {
   }
 }
 
+/**
+ * helper compresses a buffer into 4 bytes using xor
+ */
 function bufCompress (b) {
-  let tmp = locHash.readInt32LE(0);
-  for (let i = 4; i < locHash.length; i += 4) {
-    tmp = tmp ^ locHash.readInt32LE(i)
+  let tmp = b.readInt32LE(0)
+  for (let i = 4; i < b.byteLength; i += 4) {
+    tmp = tmp ^ b.readInt32LE(i)
   }
   const out = Buffer.alloc(4)
   out.writeInt32LE(tmp, 0)
@@ -20,6 +26,9 @@ function bufCompress (b) {
 }
 
 /**
+ * hash function powered by sha256
+ * @param {object} config - reference to config object
+ * @param {Buffer} buf - the buffer to hash
  */
 exports.hashFn = async function hashFn (config, buf) {
   assertBuffer(buf)
@@ -27,6 +36,9 @@ exports.hashFn = async function hashFn (config, buf) {
 }
 
 /**
+ * derive a data location from a data hash
+ * @param {object} config - reference to config object
+ * @param {Buffer} hash - the hash to convert to a location
  */
 exports.dataLocFn = async function dataLocFn (config, hash) {
   assertBuffer(hash, 32)
@@ -34,6 +46,10 @@ exports.dataLocFn = async function dataLocFn (config, hash) {
 }
 
 /**
+ * get an agent location hash from an agent hash and a nonce
+ * @param {object} config - reference to config object
+ * @param {Buffer} hash - the agent hash (sha256 of a binary agentId)
+ * @param {Buffer} nonce - the calculated nonce to apply
  */
 exports.agentLocHashFn = async function agentLocHashFn (config, hash, nonce) {
   assertBuffer(hash, 32)
@@ -56,20 +72,26 @@ exports.agentLocHashFn = async function agentLocHashFn (config, hash, nonce) {
 }
 
 /**
+ * derive an agent location from an agent hash (sha256 of a binary agentId)
+ * @param {object} config - reference to config object
+ * @param {Buffer} hash - the agent hash (sha256 of a binary agentId)
+ * @param {Buffer} nonce - the calculated nonce to apply
  */
 exports.agentLocFn = async function agentLocFn (config, hash, nonce) {
   assertBuffer(hash, 32)
   assertBuffer(nonce, 32)
-  const locHash = config.agentLocHashFn(config, hash, nonce)
+  const locHash = await config.agentLocHashFn(config, hash, nonce)
   await config.agentLocVerifyFn(config, locHash)
-  return bufCompress(locHash)
+  return bufCompress(hash)
 }
 
 /**
+ * set this if you would like to change the default agent location work target
  */
 exports.agentLocWorkTarget = Buffer.from('000000000000000000000000000000000000000000000000000000000000b400', 'hex')
 
 /**
+ * @param {object} config - reference to config object
  */
 exports.agentLocVerifyFn = async function agentLocVerifyFn (config, locHash) {
   if (mosodium.util.compare(locHash, config.agentLocWorkTarget) < 0) {
@@ -80,10 +102,13 @@ exports.agentLocVerifyFn = async function agentLocVerifyFn (config, locHash) {
 }
 
 /**
+ * set this if you always want the nonce to start at a certain point
+ * (mostly used for unit testing)
  */
 exports.debugAgentLocSearchStartNonce = null
 
 /**
+ * @param {object} config - reference to config object
  */
 exports.agentLocSearchFn = async function agentLocSearchFn (config, hash) {
   let nonce
@@ -96,11 +121,13 @@ exports.agentLocSearchFn = async function agentLocSearchFn (config, hash) {
 
   for (;;) {
     try {
+      let rawNonce
       nonce.readable(n => {
-        await config.agentLocVerifyFn(
-          config, config.agentLocHashFn(
-            config, hash, n))
+        rawNonce = Buffer.from(n)
       })
+      await config.agentLocVerifyFn(
+        config, await config.agentLocHashFn(
+          config, hash, rawNonce))
       break
     } catch (e) { /* pass */ }
 
