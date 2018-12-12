@@ -2,6 +2,10 @@ const expect = require('chai').expect
 const sodium = require('./index')
 
 describe('kdf Suite', () => {
+  before(() => {
+    sodium.SecBuf.setLockLevel(sodium.SecBuf.LOCK_NONE)
+  })
+
   it('should throw on bad derive index', () => {
     expect(() => {
       sodium.kdf.derive('hi')
