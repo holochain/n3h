@@ -1,5 +1,10 @@
 const { AsyncClass, $sleep } = require('@holochain/n3h-common')
 const defaultConfig = require('./default-config')
+const { registerHandler } = require('./handlers/handler-manifest')
+const actions = require('./actions')
+
+const REQUIRED_CONFIG = ['agentHash', 'agentNonce']
+const RESERVED_CONFIG = ['agentLoc', 'registerHandler', 'emit', 'act']
 
 /**
  */
@@ -9,29 +14,65 @@ class RRDht extends AsyncClass {
   async init (config) {
     await super.init()
 
+    this._actionQueue = [
+      Object.freeze({
+        action: 'init',
+        params: null
+      })
+    ]
+
+    this._actionHandlers = {}
+
     this._config = {}
+
+    const attach = (k, v) => {
+      /*
+      if (typeof v === 'function') {
+        this._config[k] = v.bind(v, this._config)
+      } else {
+        this._config[k] = v
+      }
+      */
+      this._config[k] = v
+    }
 
     if (typeof config === 'object') {
       for (let k in config) {
-        this._config[k] = config[k]
+        attach(k, config[k])
+      }
+    }
+
+    for (let key of REQUIRED_CONFIG) {
+      if (!(key in this._config)) {
+        throw new Error('cannot initialize rrdht without config "' + key + '"')
+      }
+    }
+
+    for (let key of RESERVED_CONFIG) {
+      if (key in this._config) {
+        throw new Error('"' + key + '" is a reserved config key')
       }
     }
 
     for (let k in defaultConfig) {
       if (!(k in this._config)) {
-        this._config[k] = defaultConfig[k]
+        attach(k, defaultConfig[k])
       }
     }
 
-    Object.freeze(this._config)
+    this._config.agentLoc = await this._config.agentLocFn(
+      this._config, this._config.agentHash, this._config.agentNonce)
 
-    this._actionQueue = []
-    this._actionQueueContinue = true
+    this._finalizeConfig(attach)
+
+    registerHandler(this._config)
 
     setImmediate(() => this._tickle())
 
     this.$pushDestructor(async () => {
-      this._actionQueueContinue = false
+      this._actionQueue = []
+      this._actionHandlers = {}
+      this._config = {}
     })
   }
 
@@ -39,29 +80,23 @@ class RRDht extends AsyncClass {
 
   /**
    */
-  queueAction (action) {
+  act (action) {
     if (typeof action.action !== 'string') {
       throw new Error('action must be a string')
     }
     if (typeof action.params !== 'object') {
       throw new Error('params must be a JSON.stringify-able object')
     }
-    action.params = JSON.stringify(action.params)
-    Object.freeze(action)
+    if (!(action.action in actions)) {
+      throw new Error('"' + action.action + '" not recognized as a valid action')
+    }
 
-    this._actionQueue.push(action)
-  }
+    const a = {
+      action: action.action,
+      params: JSON.stringify(action.params)
+    }
 
-  /**
-   */
-  registerPeer (hash, peerInfo) {
-    return this.queueAction({
-      action: 'registerPeer',
-      params: {
-        hash,
-        peerInfo
-      }
-    })
+    this._actionQueue.push(Object.freeze(a))
   }
 
   // -- immutable state accessors -- //
@@ -70,11 +105,34 @@ class RRDht extends AsyncClass {
 
   /**
    */
+  _finalizeConfig (attach) {
+    attach('registerHandler', async (action, handler) => {
+      if (!(action in this._actionHandlers)) {
+        this._actionHandlers[action] = []
+      }
+
+      this._actionHandlers[action].push(handler)
+    })
+
+    attach('emit', async (name, ...args) => {
+      return this.emit(name, ...args)
+    })
+
+    attach('act', async (action) => {
+      return this.act(action)
+    })
+
+    Object.freeze(this._config)
+  }
+
+  /**
+   */
   async _tickle () {
     try {
-      let lastTickle = 0
+      let lastTickle = Date.now()
       let waitMs = 0
-      while (this._actionQueueContinue) {
+
+      while (!this.$isDestroyed()) {
         const now = Date.now()
 
         if (now - lastTickle > 100) {
@@ -90,11 +148,14 @@ class RRDht extends AsyncClass {
         if (this._actionQueue.length) {
           waitMs = 0
           const action = this._actionQueue.shift()
-          const fnName = '_action$' + action.action
-          if (!(fnName in this)) {
-            throw new Error('unhandled action ' + action.action)
+          if (action.action in this._actionHandlers) {
+            for (let handler of this._actionHandlers[action.action]) {
+              if (this.$isDestroyed()) {
+                return
+              }
+              await handler(this._config, action.action, JSON.parse(action.params))
+            }
           }
-          await this[fnName](action.action, JSON.parse(action.params))
         } else {
           waitMs += 1
           if (waitMs > 20) {
@@ -108,16 +169,6 @@ class RRDht extends AsyncClass {
       process.exit(1)
     }
   }
-
-  async _action$tickle (action, params) {
-    console.log('tickle')
-    await this.emit('action', action, params)
-  }
-
-  async _action$registerPeer (action, params) {
-    console.log('registerPeer')
-    await this.emit('action', action, params)
-  }
 }
 
 exports.RRDht = RRDht
@@ -125,7 +176,10 @@ exports.RRDht = RRDht
 function test () {
   return new Promise(async (resolve, reject) => {
     try {
-      const dht = await new RRDht()
+      const dht = await new RRDht({
+        agentHash: 'n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=',
+        agentNonce: 'b+OXWcbfUO/eq3wmPk/RYjUWheTC/V/t+EqfIaUDJvU='
+      })
       dht.on('action', async (action, params) => {
         try {
           console.log(action, JSON.stringify(params, null, 2))
@@ -138,10 +192,10 @@ function test () {
         }
       })
       await $sleep(250)
-      dht.registerPeer('hash', {
+      dht.act(actions.registerPeer('my-hash', {
         agentId: 'yay',
         transportId: 'other'
-      })
+      }))
     } catch (e) {
       reject(e)
     }
