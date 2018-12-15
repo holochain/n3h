@@ -4,8 +4,8 @@ const handlers = [
   require('./register-peer/register-peer')
 ]
 
-exports.registerHandler = function registerHandler (config) {
+exports.registerHandler = async function registerHandler (config) {
   for (let handler of handlers) {
-    handler.registerHandler(config)
+    await handler.registerHandler(config)
   }
 }

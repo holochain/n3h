@@ -3,8 +3,27 @@ const defaultConfig = require('./default-config')
 const { registerHandler } = require('./handlers/handler-manifest')
 const actions = require('./actions')
 
-const REQUIRED_CONFIG = ['agentHash', 'agentNonce']
-const RESERVED_CONFIG = ['agentLoc', 'registerHandler', 'emit', 'act']
+const MAGIC = '$rrdht$config$'
+const CLASS_CONFIG = ['PersistCache']
+const REQUIRED_CONFIG = ['agentHash', 'agentNonce', 'agentPeerInfo']
+const RESERVED_CONFIG = [
+  MAGIC,
+  'agentLoc',
+  'registerHandler',
+  'emit',
+  'act',
+  'persistCacheProxy',
+  '$',
+  'runtimeState',
+  '_'
+]
+const PROXY_FIX = [
+  'then',
+  'Symbol(util.inspect.custom)',
+  'inspect',
+  'Symbol(Symbol.iterator)',
+  'Symbol(Symbol.toStringTag)'
+]
 
 /**
  */
@@ -26,14 +45,11 @@ class RRDht extends AsyncClass {
     this._config = {}
 
     const attach = (k, v) => {
-      /*
-      if (typeof v === 'function') {
-        this._config[k] = v.bind(v, this._config)
+      if (typeof v === 'function' && CLASS_CONFIG.indexOf(k) < 0) {
+        this._config[k] = (...args) => v(this._config, ...args)
       } else {
         this._config[k] = v
       }
-      */
-      this._config[k] = v
     }
 
     if (typeof config === 'object') {
@@ -60,12 +76,16 @@ class RRDht extends AsyncClass {
       }
     }
 
+    this._config[MAGIC] = true
+
+    // some data about ourselves are accessed so often
+    // we put them on the config object itself
     this._config.agentLoc = await this._config.agentLocFn(
-      this._config, this._config.agentHash, this._config.agentNonce)
+      this._config.agentHash, this._config.agentNonce)
 
-    this._finalizeConfig(attach)
+    await this._finalizeConfig(attach)
 
-    registerHandler(this._config)
+    await registerHandler(this._config)
 
     setImmediate(() => this._tickle())
 
@@ -79,6 +99,8 @@ class RRDht extends AsyncClass {
   // -- state mutation -- //
 
   /**
+   * Take a mutation action on this instance.
+   * See require('@holochain/rrdht').actions for options.
    */
   act (action) {
     if (typeof action.action !== 'string') {
@@ -101,12 +123,39 @@ class RRDht extends AsyncClass {
 
   // -- immutable state accessors -- //
 
+  /**
+   * Determine if this instance would store this peer at this time
+   * @param {string} peerHash - base64 peer hash
+   * @param {string} peerNonce - base64 peer nonce
+   */
+  async wouldStorePeer (peerHash, peerNonce) {
+  }
+
+  /**
+   * Determine if this instance would store this data at this time
+   * @param {string} dataHash - base64 data hash
+   */
+  async wouldStoreData (dataHash) {
+  }
+
+  /**
+   * If we have a local reference to this peer, return its peerInfo
+   */
+  async getLocalPeerInfo (peerHash) {
+  }
+
+  /**
+   * @return {boolean} - true if we are tracking this data locally
+   */
+  async isDataLocal (dataHash) {
+  }
+
   // -- private -- //
 
   /**
    */
-  _finalizeConfig (attach) {
-    attach('registerHandler', async (action, handler) => {
+  async _finalizeConfig (attach) {
+    attach('registerHandler', async (config, action, handler) => {
       if (!(action in this._actionHandlers)) {
         this._actionHandlers[action] = []
       }
@@ -114,13 +163,49 @@ class RRDht extends AsyncClass {
       this._actionHandlers[action].push(handler)
     })
 
-    attach('emit', async (name, ...args) => {
+    attach('emit', async (config, name, ...args) => {
       return this.emit(name, ...args)
     })
 
-    attach('act', async (action) => {
+    attach('act', async (config, action) => {
       return this.act(action)
     })
+
+    const proxyCache = {}
+    attach('persistCacheProxy', async (config, ns) => {
+      if (!(ns in proxyCache)) {
+        proxyCache[ns] = new Proxy(Object.create(null), {
+          has: (_, prop) => {
+            return (async () => {
+              return !!(await config.persistCacheGet(ns, prop))
+            })()
+          },
+          get: (_, prop) => {
+            // it's hard to return a proxy from an async function in nodejs...
+            if (PROXY_FIX.indexOf(prop.toString()) > -1) {
+              return
+            }
+            return (val) => {
+              if (typeof val === 'undefined') {
+                return config.persistCacheGet(ns, prop)
+              } else {
+                return config.persistCacheSet(ns, prop, val)
+              }
+            }
+          },
+          set: () => {
+            throw new Error('use `await config.prop()` to get, `await config.prop(val)` to set')
+          }
+        })
+      }
+      return proxyCache[ns]
+    })
+
+    attach('$', await this._config.persistCacheProxy('$'))
+
+    const runtimeState = {}
+    attach('runtimeState', runtimeState)
+    attach('_', runtimeState)
 
     Object.freeze(this._config)
   }
@@ -178,7 +263,10 @@ function test () {
     try {
       const dht = await new RRDht({
         agentHash: 'n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=',
-        agentNonce: 'b+OXWcbfUO/eq3wmPk/RYjUWheTC/V/t+EqfIaUDJvU='
+        agentNonce: 'b+OXWcbfUO/eq3wmPk/RYjUWheTC/V/t+EqfIaUDJvU=',
+        agentPeerInfo: {
+          transportAddress: 'ip4/127.0.0.1/5556'
+        }
       })
       dht.on('action', async (action, params) => {
         try {
@@ -192,7 +280,7 @@ function test () {
         }
       })
       await $sleep(250)
-      dht.act(actions.registerPeer('my-hash', {
+      dht.act(actions.peerHoldRequest('my-hash', 'nonce', {
         agentId: 'yay',
         transportId: 'other'
       }))

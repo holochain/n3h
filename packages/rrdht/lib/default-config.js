@@ -83,8 +83,8 @@ exports.agentLocHashFn = async function agentLocHashFn (config, hash, nonce) {
  */
 exports.agentLocFn = async function agentLocFn (config, hash, nonce) {
   const rawHash = assertBuffer(hash, 32)
-  const locHash = await config.agentLocHashFn(config, hash, nonce)
-  await config.agentLocVerifyFn(config, locHash)
+  const locHash = await config.agentLocHashFn(hash, nonce)
+  await config.agentLocVerifyFn(locHash)
   return bufCompress(rawHash).toString('base64')
 }
 
@@ -127,8 +127,8 @@ exports.agentLocSearchFn = async function agentLocSearchFn (config, hash) {
         rawNonce = Buffer.from(n)
       })
       await config.agentLocVerifyFn(
-        config, await config.agentLocHashFn(
-          config, hash.toString('base64'), rawNonce.toString('base64')))
+        await config.agentLocHashFn(
+          hash.toString('base64'), rawNonce.toString('base64')))
       break
     } catch (e) { /* pass */ }
 
