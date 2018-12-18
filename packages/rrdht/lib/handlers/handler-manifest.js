@@ -1,7 +1,7 @@
 const handlers = [
   require('./init/init'),
   require('./tickle/upkeep'),
-  require('./register-peer/register-peer')
+  require('./peer-hold-request/peer-hold-request')
 ]
 
 exports.registerHandler = async function registerHandler (config) {

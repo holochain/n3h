@@ -4,8 +4,8 @@
   "description": "generic modular peer discovery and dht library implementing the rrdht sharding and gossip algorithm",
   "main": "lib/index.js",
   "scripts": {
-    "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
-    "mocha": "mocha lib/**/*.test.js bin/**/*.test.js",
+    "lint": "standard --fix 'lib/**/*.js' 'test/**/*.js'",
+    "mocha": "mocha lib/**/*.test.js test/**/*.test.js",
     "nyc": "nyc npm run mocha",
     "test": "npm run lint && npm run nyc",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""

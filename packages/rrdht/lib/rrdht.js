@@ -2,12 +2,14 @@ const { AsyncClass, $sleep } = require('@holochain/n3h-common')
 const defaultConfig = require('./default-config')
 const { registerHandler } = require('./handlers/handler-manifest')
 const actions = require('./actions')
+const events = require('./events')
 
-const MAGIC = '$rrdht$config$'
+/*
+const CONFIG_MAGIC = '$rrdht$config$'
 const CLASS_CONFIG = ['PersistCache']
 const REQUIRED_CONFIG = ['agentHash', 'agentNonce', 'agentPeerInfo']
 const RESERVED_CONFIG = [
-  MAGIC,
+  CONFIG_MAGIC,
   'agentLoc',
   'registerHandler',
   'emit',
@@ -17,6 +19,8 @@ const RESERVED_CONFIG = [
   'runtimeState',
   '_'
 ]
+*/
+
 const PROXY_FIX = [
   'then',
   'Symbol(util.inspect.custom)',
@@ -42,48 +46,13 @@ class RRDht extends AsyncClass {
 
     this._actionHandlers = {}
 
-    this._config = {}
-
-    const attach = (k, v) => {
-      if (typeof v === 'function' && CLASS_CONFIG.indexOf(k) < 0) {
-        this._config[k] = (...args) => v(this._config, ...args)
-      } else {
-        this._config[k] = v
-      }
-    }
-
-    if (typeof config === 'object') {
-      for (let k in config) {
-        attach(k, config[k])
-      }
-    }
-
-    for (let key of REQUIRED_CONFIG) {
-      if (!(key in this._config)) {
-        throw new Error('cannot initialize rrdht without config "' + key + '"')
-      }
-    }
-
-    for (let key of RESERVED_CONFIG) {
-      if (key in this._config) {
-        throw new Error('"' + key + '" is a reserved config key')
-      }
-    }
-
-    for (let k in defaultConfig) {
-      if (!(k in this._config)) {
-        attach(k, defaultConfig[k])
-      }
-    }
-
-    this._config[MAGIC] = true
-
-    // some data about ourselves are accessed so often
-    // we put them on the config object itself
-    this._config.agentLoc = await this._config.agentLocFn(
-      this._config.agentHash, this._config.agentNonce)
-
-    await this._finalizeConfig(attach)
+    const configBuilder = defaultConfig.generateConfigBuilder()
+    await configBuilder.attach(config)
+    await this._attachConfigFns(configBuilder)
+    this._config = await configBuilder.finalize(async c => {
+      c.agentLoc = await c.agentLocFn(
+        c.agentHash, c.agentNonce)
+    })
 
     await registerHandler(this._config)
 
@@ -154,25 +123,31 @@ class RRDht extends AsyncClass {
 
   /**
    */
-  async _finalizeConfig (attach) {
-    attach('registerHandler', async (config, action, handler) => {
+  async _attachConfigFns (configBuilder) {
+    await configBuilder.attach({ 'registerHandler': async (config, action, handler) => {
       if (!(action in this._actionHandlers)) {
         this._actionHandlers[action] = []
       }
 
       this._actionHandlers[action].push(handler)
-    })
+    } })
 
-    attach('emit', async (config, name, ...args) => {
-      return this.emit(name, ...args)
-    })
+    await configBuilder.attach({ 'emit': async (config, evt) => {
+      if (!events.isEvent(evt)) {
+        throw new Error('can only emit events')
+      }
+      await Promise.all([
+        this.emit(evt.type, evt),
+        this.emit('all', evt)
+      ])
+    } })
 
-    attach('act', async (config, action) => {
+    await configBuilder.attach({ 'act': async (config, action) => {
       return this.act(action)
-    })
+    } })
 
     const proxyCache = {}
-    attach('persistCacheProxy', async (config, ns) => {
+    await configBuilder.attach({ 'persistCacheProxy': async (config, ns) => {
       if (!(ns in proxyCache)) {
         proxyCache[ns] = new Proxy(Object.create(null), {
           has: (_, prop) => {
@@ -199,15 +174,15 @@ class RRDht extends AsyncClass {
         })
       }
       return proxyCache[ns]
+    } })
+
+    await configBuilder.preInvoke(async c => {
+      configBuilder.attach({ '$': await c.persistCacheProxy('$') })
     })
 
-    attach('$', await this._config.persistCacheProxy('$'))
-
     const runtimeState = {}
-    attach('runtimeState', runtimeState)
-    attach('_', runtimeState)
-
-    Object.freeze(this._config)
+    await configBuilder.attach({ 'runtimeState': runtimeState })
+    await configBuilder.attach({ '_': runtimeState })
   }
 
   /**
@@ -257,40 +232,3 @@ class RRDht extends AsyncClass {
 }
 
 exports.RRDht = RRDht
-
-function test () {
-  return new Promise(async (resolve, reject) => {
-    try {
-      const dht = await new RRDht({
-        agentHash: 'n4bQgYhMfWWaL+qgxVrQFaO/TxsrC4Is0V1sFbDwCgg=',
-        agentNonce: 'b+OXWcbfUO/eq3wmPk/RYjUWheTC/V/t+EqfIaUDJvU=',
-        agentPeerInfo: {
-          transportAddress: 'ip4/127.0.0.1/5556'
-        }
-      })
-      dht.on('action', async (action, params) => {
-        try {
-          console.log(action, JSON.stringify(params, null, 2))
-          if (action === 'registerPeer') {
-            await dht.destroy()
-            resolve()
-          }
-        } catch (e) {
-          reject(e)
-        }
-      })
-      await $sleep(250)
-      dht.act(actions.peerHoldRequest('my-hash', 'nonce', {
-        agentId: 'yay',
-        transportId: 'other'
-      }))
-    } catch (e) {
-      reject(e)
-    }
-  })
-}
-
-test().then(() => {}, (err) => {
-  console.error(err)
-  process.exit(1)
-})

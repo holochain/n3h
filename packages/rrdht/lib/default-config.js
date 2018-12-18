@@ -178,6 +178,81 @@ exports.persistCacheSet = async function persistCacheSet (config, ns, key, data)
   return cache.set(ns, key, data)
 }
 
+// -- config object builder -- //
+
+const CONFIG_MAGIC = '$rrdht$config$'
+const CLASS_CONFIG = ['PersistCache']
+const REQUIRED_CONFIG = ['agentHash', 'agentNonce', 'agentPeerInfo']
+
+/**
+ */
+exports.isConfigObject = function isConfigObject (o) {
+  return typeof o === 'object' && o[CONFIG_MAGIC] === true && Object.isFrozen(o)
+}
+
+/**
+ */
+exports.generateConfigBuilder = function generateConfigBuilder () {
+  const config = {}
+
+  const builder = {}
+
+  const attachOne = (k, v) => {
+    if (typeof v === 'function' && CLASS_CONFIG.indexOf(k) < 0) {
+      config[k] = (...args) => v(config, ...args)
+    } else {
+      config[k] = v
+    }
+  }
+
+  builder.attach = (o) => {
+    for (let k in o) {
+      if (k in config) {
+        throw new Error('"' + k + '" already registered in config object')
+      }
+      const v = o[k]
+      attachOne(k, v)
+    }
+    return builder
+  }
+
+  builder.preInvoke = async (fn) => {
+    await fn(config)
+  }
+
+  builder.finalize = async (fn) => {
+    for (let key of REQUIRED_CONFIG) {
+      if (!(key in config)) {
+        throw new Error('cannot initialize rrdht config without item "' + key + '"')
+      }
+    }
+
+    for (let key in exports) {
+      if (key !== 'generateConfigBuilder' && key !== 'isConfigObject' && !(key in config)) {
+        attachOne(key, exports[key])
+      }
+    }
+
+    Object.defineProperty(config, CONFIG_MAGIC, {
+      value: true
+    })
+
+    if (typeof fn === 'function') {
+      await fn(config)
+    }
+
+    Object.freeze(config)
+
+    builder.attach = builder.preInvoke = builder.finalize = () => {
+      throw new Error('finalize already invoked, builder functions invalid')
+    }
+
+    return config
+  }
+
+  return builder
+}
+
 // -- helper functions -- //
 
 let persistCacheSingleton = null

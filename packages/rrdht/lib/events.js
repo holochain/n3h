@@ -1,3 +1,11 @@
+const EVT_MAGIC = '$rrdht$event$'
+
+/**
+ */
+exports.isEvent = function isEvent (evt) {
+  return typeof evt === 'object' && evt[EVT_MAGIC] && Object.isFrozen(evt)
+}
+
 /**
  */
 const createEvent = exports.createEvent = function createEvent (type, params) {
@@ -7,8 +15,11 @@ const createEvent = exports.createEvent = function createEvent (type, params) {
     value: type,
     enumerable: true
   })
+  Object.defineProperty(out, EVT_MAGIC, {
+    value: true
+  })
   for (let k in params) {
-    if (k === 'type') {
+    if (k === 'type' || k === EVT_MAGIC) {
       throw new Error('bad event parameter')
     }
     Object.defineProperty(out, k, {
