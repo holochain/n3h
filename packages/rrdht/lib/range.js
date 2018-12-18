@@ -50,7 +50,6 @@ function _normPoint (r, point) {
 // clean up and add a couple additional fields to a normalize object
 function _norm (r) {
   if (r.fLen === 0 || (0 | r.fLen) !== r.fLen) {
-    console.error('@@', r.fLen)
     throw new Error('invalid range')
   }
   if (r.len > r.fLen || (0 | r.len) !== r.len) {

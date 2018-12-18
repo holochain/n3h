@@ -178,11 +178,21 @@ exports.persistCacheSet = async function persistCacheSet (config, ns, key, data)
   return cache.set(ns, key, data)
 }
 
+/**
+ * @param {object} config - reference to config object
+ * @param {string} ns - namespace of key/value store
+ * @param {string} key - the key to fetch from store
+ */
+exports.persistCacheRemove = async function persistCacheRemove (config, ns, key) {
+  const cache = await getPersistCacheSingleton(config)
+
+  return cache.remove(ns, key)
+}
+
 // -- config object builder -- //
 
 const CONFIG_MAGIC = '$rrdht$config$'
 const CLASS_CONFIG = ['PersistCache']
-const REQUIRED_CONFIG = ['agentHash', 'agentNonce', 'agentPeerInfo']
 
 /**
  */
@@ -221,12 +231,6 @@ exports.generateConfigBuilder = function generateConfigBuilder () {
   }
 
   builder.finalize = async (fn) => {
-    for (let key of REQUIRED_CONFIG) {
-      if (!(key in config)) {
-        throw new Error('cannot initialize rrdht config without item "' + key + '"')
-      }
-    }
-
     for (let key in exports) {
       if (key !== 'generateConfigBuilder' && key !== 'isConfigObject' && !(key in config)) {
         attachOne(key, exports[key])

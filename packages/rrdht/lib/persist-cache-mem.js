@@ -36,6 +36,15 @@ class PersistCacheMem extends AsyncClass {
     this._getNsRef(ns).set(key, data)
   }
 
+  /**
+   */
+  async remove (ns, key) {
+    assertString(ns, 'ns should be a string')
+    assertString(key, 'key should be a string')
+
+    this._getNsRef(ns).delete(key)
+  }
+
   // -- private -- //
 
   /**

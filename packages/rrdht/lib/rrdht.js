@@ -4,22 +4,7 @@ const { registerHandler } = require('./handlers/handler-manifest')
 const actions = require('./actions')
 const events = require('./events')
 
-/*
-const CONFIG_MAGIC = '$rrdht$config$'
-const CLASS_CONFIG = ['PersistCache']
 const REQUIRED_CONFIG = ['agentHash', 'agentNonce', 'agentPeerInfo']
-const RESERVED_CONFIG = [
-  CONFIG_MAGIC,
-  'agentLoc',
-  'registerHandler',
-  'emit',
-  'act',
-  'persistCacheProxy',
-  '$',
-  'runtimeState',
-  '_'
-]
-*/
 
 const PROXY_FIX = [
   'then',
@@ -45,6 +30,12 @@ class RRDht extends AsyncClass {
     ]
 
     this._actionHandlers = {}
+
+    for (let key of REQUIRED_CONFIG) {
+      if (!(key in config)) {
+        throw new Error('cannot initialize rrdht config without item "' + key + '"')
+      }
+    }
 
     const configBuilder = defaultConfig.generateConfigBuilder()
     await configBuilder.attach(config)
@@ -160,13 +151,17 @@ class RRDht extends AsyncClass {
             if (PROXY_FIX.indexOf(prop.toString()) > -1) {
               return
             }
-            return (val) => {
+            const out = (val) => {
               if (typeof val === 'undefined') {
                 return config.persistCacheGet(ns, prop)
               } else {
                 return config.persistCacheSet(ns, prop, val)
               }
             }
+            out.remove = () => {
+              return config.persistCacheRemove(ns, prop)
+            }
+            return out
           },
           set: () => {
             throw new Error('use `await config.prop()` to get, `await config.prop(val)` to set')

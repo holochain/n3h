@@ -20,13 +20,27 @@ const {
   fromRadius: f100Radius
 } = rFactory(0, 100)
 
+const {
+  fromStart: fNeg,
+  fromRadius: fNegRadius
+} = rFactory(-50, 100)
+
+const {
+  fromStart: fFull,
+  fromRadius: fFullRadius
+} = rFactory(-0x7fffffff, 0xffffffff)
+
 describe('Range Suite', () => {
   describe('normalize', () => {
     ;[
       [f10(0, 0), 'r[0+0:0+10]'],
       [rFactory(-10, 20).fromStart(-1, 2), 'r[-1+2:-10+20]'],
       [f10(-1, 0), 'r[9+0:0+10]'],
-      [f10(10, 0), 'r[0+0:0+10]']
+      [f10(10, 0), 'r[0+0:0+10]'],
+      //[fNeg(-3, 3), 'r[-3+3:-50+49]'],
+      //[fNeg(-50, 49), 'r[-50+49:-50+49]'],
+      [fNegRadius(0, 49), 'r[-49+98:-50+100]']
+      [fFullRadius(-0x10000000, 0x20000000), 'r[-49+98:-50+100]']
     ].forEach(vals => {
       it(aa(vals[0]), () => {
         expect(vals[0]).equals(vals[1])

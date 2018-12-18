@@ -4,7 +4,7 @@ const { expect } = require('chai')
 const { $sleep } = require('@holochain/n3h-common')
 
 const {
-  // defaultConfig,
+  defaultConfig,
   // range,
   RRDht,
   actions
@@ -14,16 +14,27 @@ const {
 const WORK_TARGET = Buffer.from('00000000000000000000000000000000000000000000000000000000000000ff', 'hex').toString('base64')
 
 describe('RRDht Integration Suite', () => {
+  let preConf = null
+
   const nodes = []
+
+  before(async () => {
+    preConf = await (defaultConfig.generateConfigBuilder()
+      .attach({
+        agentLocWorkTarget: WORK_TARGET
+      })
+      .finalize())
+  })
 
   beforeEach(async () => {
     const agentHash = crypto.randomBytes(32).toString('base64')
+    const agentNonce = await preConf.agentLocSearchFn(agentHash)
 
     for (let i = 0; i < 1; ++i) {
       const node = await new RRDht({
         agentLocWorkTarget: WORK_TARGET,
         agentHash,
-        agentNonce: 'b+OXWcbfUO/eq3wmPk/RYjUWheTC/V/t+EqfIaUDJvU=',
+        agentNonce,
         agentPeerInfo: {
           testId: i
         }
@@ -32,7 +43,22 @@ describe('RRDht Integration Suite', () => {
       node.on('all', async evt => events.push(evt))
       nodes.push({
         node,
-        events
+        events,
+        wait: async predicate => {
+          const start = Date.now()
+          for (;;) {
+            if (events.length) {
+              const evt = events.shift()
+              if (await predicate(evt)) {
+                return evt
+              }
+            }
+            if (Date.now() - start > 5000) {
+              throw new Error('event wait timeout')
+            }
+            await $sleep(10)
+          }
+        }
       })
     }
   })
@@ -48,15 +74,7 @@ describe('RRDht Integration Suite', () => {
     nodes[0].node.act(actions.peerHoldRequest('my-hash', 'nonce', {
       testId: 'fake'
     }))
-    for (;;) {
-      if (nodes[0].events.length > 0) {
-        const evt = nodes[0].events.shift()
-        if (evt.type === 'peerHoldRequest') {
-          expect(evt.peerInfo.testId).equals('fake')
-          return
-        }
-      }
-      await $sleep(10)
-    }
+    const evt = await nodes[0].wait(evt => evt.type === 'peerHoldRequest')
+    expect(evt.peerInfo.testId).equals('fake')
   })
 })
