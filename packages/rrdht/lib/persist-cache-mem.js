@@ -19,6 +19,15 @@ class PersistCacheMem extends AsyncClass {
 
   /**
    */
+  async has (ns, key) {
+    assertString(ns, 'ns should be a string')
+    assertString(key, 'key should be a string')
+
+    return this._getNsRef(ns).has(key)
+  }
+
+  /**
+   */
   async get (ns, key) {
     assertString(ns, 'ns should be a string')
     assertString(key, 'key should be a string')

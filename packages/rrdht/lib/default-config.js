@@ -160,6 +160,18 @@ exports.persistCacheKeys = async function persistCacheKeys (config, ns) {
  * @param {string} key - the key to fetch from store
  * @return {string|undefined} - the data retrieved from store
  */
+exports.persistCacheHas = async function persistCacheHas (config, ns, key) {
+  const cache = await getPersistCacheSingleton(config)
+
+  return cache.has(ns, key)
+}
+
+/**
+ * @param {object} config - reference to config object
+ * @param {string} ns - namespace of key/value store
+ * @param {string} key - the key to fetch from store
+ * @return {string|undefined} - the data retrieved from store
+ */
 exports.persistCacheGet = async function persistCacheGet (config, ns, key) {
   const cache = await getPersistCacheSingleton(config)
 
@@ -187,6 +199,49 @@ exports.persistCacheRemove = async function persistCacheRemove (config, ns, key)
   const cache = await getPersistCacheSingleton(config)
 
   return cache.remove(ns, key)
+}
+
+const PROXY_FIX = [
+  'then',
+  'Symbol(util.inspect.custom)',
+  'inspect',
+  'Symbol(Symbol.iterator)',
+  'Symbol(Symbol.toStringTag)'
+]
+
+/**
+ */
+exports.persistCacheProxy = async function persistCacheProxy (config, ns) {
+  if (!config.runtimeState._persistCacheProxyCache) {
+    config.runtimeState._persistCacheProxyCache = {}
+  }
+  if (!(ns in config.runtimeState._persistCacheProxyCache)) {
+    config.runtimeState._persistCacheProxyCache[ns] = new Proxy(Object.create(null), {
+      get: (_, prop) => {
+        // it's hard to return a proxy from an async function in nodejs...
+        if (PROXY_FIX.indexOf(prop.toString()) > -1) {
+          return
+        }
+        const out = () => {
+          return config.persistCacheGet(ns, prop)
+        }
+        out.has = val => {
+          return config.persistCacheHas(ns, prop)
+        }
+        out.set = val => {
+          return config.persistCacheSet(ns, prop, val)
+        }
+        out.remove = () => {
+          return config.persistCacheRemove(ns, prop)
+        }
+        return out
+      },
+      set: () => {
+        throw new Error('use `await config.prop()` to get, `await config.prop.set(val)` to set, `await config.prop.remove()` to remove')
+      }
+    })
+  }
+  return config.runtimeState._persistCacheProxyCache[ns]
 }
 
 // -- config object builder -- //
@@ -241,6 +296,12 @@ exports.generateConfigBuilder = function generateConfigBuilder () {
       value: true
     })
 
+    const runtimeState = {}
+    attachOne('runtimeState', runtimeState)
+    attachOne('_', runtimeState)
+
+    attachOne('$', await config.persistCacheProxy('$'))
+
     if (typeof fn === 'function') {
       await fn(config)
     }
@@ -259,16 +320,14 @@ exports.generateConfigBuilder = function generateConfigBuilder () {
 
 // -- helper functions -- //
 
-let persistCacheSingleton = null
-
 /**
  * helper get the persistCache singleton
  */
 async function getPersistCacheSingleton (config) {
-  if (!persistCacheSingleton) {
-    persistCacheSingleton = await new config.PersistCache()
+  if (!config.runtimeState._persistCacheSingleton) {
+    config.runtimeState._persistCacheSingleton = await new config.PersistCache()
   }
-  return persistCacheSingleton
+  return config.runtimeState._persistCacheSingleton
 }
 
 /**

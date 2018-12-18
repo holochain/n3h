@@ -6,14 +6,6 @@ const events = require('./events')
 
 const REQUIRED_CONFIG = ['agentHash', 'agentNonce', 'agentPeerInfo']
 
-const PROXY_FIX = [
-  'then',
-  'Symbol(util.inspect.custom)',
-  'inspect',
-  'Symbol(Symbol.iterator)',
-  'Symbol(Symbol.toStringTag)'
-]
-
 /**
  */
 class RRDht extends AsyncClass {
@@ -115,69 +107,29 @@ class RRDht extends AsyncClass {
   /**
    */
   async _attachConfigFns (configBuilder) {
-    await configBuilder.attach({ 'registerHandler': async (config, action, handler) => {
-      if (!(action in this._actionHandlers)) {
-        this._actionHandlers[action] = []
+    await configBuilder.attach({
+      'registerHandler': async (config, action, handler) => {
+        if (!(action in this._actionHandlers)) {
+          this._actionHandlers[action] = []
+        }
+
+        this._actionHandlers[action].push(handler)
+      },
+
+      'emit': async (config, evt) => {
+        if (!events.isEvent(evt)) {
+          throw new Error('can only emit events')
+        }
+        await Promise.all([
+          this.emit(evt.type, evt),
+          this.emit('all', evt)
+        ])
+      },
+
+      'act': async (config, action) => {
+        return this.act(action)
       }
-
-      this._actionHandlers[action].push(handler)
-    } })
-
-    await configBuilder.attach({ 'emit': async (config, evt) => {
-      if (!events.isEvent(evt)) {
-        throw new Error('can only emit events')
-      }
-      await Promise.all([
-        this.emit(evt.type, evt),
-        this.emit('all', evt)
-      ])
-    } })
-
-    await configBuilder.attach({ 'act': async (config, action) => {
-      return this.act(action)
-    } })
-
-    const proxyCache = {}
-    await configBuilder.attach({ 'persistCacheProxy': async (config, ns) => {
-      if (!(ns in proxyCache)) {
-        proxyCache[ns] = new Proxy(Object.create(null), {
-          has: (_, prop) => {
-            return (async () => {
-              return !!(await config.persistCacheGet(ns, prop))
-            })()
-          },
-          get: (_, prop) => {
-            // it's hard to return a proxy from an async function in nodejs...
-            if (PROXY_FIX.indexOf(prop.toString()) > -1) {
-              return
-            }
-            const out = (val) => {
-              if (typeof val === 'undefined') {
-                return config.persistCacheGet(ns, prop)
-              } else {
-                return config.persistCacheSet(ns, prop, val)
-              }
-            }
-            out.remove = () => {
-              return config.persistCacheRemove(ns, prop)
-            }
-            return out
-          },
-          set: () => {
-            throw new Error('use `await config.prop()` to get, `await config.prop(val)` to set')
-          }
-        })
-      }
-      return proxyCache[ns]
-    } })
-
-    await configBuilder.preInvoke(async c => {
-      configBuilder.attach({ '$': await c.persistCacheProxy('$') })
     })
-
-    const runtimeState = {}
-    await configBuilder.attach({ 'runtimeState': runtimeState })
-    await configBuilder.attach({ '_': runtimeState })
   }
 
   /**

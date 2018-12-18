@@ -109,6 +109,12 @@ function _fromStart (start, length) {
 // export
 exports.rFromStart = _fromStart
 
+/**
+ */
+exports.rGetStart = function rGetStart (r) {
+  return _parse(r).beg
+}
+
 // render ascii art showing where this range falls in int32 space
 function _asciiArt (r) {
   const isOutside = r.beg === r.end
