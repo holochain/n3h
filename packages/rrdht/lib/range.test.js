@@ -1,46 +1,32 @@
 const { expect } = require('chai')
 
-const {
-  rFactory,
-  rInvert,
-  rCoversPoint,
-  rFullyCovers,
-  rCut,
-  rCoverage,
-  rAsciiArt: aa
-} = require('./range')
-
-const {
-  fromStart: f10,
-  fromRadius: f10Radius
-} = rFactory(0, 10)
-
-const {
-  // fromStart: f100,
-  fromRadius: f100Radius
-} = rFactory(0, 100)
-
-const {
-  fromStart: fNeg,
-  fromRadius: fNegRadius
-} = rFactory(-50, 100)
-
-const {
-  fromStart: fFull,
-  fromRadius: fFullRadius
-} = rFactory(-0x7fffffff, 0xffffffff)
+const range = require('./range')
+const aa = range.rAsciiArt
+const mks = range.rFromStart
+const mkr = range.rFromRadius
 
 describe('Range Suite', () => {
-  describe('normalize', () => {
+  describe('fromRadius', () => {
     ;[
-      [f10(0, 0), 'r[0+0:0+10]'],
-      [rFactory(-10, 20).fromStart(-1, 2), 'r[-1+2:-10+20]'],
-      [f10(-1, 0), 'r[9+0:0+10]'],
-      [f10(10, 0), 'r[0+0:0+10]'],
-      //[fNeg(-3, 3), 'r[-3+3:-50+49]'],
-      //[fNeg(-50, 49), 'r[-50+49:-50+49]'],
-      [fNegRadius(0, 49), 'r[-49+98:-50+100]']
-      [fFullRadius(-0x10000000, 0x20000000), 'r[-49+98:-50+100]']
+      [mkr(0, 200), '32rffffff38:00000190'],
+      [mkr('00000000', '000000c8'), '32rffffff38:00000190'],
+      [mkr(range.MIN, 0 | (range.LMAX / 4)), '32r40000001:7ffffffe']
+    ].forEach(vals => {
+      it(range.rAsciiArt(vals[0]), () => {
+        expect(vals[0]).equals(vals[1])
+      })
+    })
+  })
+
+  describe('fromStart', () => {
+    ;[
+      [mks(0, 0), '32r00000000:00000000'],
+      [mks(0, range.LMAX), '32r00000000:ffffffff'],
+      [mks(-200, 400), '32rffffff38:00000190'],
+      [mks('ffffff38', '00000190'), '32rffffff38:00000190'],
+      [mks(range.MIN, 0 | (range.LMAX / 4)), '32r80000000:3fffffff'],
+      [mks(range.MAX, 0 | (range.LMAX / 4)), '32r7fffffff:3fffffff'],
+      [mks(range.MAX + 1, 0 | (range.LMAX / 4)), '32r80000000:3fffffff']
     ].forEach(vals => {
       it(aa(vals[0]), () => {
         expect(vals[0]).equals(vals[1])
@@ -50,35 +36,34 @@ describe('Range Suite', () => {
 
   describe('rInvert', () => {
     ;[
-      [f10(0, 0), f10(0, 10)],
-      [f10(0, 1), f10(1, 9)],
-      [f10Radius(0, 5), f10(5, 0)],
-      [f10Radius(0, 4), f10(4, 2)]
+      [mks(0, 0), mks(0, range.LMAX)]
     ].forEach(vals => {
       it('should convert\n' + aa(vals[0]) + ' into\n' + aa(vals[1]), () => {
-        expect(rInvert(vals[0])).equals(vals[1])
+        expect(range.rInvert(vals[0])).equals(vals[1])
       })
     })
   })
 
   describe('rCoversPoint', () => {
     ;[
-      [f100Radius(50, 0), 50, true],
-      [f100Radius(50, 2), 51, true],
-      [f100Radius(50, 0), 51, false],
-      [f100Radius(0, 50), 99, true],
-      [f100Radius(0, 2), 1, true],
-      [f100Radius(0, 2), 98, true],
-      [f100Radius(0, 2), 97, false],
-      [f100Radius(99, 2), 99, true],
-      [f100Radius(99, 2), 1, true],
-      [f100Radius(99, 2), 2, false]
+      [mks(0x32, 1), 0x32, true],
+      [mks(0x32, 0), 0x32, false],
+      [mkr(0x32, 1), 0x33, true],
+      [mkr(0x32, 1), 0x34, false],
+      [mks(0, range.LMAX), -1, true],
+      [mks(0, range.LMAX - 1), -1, false],
+      [mkr(range.MIN, 1), range.MIN, true],
+      [mkr(range.MIN, 1), range.MAX, true],
+      [mkr(range.MIN, 1), range.MAX - 1, false],
+      [mkr(range.MAX, 1), range.MAX, true],
+      [mkr(range.MAX, 1), range.MIN, true],
+      [mkr(range.MAX, 1), range.MIN + 1, false]
     ].forEach(vals => {
       it(
         aa(vals[0]) +
-        (vals[2] ? ' should cover ' : ' should not cover ') +
-        vals[1], () => {
-          expect(rCoversPoint(vals[0], vals[1])).equals(vals[2])
+        (vals[2] ? ' should cover 0x' : ' should not cover 0x') +
+        vals[1].toString(16), () => {
+          expect(range.rCoversPoint(vals[0], vals[1])).equals(vals[2])
         }
       )
     })
@@ -86,22 +71,20 @@ describe('Range Suite', () => {
 
   describe('rFullyCovers', () => {
     ;[
-      [f100Radius(50, 0), f100Radius(60, 0), false],
-      [f100Radius(50, 0), f100Radius(50, 2), true],
-      [f100Radius(50, 1), f100Radius(50, 2), true],
-      [f100Radius(50, 2), f100Radius(50, 2), true],
-      [f100Radius(50, 3), f100Radius(50, 2), false],
-      [f100Radius(50, 50), f100Radius(50, 50), true],
-      [f100Radius(50, 49), f100Radius(100, 2), false],
-      [f100Radius(100, 20), f100Radius(100, 40), true],
-      [f10(9, 2), f10(0, 10), true]
+      [mks(0, 0), mks(0, 1), false],
+      [mks(0, 1), mks(0, 1), true],
+      [mks(0, 1), mks(0, 2), false],
+      [mks(1, 1), mks(0, 2), false],
+      [mks(0, range.LMAX), mks(range.MIN, 1), true],
+      [mks(range.MIN, range.LMAX - 1), mks(range.MAX, 1), false],
+      [mks(range.MAX, 2), mks(range.MIN, 1), true]
     ].forEach(vals => {
-      const rA = vals[1]
-      const rB = vals[0]
+      const rA = vals[0]
+      const rB = vals[1]
       it(
         'A should ' + (vals[2] ? '' : 'not ') + 'fully cover B' +
         '\n(A): ' + aa(rA) + '\n(B): ' + aa(rB), () => {
-          expect(rFullyCovers(rA, rB)).equals(vals[2])
+          expect(range.rFullyCovers(rA, rB)).equals(vals[2])
         }
       )
     })
@@ -109,18 +92,14 @@ describe('Range Suite', () => {
 
   describe('rCut', () => {
     ;[
-      [1, f10(0, 2), f10(0, 1), f10(1, 1)],
-      [2, f10(0, 2), f10(1, 1), f10(0, 1)],
-      [3, f10(0, 2), f10(9, 4), f10(0, 0)],
-      [4, f10(0, 2), f10(9, 10), f10(0, 0)],
-      [5, f10(0, 2), f10(0, 0), f10(0, 2)],
-      [6, f10(0, 4), f10(2, 0), f10(0, 4)],
-      [7, f10(9, 2), f10(9, 1), f10(0, 1)],
-      [8, f10(9, 2), f10(0, 1), f10(9, 1)],
-      [9, f10(9, 2), f10(8, 4), f10(9, 0)],
-      [10, f10(9, 2), f10(0, 10), f10(9, 0)],
-      [11, f10(9, 2), f10(9, 0), f10(9, 2)],
-      [12, f10(9, 4), f10(1, 0), f10(9, 4)]
+      [1, mks(0, 2), mks(0, 1), mks(1, 1)],
+      [2, mks(0, 2), mks(1, 1), mks(0, 1)],
+      [3, mks(range.MIN, 2), mks(range.MAX, 4), mks(range.MIN, 0)],
+      [4, mks(0, 2), mks(0, 0), mks(0, 2)],
+      [5, mks(0, 4), mks(2, 0), mks(0, 4)],
+      [6, mks(range.MAX, 2), mks(range.MAX, 1), mks(range.MIN, 1)],
+      [7, mks(range.MAX, 2), mks(range.MIN, 1), mks(range.MAX, 1)],
+      [8, mks(0, 1), mks(range.MIN, range.LMAX), mks(0, 0)]
     ].forEach(vals => {
       const rSrc = vals[1]
       const rCutBy = vals[2]
@@ -130,7 +109,7 @@ describe('Range Suite', () => {
         '\n(A): ' + aa(rSrc) +
         '\n(B): ' + aa(rCutBy) +
         '\n(C): ' + aa(rExpect), () => {
-          expect(rCut(rSrc, rCutBy)).equals(rExpect)
+          expect(range.rCut(rSrc, rCutBy)).equals(rExpect)
         }
       )
     })
@@ -140,20 +119,20 @@ describe('Range Suite', () => {
     ;[
       [
         1,
-        f10(2, 2),
-        [f10(5, 1), f10(4, 1), f10(3, 1), f10(2, 1), f10(1, 1)],
+        mks(2, 2),
+        [mks(5, 1), mks(4, 1), mks(3, 1), mks(2, 1), mks(1, 1)],
         {
-          within: [ f10(2, 1), f10(3, 1), f10(1, 1) ],
+          within: [ mks(2, 1), mks(3, 1), mks(1, 1) ],
           coverageCount: 1,
           nextHole: 2
         }
       ],
       [
         2,
-        f10(2, 2),
-        [f10(0, 5), f10(0, 10)],
+        mks(2, 2),
+        [mks(0, 5), mks(0, 10)],
         {
-          within: [ f10(0, 10), f10(0, 5) ],
+          within: [ mks(0, 10), mks(0, 5) ],
           coverageCount: 2,
           nextHole: 2
         }
@@ -162,7 +141,7 @@ describe('Range Suite', () => {
       const r = vals[1]
       const arr = vals[2]
       it('coverage test #' + vals[0], () => {
-        expect(rCoverage(r, arr)).deep.equals(vals[3])
+        expect(range.rCoverage(r, arr)).deep.equals(vals[3])
       })
     })
   })
