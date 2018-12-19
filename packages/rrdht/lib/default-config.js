@@ -9,12 +9,6 @@ const { PersistCacheMem } = require('./persist-cache-mem')
  */
 exports.agentLocWorkTarget = Buffer.from('000000000000000000000000000000000000000000000000000000000000b400', 'hex').toString('base64')
 
-/**
- * The class to use for persistence (if you use the default
- * persistCacheGet and persistCacheSet methods)
- */
-exports.PersistCache = PersistCacheMem
-
 // -- debug configuration parameters -- //
 
 /**
@@ -144,61 +138,15 @@ exports.agentLocSearchFn = async function agentLocSearchFn (config, hash) {
 }
 
 /**
- * @param {object} config - reference to config object
- * @param {string} ns - namespace of key/value store
- * @return {MapIterator}
+ * get a persist cache instance that conforms to the persist cache api
+ * note this may be called multiple times, and should return an instance
+ * with access to the same data every time.
  */
-exports.persistCacheKeys = async function persistCacheKeys (config, ns) {
-  const cache = await getPersistCacheSingleton(config)
-
-  return cache.keys(ns)
-}
-
-/**
- * @param {object} config - reference to config object
- * @param {string} ns - namespace of key/value store
- * @param {string} key - the key to fetch from store
- * @return {string|undefined} - the data retrieved from store
- */
-exports.persistCacheHas = async function persistCacheHas (config, ns, key) {
-  const cache = await getPersistCacheSingleton(config)
-
-  return cache.has(ns, key)
-}
-
-/**
- * @param {object} config - reference to config object
- * @param {string} ns - namespace of key/value store
- * @param {string} key - the key to fetch from store
- * @return {string|undefined} - the data retrieved from store
- */
-exports.persistCacheGet = async function persistCacheGet (config, ns, key) {
-  const cache = await getPersistCacheSingleton(config)
-
-  return cache.get(ns, key)
-}
-
-/**
- * @param {object} config - reference to config object
- * @param {string} ns - namespace of key/value store
- * @param {string} key - the key to add to store
- * @param {string} data - the data to add to store
- */
-exports.persistCacheSet = async function persistCacheSet (config, ns, key, data) {
-  const cache = await getPersistCacheSingleton(config)
-
-  return cache.set(ns, key, data)
-}
-
-/**
- * @param {object} config - reference to config object
- * @param {string} ns - namespace of key/value store
- * @param {string} key - the key to fetch from store
- */
-exports.persistCacheRemove = async function persistCacheRemove (config, ns, key) {
-  const cache = await getPersistCacheSingleton(config)
-
-  return cache.remove(ns, key)
+exports.getPersistCache = async function getPersistCache (config) {
+  if (!config.runtimeState._persistCache) {
+    config.runtimeState._persistCache = await new PersistCacheMem()
+  }
+  return config.runtimeState._persistCache
 }
 
 const PROXY_FIX = [
@@ -216,6 +164,7 @@ exports.persistCacheProxy = async function persistCacheProxy (config, ns) {
     config.runtimeState._persistCacheProxyCache = {}
   }
   if (!(ns in config.runtimeState._persistCacheProxyCache)) {
+    const inst = await config.getPersistCache()
     config.runtimeState._persistCacheProxyCache[ns] = new Proxy(Object.create(null), {
       get: (_, prop) => {
         // it's hard to return a proxy from an async function in nodejs...
@@ -223,16 +172,16 @@ exports.persistCacheProxy = async function persistCacheProxy (config, ns) {
           return
         }
         const out = () => {
-          return config.persistCacheGet(ns, prop)
+          return inst.get(ns, prop)
         }
         out.has = val => {
-          return config.persistCacheHas(ns, prop)
+          return inst.has(ns, prop)
         }
         out.set = val => {
-          return config.persistCacheSet(ns, prop, val)
+          return inst.set(ns, prop, val)
         }
         out.remove = () => {
-          return config.persistCacheRemove(ns, prop)
+          return inst.remove(ns, prop)
         }
         return out
       },
@@ -319,16 +268,6 @@ exports.generateConfigBuilder = function generateConfigBuilder () {
 }
 
 // -- helper functions -- //
-
-/**
- * helper get the persistCache singleton
- */
-async function getPersistCacheSingleton (config) {
-  if (!config.runtimeState._persistCacheSingleton) {
-    config.runtimeState._persistCacheSingleton = await new config.PersistCache()
-  }
-  return config.runtimeState._persistCacheSingleton
-}
 
 /**
  * helper checks if a buffer is the correct length
