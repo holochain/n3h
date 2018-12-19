@@ -3,7 +3,12 @@
 const { N3hNode, N3hHackMode } = require('../lib/index')
 
 async function main () {
-  const n3hNode = 'N3H_HACK_MODE' in process.env
+
+  const mode = 'N3H_MODE' in process.env
+    ? process.env.N3H_MODE
+    : 'toto'
+
+  const n3hNode = mode === 'HACK'
     ? await new N3hHackMode()
     : await N3hNode.constructDefault()
 
