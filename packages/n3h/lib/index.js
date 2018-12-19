@@ -12,6 +12,7 @@ const DEFAULT_MODULES = [
 ]
 
 exports.N3hHackMode = require('@holochain/hackmode').N3hHackMode
+exports.N3hMock = require('@holochain/n3h-mock').N3hMock
 
 /**
  */

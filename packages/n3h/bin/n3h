@@ -1,16 +1,24 @@
 #!/usr/bin/env node
 
-const { N3hNode, N3hHackMode } = require('../lib/index')
+const { N3hNode, N3hHackMode, N3hMock } = require('../lib/index')
 
 async function main () {
 
   const mode = 'N3H_MODE' in process.env
     ? process.env.N3H_MODE
-    : 'toto'
+    : null
 
-  const n3hNode = mode === 'HACK'
-    ? await new N3hHackMode()
-    : await N3hNode.constructDefault()
+  var n3hNode
+  switch(mode) {
+    case 'MOCK':
+      n3hNode = await new N3hMock()
+      break
+    case 'HACK':
+      n3hNode = await new N3hHackMode()
+      break
+    default:
+      n3hNode = await N3hNode.constructDefault()
+  }
 
   let terminated = false
   const terminate = async () => {
