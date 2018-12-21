@@ -73,55 +73,6 @@ class Mem {
       return JSON.parse(this._data[loc][hash].buffer.toString('utf8'))
     }
   }
-
-  toJSON () {
-    const out = {}
-    for (let loc in this._data) {
-      for (let hash in this._data[loc]) {
-        out[hash] = JSON.parse(this._data[loc][hash].buffer.toString('utf8'))
-      }
-    }
-    return out
-  }
-
-  getHashHashForLoc (loc) {
-    return getHash(Buffer.concat(Object.keys(this._data[loc]).map(
-      h => Buffer.from(h, 'base64')))).toString('base64')
-  }
-
-  getGossipHashHash () {
-    const out = {}
-    for (let loc in this._data) {
-      out[loc] = this.getHashHashForLoc(loc)
-    }
-    return out
-  }
-
-  getGossipLocListForGossipHashHash (gossipHashHash) {
-    const out = []
-    for (let loc in gossipHashHash) {
-      if (loc in this._data) {
-        if (gossipHashHash[loc] !== this.getHashHashForLoc(loc)) {
-          out.push(loc)
-        }
-      } else {
-        out.push(loc)
-      }
-    }
-    return out
-  }
-
-  getGossipHashesForGossipLocList (gossipLocList) {
-    const out = []
-    for (let loc of gossipLocList) {
-      if (loc in this._data) {
-        for (let hash in this._data[loc]) {
-          out.push(hash)
-        }
-      }
-    }
-    return out
-  }
 }
 
 exports.Mem = Mem

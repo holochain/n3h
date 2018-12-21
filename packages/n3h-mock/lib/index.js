@@ -2,22 +2,13 @@ const path = require('path')
 const os = require('os')
 const { URL } = require('url')
 
-const { AsyncClass, mkdirp, $p } = require('@holochain/n3h-common')
+const { AsyncClass, mkdirp } = require('@holochain/n3h-common')
 const { IpcServer } = require('@holochain/n3h-ipc')
-const { LibP2pBundle } = require('@holochain/n3h-mod-message-libp2p')
 
 const { Mem } = require('./mem')
 
-const PeerInfo = require('peer-info')
-const PeerId = require('peer-id')
-
 const tweetlog = require('@holochain/tweetlog')
 tweetlog.set('t')
-
-/// in hack or mock mode, we need to always output on stderr
-// tweetlog.listen((l, t, ...a) => {
-//   console.error(`(${t}) [${l}] ${a.map(a => a.stack || (Array.isArray(a) || typeof a === 'object') ? JSON.stringify(a) : a.toString()).join(' ')}`)
-// })
 
 const log = tweetlog('@mock@')
 
@@ -59,7 +50,6 @@ class N3hMock extends AsyncClass {
     // Init "submodules" ?
     await Promise.all([
       this._initIpc()
-      // , this._initP2p()
     ])
 
     // Notify that Init is done
@@ -102,7 +92,6 @@ class N3hMock extends AsyncClass {
 
     log.t('Received IPC message: ', opt)
 
-    let ref
     let toZmqId
     if (opt.name === 'json' && typeof opt.data.method === 'string') {
       switch (opt.data.method) {
@@ -110,8 +99,8 @@ class N3hMock extends AsyncClass {
           this._ipc.send('json', {
             method: 'state',
             state: 'ready',
-            id: '42' /*this._p2p.getId()*/,
-            bindings: [] /*this._p2p.getBindings()*/
+            id: '42', // not needed in mock mode
+            bindings: [] // not needed in mock mode
           })
           return
         case 'connect':
@@ -126,7 +115,7 @@ class N3hMock extends AsyncClass {
           this._track(opt.data.dnaHash, opt.data.agentId, opt.from)
           return
         case 'send':
-          ref = this._getMemRef(opt.data.dnaHash)
+          this._getMemRef(opt.data.dnaHash)
 
           if (!(opt.data.toAgentId in this._senders)) {
             this._ipc.send('json', {
@@ -149,7 +138,7 @@ class N3hMock extends AsyncClass {
           })
           return
         case 'handleSendResult':
-          ref = this._getMemRef(opt.data.dnaHash)
+          this._getMemRef(opt.data.dnaHash)
 
           if (!(opt.data.toAgentId in this._senders)) {
             log.t('send failed: unknown target node: ' + opt.data.toAgentId)
