@@ -80,6 +80,11 @@ class IpcServer extends AsyncClass {
     }
   }
 
+  sendOne (zmqid, name, data) {
+    this.$checkDestroyed()
+      this._send(zmqid, name, data)
+  }
+
   // -- private -- //
 
   /**
@@ -163,18 +168,19 @@ class IpcServer extends AsyncClass {
       if (args.length !== 4) {
         throw new Error('wrong msg size: ' + args.length)
       }
-      const zmqid = args[0].toString('hex')
-      this._tickle(zmqid)
+      const fromZmqId = args[0].toString('hex')
+      this._tickle(fromZmqId)
       const { name, data } = msg.decode(args[2], args[3])
       if (name === 'ping') {
-        this._send(zmqid, 'pong', {
+        this._send(fromZmqId, 'pong', {
           orig: data.sent,
           recv: Date.now()
         })
       }
       this.emit('message', {
         name,
-        data
+        data,
+        fromZmqId
       })
     } catch (e) {
       console.error(e)
