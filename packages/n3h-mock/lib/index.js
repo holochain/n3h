@@ -139,7 +139,7 @@ class N3hMock extends AsyncClass {
           }
 
           toZmqId = this._senders[opt.data.toAgentId]
-          this._ipc.send_one(toZmqId, 'json', {
+          this._ipc.sendOne(toZmqId, 'json', {
             method: 'handleSend',
             _id: opt.data._id,
             dnaHash: opt.data.dnaHash,
@@ -167,7 +167,7 @@ class N3hMock extends AsyncClass {
             return
           }
           toZmqId = this._senders[opt.data.toAgentId]
-          this._ipc.send_one(toZmqId, 'json', {
+          this._ipc.sendOne(toZmqId, 'json', {
             method: 'sendResult',
             _id: opt.data._id,
             dnaHash: opt.data.dnaHash,
