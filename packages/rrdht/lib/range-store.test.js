@@ -42,4 +42,32 @@ describe('Range Store Suite', () => {
     await rs.setRadius(LOC, 100)
     expect((await rs.getHash('test-hash'))).equals(undefined)
   })
+
+  it('hashList', async () => {
+    await Promise.all([
+      rs.mayStoreData(0, '0:a', {}),
+      rs.mayStoreData(0, '0:b', {}),
+      rs.mayStoreData(1, '1:a', {}),
+      rs.mayStoreData(1, '1:b', {})
+    ])
+    expect(Array.from((await rs.getHashList(0, 0, 3)).hashSet.values()))
+      .deep.equals(['0:a', '0:b'])
+    expect(Array.from((await rs.getHashList(1, 0, 3)).hashSet.values()))
+      .deep.equals(['1:a', '1:b'])
+    expect(Array.from((await rs.getHashList(0, 0, 4)).hashSet.values()))
+      .deep.equals(['0:a', '0:b', '1:a', '1:b'])
+    expect(Array.from((await rs.getHashList(1, 0, 4)).hashSet.values()))
+      .deep.equals(['1:a', '1:b', '0:a', '0:b'])
+  })
+
+  it('hashList wrap', async () => {
+    await Promise.all([
+      rs.mayStoreData(0, 'a', {}),
+      rs.mayStoreData(0x40000000, 'b', {})
+    ])
+    expect(Array.from((await rs.getHashList(1, 0)).hashSet.values()))
+      .deep.equals(['b', 'a'])
+    expect(Array.from((await rs.getHashList(1, 0x40000000)).hashSet.values()))
+      .deep.equals(['b'])
+  })
 })

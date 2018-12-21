@@ -74,7 +74,12 @@ class SKArrayStoreMem extends AsyncClass {
 
   /**
    */
-  async getHashList (startLoc, maxHashes) {
+  async getHashList (startLoc, maxLoc, maxHashes) {
+    let maxOk = true
+    if (maxLoc <= startLoc) {
+      maxOk = false
+    }
+
     maxHashes || (maxHashes = 0)
     const out = {
       startLoc: startLoc || 0,
@@ -89,6 +94,9 @@ class SKArrayStoreMem extends AsyncClass {
       if (maxHashes > 0 && out.hashSet.size + item.set.size > maxHashes) {
         return out
       }
+      if (maxOk && item.loc > maxLoc) {
+        return out
+      }
 
       out.endLoc = item.loc
 
@@ -98,7 +106,11 @@ class SKArrayStoreMem extends AsyncClass {
 
       ++idx
       if (idx >= this._data.length) {
+        if (maxLoc > startLoc) {
+          return out
+        }
         idx = 0
+        maxOk = true
       }
     }
 

@@ -75,6 +75,12 @@ class RangeStore extends AsyncClass {
     }
   }
 
+  /**
+   */
+  async getHashList (startLoc, maxLoc, maxHashes) {
+    return this._byLoc.getHashList(startLoc, maxLoc, maxHashes)
+  }
+
   // -- private -- //
 
   /**
