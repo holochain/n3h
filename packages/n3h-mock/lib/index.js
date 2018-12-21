@@ -14,33 +14,38 @@ const PeerId = require('peer-id')
 const tweetlog = require('@holochain/tweetlog')
 tweetlog.set('t')
 
-/// in hackmode, we need to always output on stderr
-tweetlog.listen((l, t, ...a) => {
-  console.error(`(${t}) [${l}] ${a.map(a => a.stack || (Array.isArray(a) || typeof a === 'object') ? JSON.stringify(a) : a.toString()).join(' ')}`)
-})
+/// in hack or mock mode, we need to always output on stderr
+// tweetlog.listen((l, t, ...a) => {
+//   console.error(`(${t}) [${l}] ${a.map(a => a.stack || (Array.isArray(a) || typeof a === 'object') ? JSON.stringify(a) : a.toString()).join(' ')}`)
+// })
 
 const log = tweetlog('@mock@')
 
 class N3hMock extends AsyncClass {
+
+  /// Network mock init.
+  /// Normally spawned by holochain_net where config is passed via environment variables
   async init () {
     await super.init()
 
+    log.t('Initializing...')
+
+    // Initialize members
     this._memory = {}
-    this._peerBook = {}
+    this._senders = {}
+    this.senders_by_dna = {}
 
-    this._gossipState = {
-      lastPeerIndex: 0,
-      pauseUntil: 0
-    }
-
+    // Set working directory from config (a temp folder) or default to $home/.n3h
     this._workDir = 'N3H_WORK_DIR' in process.env
       ? process.env.N3H_WORK_DIR
       : path.resolve(path.join(
         os.homedir(), '.nh3'))
 
+    // Move into working directory?
     await mkdirp(this._workDir)
     process.chdir(this._workDir)
 
+    // Set ipcUri
     this._ipcUri = 'N3H_IPC_SOCKET' in process.env
       ? process.env.N3H_IPC_SOCKET
       : 'ipc://' + path.resolve(path.join(
@@ -51,27 +56,28 @@ class N3hMock extends AsyncClass {
       await mkdirp(path.dirname(tmpUri.pathname))
     }
 
+    // Init "submodules" ?
     await Promise.all([
-      this._initIpc(),
-      this._initP2p()
+      this._initIpc()
+      // , this._initP2p()
     ])
 
+    // Notify that Init is done
     // make sure this is output despite our log settings
     console.log('#IPC-BINDING#:' + this._ipc.boundEndpoint)
-    for (let binding of this._p2p.getBindings()) {
-      console.log('#P2P-BINDING#:' + binding)
-    }
     console.log('#IPC-READY#')
-
-    this._gossipTimer = setInterval(() => this._checkGossip(), 200)
   }
 
+  //
   async run () {
     log.t('running')
   }
 
-  // -- private -- //
+  // ----------------------------------------------------------------------------------------------
+  // Private
+  // ----------------------------------------------------------------------------------------------
 
+  // Set IPC function pointers on message received
   async _initIpc () {
     this._ipc = await new IpcServer()
 
@@ -87,59 +93,42 @@ class N3hMock extends AsyncClass {
     log.t('bound to', this._ipc.boundEndpoint)
   }
 
-  async _initP2p () {
-    const peerInfo = this._peerInfo = new PeerInfo(await $p(PeerId.create.bind(
-      PeerId, { bits: 512 })))
-
-    peerInfo.multiaddrs.add('/ip4/0.0.0.0/tcp/0')
-
-    this._p2p = await new LibP2pBundle({
-      peerInfo
-    })
-
-    this._p2p.on('peerConnected', id => {
-      this._peerBookInsert(id)
-    })
-
-    this._p2p.on('handleSend', opt => this._handleP2pMessage(opt))
-
-    log.i('p2p bound', JSON.stringify(this._p2p.getBindings(), null, 2))
-  }
-
-  _peerBookInsert (id) {
-    if (!(id in this._peerBook)) {
-      this._peerBook[id] = {
-        lastGossip: 0
-      }
-    }
-  }
-
+  // Received 'message' from IPC: process it
   _handleIpcMessage (opt) {
+
     if (opt.name === 'ping') {
       return
     }
 
+    log.t('Received IPC message: ', opt)
+
     let ref
-    let tId
+    let toZmqId
     if (opt.name === 'json' && typeof opt.data.method === 'string') {
       switch (opt.data.method) {
         case 'requestState':
           this._ipc.send('json', {
             method: 'state',
             state: 'ready',
-            id: this._p2p.getId(),
-            bindings: this._p2p.getBindings()
+            id: '42' /*this._p2p.getId()*/,
+            bindings: [] /*this._p2p.getBindings()*/
           })
           return
         case 'connect':
-          this._p2p.connect(opt.data.address)
+          // maybe log an error?
+          this._ipc.send('json', {
+            method: 'peerConnected',
+            id: opt.data.address
+          })
+
           return
         case 'trackApp':
-          this._track(opt.data.dnaHash, opt.data.agentId)
+          this._track(opt.data.dnaHash, opt.data.agentId, opt.from)
           return
         case 'send':
           ref = this._getMemRef(opt.data.dnaHash)
-          if (!(opt.data.toAgentId in ref.agentToTransportId)) {
+
+          if (!(opt.data.toAgentId in this._senders)) {
             this._ipc.send('json', {
               method: 'failureResult',
               dnaHash: opt.data.dnaHash,
@@ -148,9 +137,10 @@ class N3hMock extends AsyncClass {
             })
             return
           }
-          tId = ref.agentToTransportId[opt.data.toAgentId]
-          this._p2p.send(tId, {
-            type: 'handleSend',
+
+          toZmqId = this._senders[opt.data.toAgentId]
+          this._ipc.send_one(toZmqId, 'json', {
+            method: 'handleSend',
             _id: opt.data._id,
             dnaHash: opt.data.dnaHash,
             toAgentId: opt.data.toAgentId,
@@ -160,7 +150,14 @@ class N3hMock extends AsyncClass {
           return
         case 'handleSendResult':
           ref = this._getMemRef(opt.data.dnaHash)
-          if (!(opt.data.toAgentId in ref.agentToTransportId)) {
+
+          if (!(opt.data.toAgentId in this._senders)) {
+            log.t('send failed: unknown target node: ' + opt.data.toAgentId)
+            return
+          }
+          toZmqId = this._senders[opt.data.toAgentId]
+
+          if (!(opt.data.toAgentId in this._senders)) {
             this._ipc.send('json', {
               method: 'failureResult',
               dnaHash: opt.data.dnaHash,
@@ -169,9 +166,9 @@ class N3hMock extends AsyncClass {
             })
             return
           }
-          tId = ref.agentToTransportId[opt.data.toAgentId]
-          this._p2p.send(tId, {
-            type: 'sendResult',
+          toZmqId = this._senders[opt.data.toAgentId]
+          this._ipc.send_one(toZmqId, 'json', {
+            method: 'sendResult',
             _id: opt.data._id,
             dnaHash: opt.data.dnaHash,
             toAgentId: opt.data.toAgentId,
@@ -224,162 +221,6 @@ class N3hMock extends AsyncClass {
     throw new Error('unexpected input ' + JSON.stringify(opt))
   }
 
-  _handleP2pMessage (opt) {
-    // log.w('@@@@', opt.data.type, JSON.stringify(opt.data))
-    switch (opt.data.type) {
-      case 'gossipHashHash':
-        this._processGossipHashHash(opt.from, opt.data.gossipHashHash)
-
-        const gossipHashHash = this._fullGossipHashHash()
-
-        // log.t('gossip (resp) with', opt.from, JSON.stringify(gossipHashHash))
-
-        this._p2p.send(opt.from, {
-          type: 'gossipHashHashResp',
-          gossipHashHash
-        })
-        return
-      case 'gossipHashHashResp':
-        this._processGossipHashHash(opt.from, opt.data.gossipHashHash)
-        return
-      case 'gossipRequestLocHashes':
-        this._processRequestLocHashes(opt.from, opt.data.locList)
-        return
-      case 'gossipHashList':
-        this._processGossipHashList(opt.from, opt.data.hashList)
-        return
-      case 'getData':
-        this._processGetData(opt.from, opt.data.dnaHash, opt.data.hash)
-        return
-      case 'getDataResp':
-        this._processGetDataResp(opt.data.dnaHash, opt.data.data)
-        return
-      case 'handleSend':
-        this._ipc.send('json', {
-          method: 'handleSend',
-          _id: opt.data._id,
-          dnaHash: opt.data.dnaHash,
-          toAgentId: opt.data.toAgentId,
-          fromAgentId: opt.data.fromAgentId,
-          data: opt.data.data
-        })
-        return
-      case 'sendResult':
-        this._ipc.send('json', {
-          method: 'sendResult',
-          _id: opt.data._id,
-          dnaHash: opt.data.dnaHash,
-          toAgentId: opt.data.toAgentId,
-          fromAgentId: opt.data.fromAgentId,
-          data: opt.data.data
-        })
-        return
-    }
-
-    throw new Error('unexpected message ' + opt.from + ' ' + JSON.stringify(
-      opt.data))
-  }
-
-  _processGossipHashHash (fromId, gossipHashHash) {
-    // we got a gossip response! push back next step 2 seconds
-    this._pauseGossip(null, 2000)
-
-    const locList = []
-    for (let hh of gossipHashHash) {
-      if (hh.dnaHash in this._memory) {
-        const ref = this._memory[hh.dnaHash].mem
-        const ll = ref.getGossipLocListForGossipHashHash(hh.gossipHashHash)
-        if (ll.length > 0) {
-          locList.push({
-            dnaHash: hh.dnaHash,
-            locList: ll
-          })
-        }
-      }
-    }
-
-    if (locList.length < 1) {
-      return
-    }
-
-    this._p2p.send(fromId, {
-      type: 'gossipRequestLocHashes',
-      locList
-    })
-  }
-
-  _processRequestLocHashes (fromId, locList) {
-    // log.t('requestLocHashes', fromId, JSON.stringify(locList))
-
-    // we got a gossip response! push back next step 2 seconds
-    this._pauseGossip(null, 2000)
-
-    const hashList = []
-    for (let ll of locList) {
-      if (ll.dnaHash in this._memory) {
-        const ref = this._memory[ll.dnaHash].mem
-        const hl = ref.getGossipHashesForGossipLocList(ll.locList)
-        if (hl.length > 0) {
-          hashList.push({
-            dnaHash: ll.dnaHash,
-            hashList: hl
-          })
-        }
-      }
-    }
-
-    this._p2p.send(fromId, {
-      type: 'gossipHashList',
-      hashList
-    })
-  }
-
-  _processGossipHashList (fromId, hashList) {
-    // log.t('hashList', fromId, JSON.stringify(hashList))
-
-    // we got a gossip response! push back next step 2 seconds
-    this._pauseGossip(null, 2000)
-
-    for (let hl of hashList) {
-      if (hl.dnaHash in this._memory) {
-        const ref = this._memory[hl.dnaHash].mem
-        for (let hash of hl.hashList) {
-          if (!ref.has(hash)) {
-            this._p2p.send(fromId, {
-              type: 'getData',
-              dnaHash: hl.dnaHash,
-              hash
-            })
-          }
-        }
-      }
-    }
-  }
-
-  _processGetData (fromId, dnaHash, hash) {
-    // log.t('getData', fromId, dnaHash, hash)
-    if (dnaHash in this._memory) {
-      const ref = this._memory[dnaHash].mem
-      if (ref.has(hash)) {
-        const data = ref.get(hash)
-        this._p2p.send(fromId, {
-          type: 'getDataResp',
-          dnaHash: dnaHash,
-          data
-        })
-      }
-    }
-  }
-
-  _processGetDataResp (dnaHash, data) {
-    if (dnaHash in this._memory) {
-      const ref = this._memory[dnaHash].mem
-      if (ref.insert(data)) {
-        log.t('newGossip', dnaHash, JSON.stringify(data))
-      }
-    }
-  }
-
   _getMemRef (dnaHash) {
     if (!(dnaHash in this._memory)) {
       const mem = new Mem()
@@ -426,78 +267,22 @@ class N3hMock extends AsyncClass {
     return this._memory[dnaHash]
   }
 
-  _track (dnaHash, agentId) {
+  _CatDnaAgent(DnaHash, AgentId) {
+    return DnaHash + '::' + AgentId
+  }
+
+  _track (dnaHash, agentId, from) {
     const ref = this._getMemRef(dnaHash)
     ref.mem.insert({
       type: 'agent',
       dnaHash: dnaHash,
       agentId: agentId,
-      transportId: this._p2p.getId()
+      transportId: from
     })
-  }
 
-  _fullGossipHashHash () {
-    const out = []
-    for (let dnaHash in this._memory) {
-      out.push({
-        dnaHash,
-        gossipHashHash: this._memory[dnaHash].mem.getGossipHashHash()
-      })
-    }
-    return out
-  }
-
-  _pauseGossip (msg, ms) {
-    if (msg) {
-      // log.i(msg)
-    }
-    const until = Date.now() + ms
-    if (this._gossipState.pauseUntil < until) {
-      this._gossipState.pauseUntil = until
-    }
-  }
-
-  _checkGossip () {
-    setImmediate(() => {
-      if (this._gossipState.pauseUntil < Date.now()) {
-        this._gossip()
-      }
-    })
-  }
-
-  async _gossip () {
-    // give the next step some space
-    this._pauseGossip(null, 1000)
-
-    const peerCount = Object.keys(this._peerBook).length
-    if (peerCount < 1) {
-      this._pauseGossip('no peers, pausing gossip for .5 seconds', 500)
-      return
-    }
-
-    const gs = this._gossipState
-    if (gs.lastPeerIndex >= peerCount) {
-      gs.lastPeerIndex = 0
-      this._pauseGossip('circled the peerBook, pausing gossip for .5 seconds', 500)
-      return
-    }
-
-    const thisGossipPeer = Object.keys(this._peerBook)[gs.lastPeerIndex++]
-    const peerRef = this._peerBook[thisGossipPeer]
-    if (Date.now() - peerRef.lastGossip < 1000) {
-      this._pauseGossip('peer too recent, pauing gossip for .5 seconds', 500)
-      return
-    }
-    peerRef.lastGossip = Date.now()
-
-    const gossipHashHash = this._fullGossipHashHash()
-
-    // log.t('gossip with', thisGossipPeer, JSON.stringify(gossipHashHash))
-
-    this._p2p.send(thisGossipPeer, {
-      type: 'gossipHashHash',
-      gossipHashHash
-    })
+    const uid = this._CatDnaAgent(dnaHash, agentId)
+    log.t("tracking: '" + uid + "' for " + from)
+    this._senders[agentId] = from
   }
 }
 

@@ -80,6 +80,11 @@ class IpcServer extends AsyncClass {
     }
   }
 
+  send_one (zmqid, name, data) {
+    this.$checkDestroyed()
+      this._send(zmqid, name, data)
+  }
+
   // -- private -- //
 
   /**
@@ -174,7 +179,8 @@ class IpcServer extends AsyncClass {
       }
       this.emit('message', {
         name,
-        data
+        data,
+        from: zmqid
       })
     } catch (e) {
       console.error(e)
