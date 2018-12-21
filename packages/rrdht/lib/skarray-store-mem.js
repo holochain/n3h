@@ -21,6 +21,12 @@ class SKArrayStoreMem extends AsyncClass {
 
   /**
    */
+  async clear () {
+    this._data = []
+  }
+
+  /**
+   */
   async insert (loc, hash) {
     const idx = this._idxSearch(loc)
     const item = this._data[idx]

@@ -12,7 +12,10 @@ class RangeStore extends AsyncClass {
     this._config = config
 
     this._byHash = await config.persistCacheProxy('storeByHash')
-    this._byLoc = new Map()
+    this._byLoc = await config.getSKArrayStore('storeByLoc')
+
+    // trust our full data store, clear and re-index loc lookups
+    await this._byLoc.clear()
     await this._populateLoc()
 
     await this.setRadius(loc, radius)
@@ -42,7 +45,7 @@ class RangeStore extends AsyncClass {
         nonce,
         meta
       }))
-      this._locAddHash(loc, hash)
+      this._byLoc.insert(loc, hash)
     }
   }
 
@@ -56,7 +59,7 @@ class RangeStore extends AsyncClass {
         hash,
         meta
       }))
-      this._locAddHash(loc, hash)
+      this._byLoc.insert(loc, hash)
     }
   }
 
@@ -76,41 +79,25 @@ class RangeStore extends AsyncClass {
 
   /**
    */
-  _locAddHash (loc, hash) {
-    if (!this._byLoc.has(loc)) {
-      this._byLoc.set(loc, new Set())
-    }
-    this._byLoc.get(loc).add(hash)
-  }
-
-  /**
-   */
-  _locRemHash (loc, hash) {
-    if (!this._byLoc.has(loc)) {
-      return
-    }
-    this._byLoc.get(loc).delete(hash)
-  }
-
-  /**
-   */
   async _populateLoc () {
-    const keys = await this._config.persistCacheKeys('storeByHash')
+    const p = await this._config.getPersistCache('storeByHash')
+    const keys = await p.keys()
     for (let key of keys) {
       const entry = JSON.parse(await this._byHash[key]())
-      this._locAddHash(entry.loc, entry.hash)
+      this._byLoc.insert(entry.loc, entry.hash)
     }
   }
 
   /**
    */
   async _prune () {
-    for (let [loc, hashList] of this._byLoc) {
+    for (let loc of await this._byLoc.keys()) {
+      const hashList = await this._byLoc.get(loc)
       if (!this.wouldStore(loc)) {
         for (let hash of hashList) {
           this._byHash[hash].remove()
+          this._byLoc.remove(loc, hash)
         }
-        this._byLoc.delete(loc)
       }
     }
   }

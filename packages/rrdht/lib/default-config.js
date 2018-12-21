@@ -1,5 +1,6 @@
 const mosodium = require('@holochain/mosodium')
 const { PersistCacheMem } = require('./persist-cache-mem')
+const { SKArrayStoreMem } = require('./skarray-store-mem')
 
 // -- configuration parameters -- //
 
@@ -135,6 +136,22 @@ exports.agentLocSearchFn = async function agentLocSearchFn (config, hash) {
   })
 
   return out.toString('base64')
+}
+
+/**
+ * get an sk-array-store for a particular namespace
+ * note this may be called multiple times, and should return an instance
+ * with access to the same data every time.
+ */
+exports.getSKArrayStore = async function getSKArrayStore (config, ns) {
+  if (!config.runtimeState._skArrayStores) {
+    config.runtimeState._skArrayStores = {}
+  }
+  const ref = config.runtimeState._skArrayStores
+  if (!(ns in ref)) {
+    ref[ns] = await new SKArrayStoreMem()
+  }
+  return ref[ns]
 }
 
 /**

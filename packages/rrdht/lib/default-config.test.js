@@ -84,15 +84,19 @@ describe('defaultConfig Suite', () => {
   })
 
   it('cache set and get', async () => {
-    await conf.persistCacheSet('testNs', 'testKey', 'testVal')
-    expect(await conf.persistCacheGet('testNs', 'testKey')).equals('testVal')
+    const p = await conf.persistCacheProxy('testNs')
+    await p.testKey.set('testVal')
+    expect(await p.testKey()).equals('testVal')
   })
 
   it('cache remove', async () => {
-    await conf.persistCacheSet('testNs', 'testKey', 'testVal')
-    await conf.persistCacheSet('testNs', 'testKey2', 'testVal2')
-    await conf.persistCacheRemove('testNs', 'testKey')
-    expect(await conf.persistCacheGet('testNs', 'testKey2')).equals('testVal2')
-    expect(await conf.persistCacheGet('testNs', 'testKey')).equals(undefined)
+    const p = await conf.persistCacheProxy('testNs')
+    await Promise.all([
+      p.testKey.set('testVal'),
+      p.testKey2.set('testVal2')
+    ])
+    await p.testKey.remove()
+    expect(await p.testKey2()).equals('testVal2')
+    expect(await p.testKey()).equals(undefined)
   })
 })
