@@ -112,7 +112,7 @@ class N3hMock extends AsyncClass {
 
           return
         case 'trackApp':
-          this._track(opt.data.dnaHash, opt.data.agentId, opt.from)
+          this._track(opt.data.dnaHash, opt.data.agentId, opt.fromZmqId)
           return
         case 'send':
           this._getMemRef(opt.data.dnaHash)
@@ -166,6 +166,7 @@ class N3hMock extends AsyncClass {
           })
           return
         case 'publishDht':
+          // TODO: we don't actually need to store the data on the nodejs side, we could just make all the store requests to connected nodes inline here, but that could be an optimization for later.
           this._getMemRef(opt.data.dnaHash).mem.insert({
             type: 'dht',
             _id: opt.data._id,
@@ -260,18 +261,18 @@ class N3hMock extends AsyncClass {
     return DnaHash + '::' + AgentId
   }
 
-  _track (dnaHash, agentId, from) {
+  _track (dnaHash, agentId, fromZmqId) {
     const ref = this._getMemRef(dnaHash)
     ref.mem.insert({
       type: 'agent',
       dnaHash: dnaHash,
       agentId: agentId,
-      transportId: from
+      transportId: fromZmqId
     })
 
     const uid = this._CatDnaAgent(dnaHash, agentId)
-    log.t("tracking: '" + uid + "' for " + from)
-    this._senders[agentId] = from
+    log.t("tracking: '" + uid + "' for " + fromZmqId)
+    this._senders[agentId] = fromZmqId
   }
 }
 
