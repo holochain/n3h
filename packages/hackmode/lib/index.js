@@ -119,6 +119,8 @@ class N3hHackMode extends AsyncClass {
       return
     }
 
+    // log.t('Received IPC message: ', opt)
+
     let ref
     let tId
     if (opt.name === 'json' && typeof opt.data.method === 'string') {
