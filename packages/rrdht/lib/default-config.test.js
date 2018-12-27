@@ -60,7 +60,7 @@ describe('defaultConfig Suite', () => {
   it('dataLocFn', async () => {
     expect((await conf.dataLocFn(
       await conf.hashFn(TEST_DATA))))
-      .equals('oaY8ew==')
+      .equals(2067572385)
   })
 
   it('agentLocSearchFn', async () => {
@@ -80,7 +80,7 @@ describe('defaultConfig Suite', () => {
 
   it('agentLocFn', async () => {
     const loc = await conf.agentLocFn(TEST_HASH, TEST_NONCE)
-    expect(loc).equals('oaY8ew==')
+    expect(loc).equals(2067572385)
   })
 
   it('cache set and get', async () => {

@@ -39,6 +39,13 @@ class RRDht extends AsyncClass {
 
     await registerHandler(this._config)
 
+    const outPromise = new Promise((resolve, reject) => {
+      this._config._._waitInit = {
+        resolve,
+        reject
+      }
+    })
+
     setImmediate(() => this._tickle())
 
     this.$pushDestructor(async () => {
@@ -46,6 +53,8 @@ class RRDht extends AsyncClass {
       this._actionHandlers = {}
       this._config = {}
     })
+
+    return outPromise
   }
 
   // -- state mutation -- //
@@ -76,11 +85,23 @@ class RRDht extends AsyncClass {
   // -- immutable state accessors -- //
 
   /**
+   */
+  async getLoc () {
+    return this._config.agentLoc
+  }
+
+  /**
    * Determine if this instance would store this peer at this time
    * @param {string} peerHash - base64 peer hash
    * @param {string} peerNonce - base64 peer nonce
    */
   async wouldStorePeer (peerHash, peerNonce) {
+    try {
+      const loc = await this._config.agentLocFn(peerHash, peerNonce)
+      return this._config._.rangeStore.wouldStore(loc)
+    } catch (e) {
+      return false
+    }
   }
 
   /**
@@ -88,6 +109,12 @@ class RRDht extends AsyncClass {
    * @param {string} dataHash - base64 data hash
    */
   async wouldStoreData (dataHash) {
+    try {
+      const loc = await this._config.dataLocFn(dataHash)
+      return this._config._.rangeStore.wouldStore(loc)
+    } catch (e) {
+      return false
+    }
   }
 
   /**
@@ -109,6 +136,9 @@ class RRDht extends AsyncClass {
   async _attachConfigFns (configBuilder) {
     await configBuilder.attach({
       'registerHandler': async (config, action, handler) => {
+        if (this.$isDestroyed()) {
+          return
+        }
         if (!(action in this._actionHandlers)) {
           this._actionHandlers[action] = []
         }
@@ -117,6 +147,9 @@ class RRDht extends AsyncClass {
       },
 
       'emit': async (config, evt) => {
+        if (this.$isDestroyed()) {
+          return
+        }
         if (!events.isEvent(evt)) {
           throw new Error('can only emit events')
         }
@@ -127,6 +160,9 @@ class RRDht extends AsyncClass {
       },
 
       'act': async (config, action) => {
+        if (this.$isDestroyed()) {
+          return
+        }
         return this.act(action)
       }
     })

@@ -5,6 +5,14 @@ const { SKArrayStoreMem } = require('./skarray-store-mem')
 // -- configuration parameters -- //
 
 /**
+ */
+exports.agentLocWorkMemLimit = mosodium.pwhash.MEMLIMIT_MODERATE
+
+/**
+ */
+exports.agentLocWorkOpsLimit = mosodium.pwhash.OPSLIMIT_INTERACTIVE
+
+/**
  * set this if you would like to change the default agent location work target
  * the from(..., 'hex').toString('base64') is just to make editing easier
  */
@@ -39,7 +47,7 @@ exports.hashFn = async function hashFn (config, buf) {
  */
 exports.dataLocFn = async function dataLocFn (config, hash) {
   hash = assertBuffer(hash, 32)
-  return bufCompress(hash).toString('base64')
+  return bufCompress(hash)
 }
 
 /**
@@ -57,8 +65,8 @@ exports.agentLocHashFn = async function agentLocHashFn (config, hash, nonce) {
 
   const res = await mosodium.pwhash.hash(nonce, {
     salt: hash,
-    opslimit: mosodium.pwhash.OPSLIMIT_INTERACTIVE,
-    memlimit: mosodium.pwhash.MEMLIMIT_MODERATE
+    opslimit: config.agentLocWorkOpsLimit,
+    memlimit: config.agentLocWorkMemLimit
   })
 
   let locHash
@@ -80,7 +88,7 @@ exports.agentLocFn = async function agentLocFn (config, hash, nonce) {
   const rawHash = assertBuffer(hash, 32)
   const locHash = await config.agentLocHashFn(hash, nonce)
   await config.agentLocVerifyFn(locHash)
-  return bufCompress(rawHash).toString('base64')
+  return bufCompress(rawHash)
 }
 
 /**
@@ -308,7 +316,5 @@ function bufCompress (b) {
   for (let i = 4; i < b.byteLength; i += 4) {
     tmp = tmp ^ b.readInt32LE(i)
   }
-  const out = Buffer.alloc(4)
-  out.writeInt32LE(tmp, 0)
-  return out
+  return tmp
 }

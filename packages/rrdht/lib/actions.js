@@ -68,6 +68,7 @@ exports.dataPublish = function dataPublish (dataHash, data) {
   return {
     action: 'dataPublish',
     params: {
+      dataHash,
       data
     }
   }
