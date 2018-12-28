@@ -10,12 +10,9 @@ describe('Range Store Suite', () => {
   let conf = null
   let rs = null
 
-  before(async () => {
+  beforeEach(async () => {
     conf = await defaultConfig.generateConfigBuilder()
       .finalize()
-  })
-
-  beforeEach(async () => {
     rs = await new RangeStore(conf, LOC, RADIUS)
   })
 

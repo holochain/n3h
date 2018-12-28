@@ -1,10 +1,12 @@
 const { AsyncClass, $sleep } = require('@holochain/n3h-common')
 const defaultConfig = require('./default-config')
 const { registerHandler } = require('./handlers/handler-manifest')
+const range = require('./range')
 const actions = require('./actions')
 const events = require('./events')
 
 const REQUIRED_CONFIG = ['agentHash', 'agentNonce', 'agentPeerInfo']
+const RE_RANGE = /^32r([0-9a-f]{8}):([0-9a-f]{8})$/
 
 /**
  */
@@ -85,9 +87,20 @@ class RRDht extends AsyncClass {
   // -- immutable state accessors -- //
 
   /**
+   * return 24 hex digits representing 12 bytes
+   * the first 4 bytes are the loc
+   * the second 4 bytes are the hold radius
+   * the third 4 bytes are the query radius
+   * these are the data that will be gossiped about this node
    */
-  async getLoc () {
-    return this._config.agentLoc
+  async getRadii () {
+    const loc = this._config.agentLoc
+    const hold = range.rFromRadius(loc, this._config._.radii.hold)
+    const query = range.rFromRadius(loc, this._config._.radii.query)
+    const mH = hold.match(RE_RANGE)
+    const mQ = query.match(RE_RANGE)
+    const out = mH[1] + mH[2] + mQ[2]
+    return out
   }
 
   /**

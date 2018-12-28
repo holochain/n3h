@@ -105,7 +105,11 @@ describe('RRDht Integration Suite', () => {
         if (hashA === hashB) {
           continue
         }
-        nA.node.act(actions.peerHoldRequest(hashB, nB.agentNonce, {}))
+        nA.node.act(actions.peerHoldRequest({
+          peerHash: hashB,
+          peerNonce: nB.agentNonce,
+          radii: await nB.node.getRadii()
+        }))
         /*
         console.log(await nA.node.getLoc(), 'wouldStore peer', await nB.node.getLoc(),
           await nA.node.wouldStorePeer(hashB, nB.agentNonce))

@@ -1,3 +1,5 @@
+// const range = require('./range')
+
 function assertString (v) {
   if (typeof v !== 'string') {
     throw new Error('param must be a string')
@@ -10,6 +12,26 @@ function assertObject (v) {
   }
   throw new Error('param must be an object')
 }
+
+const RE_RADII = /^[a-f0-9]{24}$/
+function assertRadii (v) {
+  if (!RE_RADII.test(v)) {
+    throw new Error('param must be 24 hex characters (12 bytes)')
+  }
+}
+
+/*
+function assertRange (v) {
+  try {
+    const vv = range.rValidate(v)
+    if (v !== vv) {
+      throw new Error()
+    }
+  } catch (e) {
+    throw new Error('param must be a valid range')
+  }
+}
+*/
 
 /**
  * We have received a gossip bundle from a remote node,
@@ -29,16 +51,17 @@ exports.remoteGossipBundle = function remoteGossipBundle (bundle) {
  * Implementors would like us to hold this peer info
  * We will decide if that makes sense or not, and take appropriate action
  */
-exports.peerHoldRequest = function peerHoldRequest (peerHash, peerNonce, peerInfo) {
-  assertString(peerHash)
-  assertString(peerNonce)
-  assertObject(peerInfo)
+exports.peerHoldRequest = function peerHoldRequest (opt) {
+  assertObject(opt)
+  assertString(opt.peerHash)
+  assertString(opt.peerNonce)
+  assertRadii(opt.radii)
   return {
     action: 'peerHoldRequest',
     params: {
-      peerHash,
-      peerNonce,
-      peerInfo
+      peerHash: opt.peerHash,
+      peerNonce: opt.peerNonce,
+      radii: opt.radii
     }
   }
 }

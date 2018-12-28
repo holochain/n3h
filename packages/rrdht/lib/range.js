@@ -83,6 +83,12 @@ function _fixLen (l) {
   return l
 }
 
+/**
+ */
+exports.rValidate = function rValidate (r) {
+  return _repr(_parse(r))
+}
+
 // create a range string from a center and radius
 function _fromRadius (center, radius) {
   center = _fixPoint(center)
@@ -108,6 +114,14 @@ function _fromStart (start, length) {
 
 // export
 exports.rFromStart = _fromStart
+
+const RE_RADII = /^[a-f0-9]{24}$/
+exports.rFromRadiiHold = function rFromRadiiHold (r) {
+  if (!RE_RADII.test(r)) {
+    throw new Error(Object.prototype.toString.call(r) + ' is not a valid radii')
+  }
+  return `32r${r.substr(0, 8)}:${r.substr(8, 8)}`
+}
 
 /**
  */

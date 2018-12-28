@@ -60,6 +60,9 @@ class PersistCacheMem extends AsyncClass {
    * helper fetch the namespaced map
    */
   _getNsRef (ns) {
+    if (!ns) {
+      throw new Error('ns must be defined!')
+    }
     if (!this._data.has(ns)) {
       this._data.set(ns, new Map())
     }

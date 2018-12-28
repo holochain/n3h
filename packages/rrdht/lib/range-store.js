@@ -13,6 +13,7 @@ class RangeStore extends AsyncClass {
 
     this._byHash = await config.persistCacheProxy('storeByHash')
     this._byLoc = await config.getSKArrayStore('storeByLoc')
+    this._extraPeerRefs = await config.persistCacheProxy('storeExtraPeerRefs')
 
     // trust our full data store, clear and re-index loc lookups
     await this._byLoc.clear()
@@ -42,16 +43,39 @@ class RangeStore extends AsyncClass {
 
   /**
    */
-  async mayStorePeer (loc, hash, nonce, meta) {
+  async mayStorePeer (loc, hash, nonce, radii) {
     if (this.wouldStore(loc)) {
       this._byHash[hash].set(JSON.stringify({
         type: 'peer',
         loc,
         hash,
         nonce,
-        meta
+        radii
       }))
       this._byLoc.insert(loc, hash)
+      console.log(this._range, 'store peer', loc, radii)
+    } else {
+      // for now, we just keep 20 of the newest extra peer refs
+      let nextIdx = await this._extraPeerRefs.nextIdx()
+      if (typeof nextIdx !== 'string') {
+        nextIdx = '0'
+        await this._extraPeerRefs.nextIdx.set(nextIdx)
+      }
+      nextIdx = parseInt(nextIdx, 10)
+      let n = nextIdx + 1
+      if (n > 19) {
+        n = 0
+      }
+      await this._extraPeerRefs.nextIdx.set(n.toString())
+      const idx = 'peer-' + nextIdx
+      this._extraPeerRefs[idx].set(JSON.stringify({
+        type: 'peer',
+        loc,
+        hash,
+        nonce,
+        radii
+      }))
+      console.log(this._range, 'store extra', '(' + idx + ')', loc, radii)
     }
   }
 
@@ -67,6 +91,53 @@ class RangeStore extends AsyncClass {
       }))
       this._byLoc.insert(loc, hash)
     }
+  }
+
+  /**
+   */
+  async getPeersForPublishLoc (loc) {
+    // right now, search through the whole peerbook (including extraRefs)
+    // someday we'll need to index this properly
+    // since publish should be a less frequent operation,
+    // right now we are optimized for gossip
+
+    const out = []
+
+    const check = json => {
+      json = JSON.parse(json)
+      if (json.type !== 'peer') {
+        return
+      }
+      if (!json.radii) {
+        throw new Error(JSON.stringify(json))
+      }
+      const covers = range.rCoversPoint(range.rFromRadiiHold(json.radii), loc)
+      if (covers) {
+        out.push(json)
+      }
+    }
+
+    const wait = []
+
+    const p = await this._config.getPersistCache()
+    const keys = await p.keys('storeByHash')
+    for (let hash of keys) {
+      wait.push((async () => {
+        check(await this._byHash[hash]())
+      })())
+    }
+
+    for (let i = 0; i < 20; ++i) {
+      wait.push((async () => {
+        const d = await this._extraPeerRefs['peer-' + i]()
+        if (d) {
+          check(d)
+        }
+      })())
+    }
+
+    await Promise.all(wait)
+    return out
   }
 
   /**
@@ -92,8 +163,8 @@ class RangeStore extends AsyncClass {
   /**
    */
   async _populateLoc () {
-    const p = await this._config.getPersistCache('storeByHash')
-    const keys = await p.keys()
+    const p = await this._config.getPersistCache()
+    const keys = await p.keys('storeByHash')
     for (let key of keys) {
       const entry = JSON.parse(await this._byHash[key]())
       this._byLoc.insert(entry.loc, entry.hash)

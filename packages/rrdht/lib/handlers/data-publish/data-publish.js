@@ -1,4 +1,5 @@
-// const events = require('../../events')
+const events = require('../../events')
+const msgpack = require('msgpack-lite')
 
 async function dataPublish (config, action, params) {
   const loc = await config.dataLocFn(params.dataHash)
@@ -7,8 +8,21 @@ async function dataPublish (config, action, params) {
   await config._.rangeStore.mayStoreData(loc, params.dataHash)
 
   console.log('dataPublish', params.dataHash, loc)
-  if (config._.rangeStore.wouldStore(loc)) {
-    console.log('HOT DOG - need a way of getting peer list that should store this')
+
+  const publishPeers = await config._.rangeStore.getPeersForPublishLoc(loc)
+
+  const bundle = msgpack.encode([
+    'dataPublish',
+    Buffer.from(params.dataHash, 'base64'),
+    Buffer.from(params.data, 'base64')
+  ]).toString('base64')
+
+  if (publishPeers.length > 0) {
+    const evt = events.unreliableGossipBroadcast(publishPeers, bundle)
+    console.log('@@', evt)
+  } else {
+    // XXX TODO - we need to do a peer discovery run first
+    throw new Error('no peers conneted that will hold this data!!')
   }
 }
 
