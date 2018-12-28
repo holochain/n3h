@@ -61,6 +61,7 @@ const types = exports.types = {
   UNRELIABLE_GOSSIP_BROADCAST: 'unreliableGossipBroadcast',
   PEER_HOLD_REQUEST: 'peerHoldRequest',
   DATA_HOLD_REQUEST: 'dataHoldRequest',
+  DATA_FETCH: 'dataFetch',
   DATA_PRUNE: 'dataPrune'
 }
 
@@ -109,6 +110,16 @@ exports.dataHoldRequest = function dataHoldRequest (dataHash, data) {
 }
 
 /**
+ * This dht tracker requires access to the data associated with a data hash.
+ * This event should cause implementors to respond with a dataFetchResponse
+ * action.
+ */
+exports.dataFetch = function dataFetch (dataHash, msgId) {
+  assertString(dataHash)
+  return createEvent(types.DATA_FETCH, { dataHash, msgId })
+}
+
+/**
  * Tell our implementors that we are no longer tracking this data
  * locally. Implementors should purge this hash from storage,
  * but that can, of course, choose not to.
@@ -117,13 +128,3 @@ exports.dataPrune = function dataPrune (dataHash) {
   assertString(dataHash)
   return createEvent(types.DATA_PRUNE, { dataHash })
 }
-
-// -- debugging -- //
-
-/*
-console.log(exports.gossipTo('agent1', 'my-base64-thing'))
-console.log(exports.unreliableGossipBroadcast(['agent1', 'agent2'], 'my-base64-thing'))
-console.log(exports.peerHoldRequest('agent1', 'nonce', { yo: 'hey' }))
-console.log(exports.dataHoldRequest('data-hash', 'base64-binary'))
-console.log(exports.dataPrune('data-hash'))
-*/

@@ -81,15 +81,15 @@ class RangeStore extends AsyncClass {
 
   /**
    */
-  async mayStoreData (loc, hash, meta) {
+  async mayStoreData (loc, hash) {
     if (this.wouldStore(loc)) {
       this._byHash[hash].set(JSON.stringify({
         type: 'data',
         loc,
-        hash,
-        meta
+        hash
       }))
       this._byLoc.insert(loc, hash)
+      console.log('store data', loc, hash)
     }
   }
 
@@ -145,10 +145,7 @@ class RangeStore extends AsyncClass {
   async getHash (hash) {
     let out = await this._byHash[hash]()
     if (out) {
-      out = JSON.parse(out)
-    }
-    if (out && out.meta) {
-      return out.meta
+      return JSON.parse(out)
     }
   }
 

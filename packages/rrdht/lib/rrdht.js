@@ -84,6 +84,42 @@ class RRDht extends AsyncClass {
     this._actionQueue.push(Object.freeze(a))
   }
 
+  /**
+   * If we have this hash locally, return it, otherwise return undefined
+   * @param {string} hash - base64 hash to search for
+   * @param {number} [timeout] - timeout to wait for data (default 5000 ms)
+   * @return {Promise}
+   */
+  fetchLocal (hash, timeout) {
+    const timeoutStack = (new Error('timeout')).stack
+    return new Promise(async (resolve, reject) => {
+      try {
+        const timeoutId = setTimeout(() => {
+          reject(new Error('timeout, inner stack: ' + timeoutStack))
+        })
+        const result = {
+          resolve: (...args) => {
+            clearTimeout(timeoutId)
+            resolve(...args)
+          },
+          reject: (e) => {
+            clearTimeout(timeoutId)
+            reject(e)
+          }
+        }
+
+        const ref = await this._config._.rangeStore.getHash(hash)
+        if (ref) {
+          resolve(true)
+        } else {
+          resolve(false)
+        }
+      } catch (e) {
+        reject(e)
+      }
+    })
+  }
+
   // -- immutable state accessors -- //
 
   /**
@@ -128,18 +164,6 @@ class RRDht extends AsyncClass {
     } catch (e) {
       return false
     }
-  }
-
-  /**
-   * If we have a local reference to this peer, return its peerInfo
-   */
-  async getLocalPeerInfo (peerHash) {
-  }
-
-  /**
-   * @return {boolean} - true if we are tracking this data locally
-   */
-  async isDataLocal (dataHash) {
   }
 
   // -- private -- //

@@ -82,6 +82,22 @@ exports.dataHoldRequest = function dataHoldRequest (dataHash) {
 }
 
 /**
+ * We recieved a dataFetch event... If we have that data,
+ * publish this dataFetchResponse action.
+ */
+exports.dataFetchResponse = function dataFetchResponse (msgId, data) {
+  assertString(msgId)
+  assertString(data)
+  return {
+    action: 'dataFetchResponse',
+    params: {
+      msgId,
+      data
+    }
+  }
+}
+
+/**
  * Implementors would like this data publish appropriately on the network.
  * We will determine the appropriate neighborhood and broadcast.
  */

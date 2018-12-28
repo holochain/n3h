@@ -75,28 +75,29 @@ describe('RRDht Integration Suite', () => {
           testId: i
         }
       })
-      const events = []
-      node.on('all', async evt => events.push(evt))
+      node.on('all', async evt => {
+        switch (evt.type) {
+          case 'unreliableGossipBroadcast':
+            for (let peer of evt.peerList) {
+              if (nodes.has(peer.hash)) {
+                const ref = nodes.get(peer.hash)
+                ref.node.act(actions.remoteGossipBundle(evt.bundle))
+              }
+            }
+            break
+          case 'dataHoldRequest':
+            // for this test, we don't do any validation, just pass it back
+            node.act(actions.dataHoldRequest(evt.dataHash))
+            break
+          default:
+            console.error('unexpected event', evt)
+            break
+        }
+      })
       nodes.set(agentHash, {
         agentHash,
         agentNonce,
-        node,
-        events,
-        wait: async predicate => {
-          const start = Date.now()
-          for (;;) {
-            if (events.length) {
-              const evt = events.shift()
-              if (await predicate(evt)) {
-                return evt
-              }
-            }
-            if (Date.now() - start > 5000) {
-              throw new Error('event wait timeout')
-            }
-            await $sleep(10)
-          }
-        }
+        node
       })
     }
 
@@ -110,14 +111,10 @@ describe('RRDht Integration Suite', () => {
           peerNonce: nB.agentNonce,
           radii: await nB.node.getRadii()
         }))
-        /*
-        console.log(await nA.node.getLoc(), 'wouldStore peer', await nB.node.getLoc(),
-          await nA.node.wouldStorePeer(hashB, nB.agentNonce))
-        */
       }
     }
 
-    const n = nodes.values().next().value
+    const n = nodes.get(AGENTS[0][0])
     for (let hash of data.keys()) {
       console.log('wouldStore data', hash, await n.node.wouldStoreData(hash))
       n.node.act(actions.dataPublish(hash, data.get(hash)))
@@ -132,18 +129,16 @@ describe('RRDht Integration Suite', () => {
   })
 
   it('integration test', async () => {
-    await $sleep(500)
-    /*
-    const peerHash = crypto.randomBytes(32).toString('base64')
-    const peerNonce = await preConf.agentLocSearchFn(peerHash)
+    await $sleep(200)
 
-    const n = nodes.values().next().value
+    const results = []
+    for (let n of nodes.values()) {
+      for (let hash of data.keys()) {
+        results.push(n.node.fetchLocal(hash))
+      }
+    }
+    console.log(JSON.stringify(await Promise.all(results), null, 2))
 
-    n.node.act(actions.peerHoldRequest(peerHash, peerNonce, {
-      testId: 'fake'
-    }))
-    const evt = await n.wait(evt => evt.type === 'peerHoldRequest')
-    expect(evt.peerInfo.testId).equals('fake')
-    */
+    await $sleep(300)
   })
 })

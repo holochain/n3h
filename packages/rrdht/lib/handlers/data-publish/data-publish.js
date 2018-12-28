@@ -19,7 +19,7 @@ async function dataPublish (config, action, params) {
 
   if (publishPeers.length > 0) {
     const evt = events.unreliableGossipBroadcast(publishPeers, bundle)
-    console.log('@@', evt)
+    await config.emit(evt)
   } else {
     // XXX TODO - we need to do a peer discovery run first
     throw new Error('no peers conneted that will hold this data!!')
