@@ -292,10 +292,18 @@ class RRDht extends AsyncClass {
         if (!events.isEvent(evt)) {
           throw new Error('can only emit events')
         }
-        await Promise.all([
-          this.emit(evt.type, evt),
-          this.emit('all', evt)
-        ])
+        // don't actually await, but we need to catch errors
+        setImmediate(async () => {
+          try {
+            await Promise.all([
+              this.emit(evt.type, evt),
+              this.emit('all', evt)
+            ])
+          } catch (e) {
+            console.error(e)
+            process.exit(1)
+          }
+        })
       },
 
       'act': async (config, action) => {
