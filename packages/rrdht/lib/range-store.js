@@ -95,7 +95,7 @@ class RangeStore extends AsyncClass {
 
   /**
    */
-  async getPeersForPublishLoc (loc) {
+  async getPeersForLoc (loc) {
     // right now, search through the whole peerbook (including extraRefs)
     // someday we'll need to index this properly
     // since publish should be a less frequent operation,

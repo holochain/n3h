@@ -9,7 +9,7 @@ async function dataPublish (config, action, params) {
 
   console.log('dataPublish', params.dataHash, loc)
 
-  const publishPeers = await config._.rangeStore.getPeersForPublishLoc(loc)
+  const publishPeers = await config._.rangeStore.getPeersForLoc(loc)
 
   const bundle = msgpack.encode([
     'dataPublish',

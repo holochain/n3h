@@ -5,6 +5,8 @@ const range = require('./range')
 const actions = require('./actions')
 const events = require('./events')
 
+const msgpack = require('msgpack-lite')
+
 const REQUIRED_CONFIG = ['agentHash', 'agentNonce', 'agentPeerInfo']
 const RE_RANGE = /^32r([0-9a-f]{8}):([0-9a-f]{8})$/
 
@@ -22,6 +24,10 @@ class RRDht extends AsyncClass {
         params: null
       })
     ]
+
+    this._nextId = Math.random();
+
+    this._waitPromises = new Map()
 
     this._actionHandlers = {}
 
@@ -75,13 +81,70 @@ class RRDht extends AsyncClass {
     if (!(action.action in actions)) {
       throw new Error('"' + action.action + '" not recognized as a valid action')
     }
+    if ('msgId' in action && typeof action.msgId !== 'string') {
+      throw new Error('msgId must be a string')
+    }
 
     const a = {
       action: action.action,
       params: JSON.stringify(action.params)
     }
 
+    if ('msgId' in action) {
+      a.msgId = action.msgId
+    }
+
     this._actionQueue.push(Object.freeze(a))
+  }
+
+  /**
+   */
+  async fetch (hash, timeout) {
+    // - step 1 - check locally - //
+    const local = await this.fetchLocal(hash, timeout)
+    if (typeof local === 'string') {
+      return local
+    }
+
+    const loc = await this._config.dataLocFn(hash)
+
+    // - step 2 - check for peers we know of that should store it - //
+    const storePeers = await this._config._.rangeStore.getPeersForLoc(loc)
+
+    if (storePeers.length > 0) {
+      const id = this.$getMsgId()
+      const hp = this.$registerWaitHandler(id, timeout)
+
+      const bundle = msgpack.encode([
+        'dataQuery',
+        id,
+        Buffer.from(this._config.agentHash, 'base64'),
+        Buffer.from(hash, 'base64')
+      ]).toString('base64')
+
+      if (storePeers.length < 3) {
+        const wait = []
+        for (let peer of storePeers) {
+          wait.push(this._config.emit(events.gossipTo(peer, bundle)))
+        }
+        await Promise.all(wait)
+      } else {
+        const peers = []
+        for (let i = 0; i < 4 && i < storePeers.length; ++i) {
+          peers.push(storePeers[i])
+        }
+        const evt = events.unreliableGossipBroadcast(peers, bundle)
+        await this._config.emit(evt)
+      }
+
+      const res = await hp;
+      if (res && res.data) {
+        return res
+      }
+    }
+
+    // - step 3 - find the peer closest to it to query - //
+    throw new Error('peer query unimplemented')
   }
 
   /**
@@ -90,34 +153,22 @@ class RRDht extends AsyncClass {
    * @param {number} [timeout] - timeout to wait for data (default 5000 ms)
    * @return {Promise}
    */
-  fetchLocal (hash, timeout) {
-    const timeoutStack = (new Error('timeout')).stack
-    return new Promise(async (resolve, reject) => {
-      try {
-        const timeoutId = setTimeout(() => {
-          reject(new Error('timeout, inner stack: ' + timeoutStack))
-        })
-        const result = {
-          resolve: (...args) => {
-            clearTimeout(timeoutId)
-            resolve(...args)
-          },
-          reject: (e) => {
-            clearTimeout(timeoutId)
-            reject(e)
-          }
-        }
+  async fetchLocal (hash, timeout) {
+    const ref = await this._config._.rangeStore.getHash(hash)
 
-        const ref = await this._config._.rangeStore.getHash(hash)
-        if (ref) {
-          resolve(true)
-        } else {
-          resolve(false)
+    if (ref) {
+      if (ref.type === 'data') {
+        const id = this.$getMsgId()
+        const hp = this.$registerWaitHandler(id, timeout)
+        await this._config.emit(events.dataFetch(hash, id))
+        const res = await hp;
+        if (res && res.data) {
+          return res.data
         }
-      } catch (e) {
-        reject(e)
+      } else {
+        throw new Error('unhandled hash type ' + ref.type)
       }
-    })
+    }
   }
 
   // -- immutable state accessors -- //
@@ -166,6 +217,57 @@ class RRDht extends AsyncClass {
     }
   }
 
+  // -- protected -- //
+
+  /**
+   */
+  $getMsgId () {
+    this._nextId += Math.random() + 0.00001
+    return this._nextId.toString(36)
+  }
+
+  /**
+   */
+  $registerWaitHandler (msgId, timeout) {
+    const timeoutStack = (new Error('timeout')).stack
+
+    let timeoutId
+
+    const cleanupFns = [() => {
+      clearTimeout(timeoutId)
+    }]
+
+    const cleanup = () => {
+      for (let fn of cleanupFns) {
+        fn()
+      }
+    }
+
+    return new Promise((resolve, reject) => {
+      const result = {
+        resolve: (...args) => {
+          cleanup()
+          resolve(...args)
+        },
+        reject: (e) => {
+          cleanup()
+          reject(e)
+        }
+      }
+
+      timeoutId = setTimeout(() => {
+        result.reject(new Error('timeout, inner stack: ' + timeoutStack))
+      }, timeout || 5000)
+
+      cleanupFns.push(() => {
+        this._waitPromises.delete(msgId)
+      })
+
+      this._waitPromises.set(msgId, result)
+    })
+  }
+
+
   // -- private -- //
 
   /**
@@ -201,6 +303,17 @@ class RRDht extends AsyncClass {
           return
         }
         return this.act(action)
+      },
+
+      'getMsgId': async (config, action) => {
+        return this.$getMsgId()
+      },
+
+      'registerWaitHandler': (config, msgId, timeout) => {
+        if (this.$isDestroyed()) {
+          return
+        }
+        return this.$registerWaitHandler(msgId, timeout)
       }
     })
   }
@@ -228,7 +341,13 @@ class RRDht extends AsyncClass {
         if (this._actionQueue.length) {
           waitMs = 0
           const action = this._actionQueue.shift()
-          if (action.action in this._actionHandlers) {
+          if (typeof action.msgId === 'string') {
+            if (this._waitPromises.has(action.msgId)) {
+              this._waitPromises.get(action.msgId).resolve(JSON.parse(action.params))
+            } else {
+              console.error('unhandled msgId ', action, this._waitPromises)
+            }
+          } else if (action.action in this._actionHandlers) {
             for (let handler of this._actionHandlers[action.action]) {
               if (this.$isDestroyed()) {
                 return

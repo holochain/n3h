@@ -69,10 +69,10 @@ const types = exports.types = {
  * Instructs implementors to send this binary gossip bundle
  * to the specified peer Id in a reliable manner.
  */
-exports.gossipTo = function gossipTo (peerHash, bundle) {
-  assertString(peerHash)
+exports.gossipTo = function gossipTo (peer, bundle) {
+  assertString(peer)
   assertString(bundle)
-  return createEvent(types.GOSSIP_TO, { peerHash, bundle })
+  return createEvent(types.GOSSIP_TO, { peer, bundle })
 }
 
 /**

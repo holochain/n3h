@@ -90,8 +90,8 @@ exports.dataFetchResponse = function dataFetchResponse (msgId, data) {
   assertString(data)
   return {
     action: 'dataFetchResponse',
+    msgId,
     params: {
-      msgId,
       data
     }
   }

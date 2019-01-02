@@ -89,6 +89,11 @@ describe('RRDht Integration Suite', () => {
             // for this test, we don't do any validation, just pass it back
             node.act(actions.dataHoldRequest(evt.dataHash))
             break
+          case 'dataFetch':
+            const d = data.get(evt.dataHash)
+            node.act(actions.dataFetchResponse(
+              evt.msgId, d))
+            break
           default:
             console.error('unexpected event', evt)
             break
@@ -134,11 +139,11 @@ describe('RRDht Integration Suite', () => {
     const results = []
     for (let n of nodes.values()) {
       for (let hash of data.keys()) {
-        results.push(n.node.fetchLocal(hash))
+        results.push(n.node.fetch(hash))
       }
     }
     console.log(JSON.stringify(await Promise.all(results), null, 2))
 
     await $sleep(300)
-  })
+  }).timeout(20000)
 })
