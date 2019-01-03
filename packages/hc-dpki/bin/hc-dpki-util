@@ -5,8 +5,8 @@ const os = require('os')
 const fs = require('fs')
 const path = require('path')
 
-const { mkdirp } = require('n3h-common')
-const mosodium = require('mosodium')
+const { mkdirp } = require('@holochain/n3h-common')
+const mosodium = require('@holochain/mosodium')
 const prompt = require('prompt')
 
 const { RootSeed, Seed, work } = require('../lib/index')
