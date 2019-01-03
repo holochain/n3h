@@ -30,8 +30,8 @@ describe('Range Store Suite', () => {
   })
 
   it('can store', async () => {
-    await rs.mayStoreData(0, 'test-hash', { test: 'zombies' })
-    expect((await rs.getHash('test-hash')).test).equals('zombies')
+    await rs.mayStoreData(0, 'test-hash')
+    expect((await rs.getHash('test-hash')).loc).equals(0)
   })
 
   it('should prune', async () => {

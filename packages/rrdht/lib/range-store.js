@@ -89,8 +89,29 @@ class RangeStore extends AsyncClass {
         hash
       }))
       this._byLoc.insert(loc, hash)
-      console.log('store data', loc, hash)
+      // console.log('store data', loc, hash)
     }
+  }
+
+  /**
+   */
+  async getNeighborhoodPeers () {
+    const out = []
+    const wait = []
+
+    const p = await this._config.getPersistCache()
+    const keys = await p.keys('storeByHash')
+    for (let hash of keys) {
+      wait.push((async () => {
+        const item = JSON.parse(await this._byHash[hash]())
+        if (item.type === 'peer') {
+          out.push(item)
+        }
+      })())
+    }
+
+    await Promise.all(wait)
+    return out
   }
 
   /**

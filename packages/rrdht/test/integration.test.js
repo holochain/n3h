@@ -136,6 +136,7 @@ describe('RRDht Integration Suite', () => {
   it('integration test', async () => {
     await $sleep(200)
 
+    /*
     const results = []
     for (let n of nodes.values()) {
       for (let hash of data.keys()) {
@@ -143,6 +144,7 @@ describe('RRDht Integration Suite', () => {
       }
     }
     console.log(JSON.stringify(await Promise.all(results), null, 2))
+    */
 
     await $sleep(300)
   }).timeout(20000)

@@ -115,6 +115,31 @@ describe('Range Suite', () => {
     })
   })
 
+  describe('rUnion', () => {
+    ;[
+      [1, mks(0, 2), mks(0, 1), mks(0, 1)],
+      [2, mks(0, 0), mks(0, 1), mks(0, 0)],
+      [3, mks(0, 2), mks(1, 0), mks(1, 0)],
+      [4, mks(0, 4), mks(1, 1), mks(1, 1)],
+      [5, mks(2, 1), mks(0, 4), mks(2, 1)],
+      [6, mks(-10, 1), mks(10, 1), mks(-10, 0)],
+      [7, mks(range.MAX, 2), mks(range.MIN, 1), mks(range.MIN, 1)],
+      [8, mks(range.MAX, 1), mks(range.MAX - 1, 2), mks(range.MAX, 1)]
+    ].forEach(vals => {
+      const rA = vals[1]
+      const rB = vals[2]
+      const rExpect = vals[3]
+      it(
+        vals[0] + ': union A with B should give C' +
+        '\n(A): ' + aa(rA) +
+        '\n(B): ' + aa(rB) +
+        '\n(C): ' + aa(rExpect), () => {
+          expect(range.rUnion(rA, rB)).equals(rExpect)
+        }
+      )
+    })
+  })
+
   describe('rCoverage', () => {
     ;[
       [

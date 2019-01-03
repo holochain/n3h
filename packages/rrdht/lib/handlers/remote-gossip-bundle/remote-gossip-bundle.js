@@ -23,7 +23,7 @@ async function remoteGossipBundle (config, action, params) {
       // don't await this in-line
       setImmediate(async () => {
         try {
-          const res = await hp;
+          const res = await hp
           console.log('@@ local fetch response:', res)
           if (res && res.data) {
             const bundle = msgpack.encode([

@@ -25,7 +25,7 @@ class RRDht extends AsyncClass {
       })
     ]
 
-    this._nextId = Math.random();
+    this._nextId = Math.random()
 
     this._waitPromises = new Map()
 
@@ -137,7 +137,7 @@ class RRDht extends AsyncClass {
         await this._config.emit(evt)
       }
 
-      const res = await hp;
+      const res = await hp
       if (res && res.data) {
         return res
       }
@@ -161,7 +161,7 @@ class RRDht extends AsyncClass {
         const id = this.$getMsgId()
         const hp = this.$registerWaitHandler(id, timeout)
         await this._config.emit(events.dataFetch(hash, id))
-        const res = await hp;
+        const res = await hp
         if (res && res.data) {
           return res.data
         }
@@ -266,7 +266,6 @@ class RRDht extends AsyncClass {
       this._waitPromises.set(msgId, result)
     })
   }
-
 
   // -- private -- //
 
