@@ -112,15 +112,15 @@ class N3hMock extends AsyncClass {
 
           return
         case 'trackApp':
-          this._track(opt.data.dnaHash, opt.data.agentId, opt.fromZmqId)
+          this._track(opt.data.dnaAddress, opt.data.agentId, opt.fromZmqId)
           return
         case 'send':
-          this._getMemRef(opt.data.dnaHash)
+          this._getMemRef(opt.data.dnaAddress)
 
           if (!(opt.data.toAgentId in this._senders)) {
             this._ipc.send('json', {
               method: 'failureResult',
-              dnaHash: opt.data.dnaHash,
+              dnaAddress: opt.data.dnaAddress,
               toAgentId: opt.data.fromAgentId,
               errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting send'
             })
@@ -131,14 +131,14 @@ class N3hMock extends AsyncClass {
           this._ipc.sendOne(toZmqId, 'json', {
             method: 'handleSend',
             _id: opt.data._id,
-            dnaHash: opt.data.dnaHash,
+            dnaAddress: opt.data.dnaAddress,
             toAgentId: opt.data.toAgentId,
             fromAgentId: opt.data.fromAgentId,
             data: opt.data.data
           })
           return
         case 'handleSendResult':
-          this._getMemRef(opt.data.dnaHash)
+          this._getMemRef(opt.data.dnaAddress)
 
           if (!(opt.data.toAgentId in this._senders)) {
             log.t('send failed: unknown target node: ' + opt.data.toAgentId)
@@ -149,7 +149,7 @@ class N3hMock extends AsyncClass {
           if (!(opt.data.toAgentId in this._senders)) {
             this._ipc.send('json', {
               method: 'failureResult',
-              dnaHash: opt.data.dnaHash,
+              dnaAddress: opt.data.dnaAddress,
               toAgentId: opt.data.fromAgentId,
               errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting handleSendResult'
             })
@@ -159,7 +159,7 @@ class N3hMock extends AsyncClass {
           this._ipc.sendOne(toZmqId, 'json', {
             method: 'sendResult',
             _id: opt.data._id,
-            dnaHash: opt.data.dnaHash,
+            dnaAddress: opt.data.dnaAddress,
             toAgentId: opt.data.toAgentId,
             fromAgentId: opt.data.fromAgentId,
             data: opt.data.data
@@ -167,7 +167,7 @@ class N3hMock extends AsyncClass {
           return
         case 'publishDht':
           // TODO: we don't actually need to store the data on the nodejs side, we could just make all the store requests to connected nodes inline here, but that could be an optimization for later.
-          this._getMemRef(opt.data.dnaHash).mem.insert({
+          this._getMemRef(opt.data.dnaAddress).mem.insert({
             type: 'dht',
             _id: opt.data._id,
             agentId: opt.data.agentId,
@@ -176,7 +176,7 @@ class N3hMock extends AsyncClass {
           })
           return
         case 'publishDhtMeta':
-          this._getMemRef(opt.data.dnaHash).mem.insert({
+          this._getMemRef(opt.data.dnaAddress).mem.insert({
             type: 'dhtMeta',
             _id: opt.data._id,
             agentId: opt.data.agentId,
@@ -211,15 +211,15 @@ class N3hMock extends AsyncClass {
     throw new Error('unexpected input ' + JSON.stringify(opt))
   }
 
-  _getMemRef (dnaHash) {
-    if (!(dnaHash in this._memory)) {
+  _getMemRef (dnaAddress) {
+    if (!(dnaAddress in this._memory)) {
       const mem = new Mem()
       mem.registerIndexer((store, hash, data) => {
         if (data && data.type === 'dht') {
           this._ipc.send('json', {
             method: 'storeDht',
             _id: data._id,
-            dnaHash,
+            dnaAddress,
             agentId: data.agentId,
             address: data.address,
             content: data.content
@@ -232,7 +232,7 @@ class N3hMock extends AsyncClass {
           this._ipc.send('json', {
             method: 'storeDhtMeta',
             _id: data._id,
-            dnaHash,
+            dnaAddress,
             agentId: data.agentId,
             address: data.address,
             attribute: data.attribute,
@@ -240,37 +240,37 @@ class N3hMock extends AsyncClass {
           })
         }
       })
-      this._memory[dnaHash] = {
+      this._memory[dnaAddress] = {
         mem,
         agentToTransportId: mem.registerIndexer((store, hash, data) => {
           if (data && data.type === 'agent') {
             store[data.agentId] = data.transportId
             this._ipc.send('json', {
               method: 'peerConnected',
-              dnaHash: dnaHash,
+              dnaAddress: dnaAddress,
               agentId: data.agentId
             })
           }
         })
       }
     }
-    return this._memory[dnaHash]
+    return this._memory[dnaAddress]
   }
 
   _CatDnaAgent(DnaHash, AgentId) {
     return DnaHash + '::' + AgentId
   }
 
-  _track (dnaHash, agentId, fromZmqId) {
-    const ref = this._getMemRef(dnaHash)
+  _track (dnaAddress, agentId, fromZmqId) {
+    const ref = this._getMemRef(dnaAddress)
     ref.mem.insert({
       type: 'agent',
-      dnaHash: dnaHash,
+      dnaAddress: dnaAddress,
       agentId: agentId,
       transportId: fromZmqId
     })
 
-    const uid = this._CatDnaAgent(dnaHash, agentId)
+    const uid = this._CatDnaAgent(dnaAddress, agentId)
     log.t("tracking: '" + uid + "' for " + fromZmqId)
     this._senders[agentId] = fromZmqId
   }
