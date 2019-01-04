@@ -1,3 +1,5 @@
+const range = require('../../range')
+
 // probably need some more robust timing handlers
 // for now, just upkeep every 100 ms
 async function upkeep (config, action, params) {
@@ -10,6 +12,8 @@ async function upkeep (config, action, params) {
   if (!_.curScanPeer) {
     _.curScanPeer = _.scanPeers.shift()
     console.log('@@', _.curScanPeer)
+    console.log('&&', range.rUnion(
+      _.rangeStore._range, range.rFromRadiiHold(_.curScanPeer.radii)))
   }
 }
 

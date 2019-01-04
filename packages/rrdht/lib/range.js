@@ -9,37 +9,42 @@
  *
  * This is an accurate but naive implementation to get us going.
  * Someday need to refactor for efficiency.
+ *
+ * We have a tricky workaround here. We need to be able to represent
+ * both zero length ranges, and full ranges. We cannot do this with 4 bytes.
+ * (hence allowing 9 characters for the length repr hex digits)
+ *
+ * Since this is javascript, and numbers are all 64 bits anyways, we just
+ * go ahead and represent the length directly (see LMAX)
  */
 
-const MIN = exports.MIN = 0x80000000 | 0
-const MAX = exports.MAX = 0x7fffffff | 0
-const LMAX = exports.LMAX = 0xffffffff
+const MIN = 0x00000000
+exports.MIN = _reprPoint(MIN)
+const MAX = 0xffffffff
+exports.MAX = _reprPoint(MAX)
+const LMAX = 0x100000000
+exports.LMAX = _reprLen(LMAX)
 
 const AAFACT = 10 / LMAX
 
-const xReParse = /^32r([0-9a-f]{8}):([0-9a-f]{8})$/
+const xReParse = /^32r([0-9a-f]{8}):([0-9a-f]{8,9})$/
 
 // parse a string range into a normalized object
 function _parse (r) {
   const m = r.match(xReParse)
   if (!m || m.length !== 3) {
-    console.log('##', m)
-    throw new Error('could not parse range: "' + r + '"')
+    throw new Error('could not parse range: "' + r + '" (' + m + ')')
   }
   return _norm({
-    beg: parseInt(m[1], 16) | 0,
-    len: parseInt(m[2], 16)
+    beg: _parsePoint(m[1]),
+    len: _parseLen(m[2])
   })
 }
 
 // render a normalized object into a string range
 function _repr (r) {
-  const beg = (r.beg < 0 ? 0x100000000 + r.beg : r.beg)
-    .toString(16)
-    .padStart(8, '0')
-  const len = (r.len)
-    .toString(16)
-    .padStart(8, '0')
+  const beg = _reprPoint(r.beg)
+  const len = _reprLen(r.len)
   return `32r${beg}:${len}`
 }
 
@@ -63,24 +68,44 @@ function _norm (r) {
     throw new Error('invalid range length')
   }
   const beg = _point(r.beg)
-  const end = _point(beg + r.len)
-  return { beg, end, len: r.len }
+  return { beg, len: r.len }
 }
+
+const RE_POINT = /^[a-f0-9]{8}$/
 
 // fix a point provided as input
-function _fixPoint (p) {
-  if (typeof p === 'string') {
-    p = parseInt(p, 16)
+function _parsePoint (p) {
+  if (typeof p !== 'string' || !RE_POINT.test(p)) {
+    throw new Error('expected 8 hex characters')
   }
-  return p | 0
+  return parseInt(p, 16)
 }
 
+const RE_LEN = /^[a-f0-9]{8,9}$/
+
 // fix a length provided as input
-function _fixLen (l) {
-  if (typeof l === 'string') {
-    l = parseInt(l, 16)
+function _parseLen (l) {
+  if (typeof l !== 'string' || !RE_LEN.test(l)) {
+    throw new Error('expected 8 or 9 hex characters')
   }
-  return l
+  const len = parseInt(l, 16)
+  if (len < 0 || len > LMAX) {
+    throw new Error('invalid range length')
+  }
+  return len
+}
+
+// render a point to a hex string
+function _reprPoint (p) {
+  return p
+    .toString(16)
+    .padStart(8, '0')
+}
+
+// render a length to a hex string
+function _reprLen (l) {
+  // same as reprPoint for now
+  return _reprPoint(l)
 }
 
 /**
@@ -91,8 +116,8 @@ exports.rValidate = function rValidate (r) {
 
 // create a range string from a center and radius
 function _fromRadius (center, radius) {
-  center = _fixPoint(center)
-  radius = _fixLen(radius)
+  center = _parsePoint(center)
+  radius = _parseLen(radius)
   return _repr(_norm({
     beg: center - radius,
     len: radius * 2
@@ -104,8 +129,8 @@ exports.rFromRadius = _fromRadius
 
 // crate a range string from a start point and length
 function _fromStart (start, length) {
-  start = _fixPoint(start)
-  length = _fixLen(length)
+  start = _parsePoint(start)
+  length = _parseLen(length)
   return _repr(_norm({
     beg: start,
     len: length
@@ -126,33 +151,24 @@ exports.rFromRadiiHold = function rFromRadiiHold (r) {
 /**
  */
 exports.rGetStart = function rGetStart (r) {
-  return _parse(r).beg
+  return _reprPoint(_parse(r).beg)
 }
 
 // render ascii art showing where this range falls in int32 space
 function _asciiArt (r) {
-  const isOutside = r.beg === r.end
-    ? r.len > 0
-    : r.beg > r.end
-  const beg = 0 | (r.beg * AAFACT)
-  const end = 0 | (r.end * AAFACT)
-  let out = ['[']
-  for (let a = -5; a < 5; ++a) {
-    if (beg === a && end === a) {
-      out.push('|')
-    } else if (beg === a) {
-      out.push('<')
-    } else if (end === a) {
-      out.push('>')
-    } else if (isOutside && (a < end || a > beg)) {
-      out.push('-')
-    } else if (!isOutside && a > beg && a < end) {
-      out.push('-')
+  const out = ['[', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ']']
+  const len = Math.floor(r.len * AAFACT) + 1
+  const beg = Math.floor(r.beg * AAFACT)
+  for (let i = 0, cur = beg; i < len; ++i, ++cur) {
+    if (cur + 1 > 10) {
+      cur = 0
+    }
+    if (cur === beg) {
+      out[cur + 1] = '|'
     } else {
-      out.push(' ')
+      out[cur + 1] = '-'
     }
   }
-  out.push(']')
   return out.join('')
 }
 
@@ -163,18 +179,25 @@ exports.rAsciiArt = function rAsciiArt (r) {
   return _asciiArt(_parse(r)) + '=' + r
 }
 
-// clone a normalized object, potentially altering characteristics
-function _alter (r, opt) {
-  opt || (opt = {})
-  return _norm({
-    beg: typeof opt.beg === 'number' ? opt.beg : r.beg,
-    len: typeof opt.len === 'number' ? opt.len : r.len
-  })
+// get the distance from pointA to pointB counting forward only
+function _forwardDist (pointA, pointB) {
+  pointA = _point(pointA)
+  pointB = _point(pointB)
+  if (pointB >= pointA) {
+    return pointB - pointA
+  }
+  return (MAX - pointA) + (pointB - MIN) + 1
+}
+
+/**
+ */
+exports.rForwardDist = function rForwardDist (pointA, pointB) {
+  return _reprLen(_forwardDist(_parsePoint(pointA), _parsePoint(pointB)))
 }
 
 // invert a range (wrap around the other way)
 function _invert (r) {
-  return _alter(r, {
+  return _norm({
     beg: r.beg + r.len,
     len: LMAX - r.len
   })
@@ -190,21 +213,9 @@ exports.rInvert = function rInvert (r) {
 // does `point` fall within range `r`?
 function _coversPoint (r, point) {
   point = _point(point)
-  if (r.len < 1) {
-    return false
-  } else if (r.len >= LMAX) {
-    return true
-  } else if (point === r.beg || point === r.end) {
-    return true
-  } else if (
-    r.beg > r.end && (
-      point > r.beg || point < r.end
-    )
-  ) {
-    return true
-  } else if (
-    r.end > r.beg && point > r.beg && point < r.end
-  ) {
+
+  const dist = _forwardDist(r.beg, point)
+  if (dist < r.len) {
     return true
   }
   return false
@@ -216,28 +227,14 @@ function _coversPoint (r, point) {
  * @return {boolean} - true if point is within our range
  */
 exports.rCoversPoint = function rCoversPoint (r, point) {
-  return _coversPoint(_parse(r), _fixPoint(point))
+  return _coversPoint(_parse(r), _parsePoint(point))
 }
 
 // does `rCheck` fully cover `rTarget`?
 // (might catch ends, but wrap the other way)
 function _fullyCovers (rCheck, rTarget) {
-  if (rCheck.len >= LMAX) {
-    return true
-  }
-
-  if (
-    !_coversPoint(rCheck, rTarget.beg) ||
-    !_coversPoint(rCheck, rTarget.end)
-  ) {
-    return false
-  }
-
-  // offset all numbers by other beg and normalize
-  const targetStart = _point(rTarget, rTarget.beg - rCheck.beg)
-  const targetEnd = _point(rTarget, rTarget.end - rCheck.beg)
-
-  if (targetEnd >= targetStart) {
+  const dist = _forwardDist(rCheck.beg, rTarget.beg)
+  if (rTarget.len + dist <= rCheck.len) {
     return true
   }
   return false
@@ -256,35 +253,56 @@ exports.rFullyCovers = function rFullyCovers (rCheck, rTarget) {
 
 // cut rSource with rCutBy
 function _cut (rSource, rCutBy) {
-  if (rSource.len === 0 || rCutBy.len === 0) {
+  // special exception, early return if rCutBy len is zero
+  if (rCutBy.len < 1) {
     return rSource
   }
-  if (_fullyCovers(rCutBy, rSource)) {
-    return _alter(rSource, {
+
+  let len = rSource.len
+  let beg = rSource.beg
+
+  // -- first, cut the front -- //
+
+  let dist = _forwardDist(rCutBy.beg, rSource.beg)
+  let cutBy = rCutBy.len - dist
+  if (cutBy > 0) {
+    len -= cutBy
+    beg += cutBy
+  }
+
+  if (len < 1) {
+    return _norm({
+      beg: rSource.beg,
       len: 0
     })
   }
 
-  const srcBeg = 0
-  const srcEnd = _point(rSource.end - rSource.beg)
-  const cutBeg = _point(rCutBy.beg - rSource.beg)
-  const cutEnd = _point(rCutBy.end - rSource.beg)
+  // -- second, cut the back -- //
 
-  let newBeg = srcBeg
-  let newEnd = srcEnd
+  // we don't allow cutting a range into multiple segments
+  // so, if the beginning of rCutBy is within us, trim everything following
 
-  if (cutEnd < srcEnd) {
-    newBeg = cutEnd
-  } else if (cutBeg < srcEnd) {
-    newEnd = cutBeg
-  }
-
-  const newRange = _alter(rSource, {
-    beg: _point(newBeg + rSource.beg),
-    len: newEnd - newBeg
+  const rN = _norm({
+    beg,
+    len
   })
 
-  return newRange
+  dist = _forwardDist(beg, rCutBy.beg)
+  if (dist > 0 && dist <= len) {
+    len = dist
+  }
+
+  if (len < 1) {
+    return _norm({
+      beg: rSource.beg,
+      len: 0
+    })
+  }
+
+  return _norm({
+    beg,
+    len
+  })
 }
 
 /**
@@ -321,18 +339,22 @@ function _union (rA, rB) {
     })
   }
 
-  const begA = 0
-  const endA = _point(rA.end - rA.beg)
-  const begB = _point(rB.beg - rA.beg)
-  const endB = _point(rB.end - rA.beg)
+  const offset = rA.beg < rB.beg ? rA.beg : rB.beg
+
+  const begA = _point(rA.beg - offset)
+  const endA = _point(rA.end - offset)
+  const begB = _point(rB.beg - offset)
+  const endB = _point(rB.end - offset)
+
+  console.log(begA, endA, '-', begB, endB)
 
   const begN = begA > begB ? begA : begB
   const endN = endA < endB ? endA : endB
 
-  // console.log(begN, endN)
+  console.log(begN, endN)
 
   const newRange = _norm({
-    beg: _point(begN + rA.beg),
+    beg: _point(begN + offset),
     len: endN - begN
   })
 
