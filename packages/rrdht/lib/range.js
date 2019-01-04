@@ -316,49 +316,28 @@ exports.rCut = function rCut (rSource, rCutBy) {
   return _repr(_cut(_parse(rSource), _parse(rCutBy)))
 }
 
+// help fn for _union below
+function _fixUnion (beg, minA, minB) {
+  let len = Math.min(minA, minB)
+  if (len < 0) {
+    len = 0
+  }
+  return _norm({
+    beg,
+    len
+  })
+}
+
 // return overlap of rA and rB
 function _union (rA, rB) {
-  if (rA.len === 0) {
-    return rA
+  const distA = _forwardDist(rA.beg, rB.beg)
+  const distB = _forwardDist(rB.beg, rA.beg)
+
+  if (distA < rA.len) {
+    return _fixUnion(rA.beg + distA, rB.len, rA.len - distA)
+  } else {
+    return _fixUnion(rB.beg + distB, rA.len, rB.len - distB)
   }
-
-  if (rB.len === 0) {
-    return rB
-  }
-
-  // they must not intersect
-  if (
-    !_coversPoint(rA, rB.beg) &&
-    !_coversPoint(rA, rB.end) &&
-    !_coversPoint(rB, rA.beg) &&
-    !_coversPoint(rB, rA.end)
-  ) {
-    return _norm({
-      beg: rA.beg,
-      len: 0
-    })
-  }
-
-  const offset = rA.beg < rB.beg ? rA.beg : rB.beg
-
-  const begA = _point(rA.beg - offset)
-  const endA = _point(rA.end - offset)
-  const begB = _point(rB.beg - offset)
-  const endB = _point(rB.end - offset)
-
-  console.log(begA, endA, '-', begB, endB)
-
-  const begN = begA > begB ? begA : begB
-  const endN = endA < endB ? endA : endB
-
-  console.log(begN, endN)
-
-  const newRange = _norm({
-    beg: _point(begN + offset),
-    len: endN - begN
-  })
-
-  return newRange
 }
 
 /**
@@ -367,7 +346,7 @@ function _union (rA, rB) {
  * @param {range} rB - second range
  * @return {range}
  */
-exports.rUnion = function rCut (rA, rB) {
+exports.rUnion = function rUnion (rA, rB) {
   return _repr(_union(_parse(rA), _parse(rB)))
 }
 
