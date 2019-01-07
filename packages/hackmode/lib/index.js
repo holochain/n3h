@@ -195,6 +195,7 @@ class N3hHackMode extends AsyncClass {
             type: 'dhtMeta',
             _id: opt.data._id,
             agentId: opt.data.agentId,
+            fromAgentId: opt.data.fromAgentId,
             address: opt.data.address,
             attribute: opt.data.attribute,
             content: opt.data.content
@@ -405,6 +406,7 @@ class N3hHackMode extends AsyncClass {
             _id: data._id,
             dnaAddress,
             agentId: data.agentId,
+            fromAgentId: data.fromAgentId,
             address: data.address,
             attribute: data.attribute,
             content: data.content
