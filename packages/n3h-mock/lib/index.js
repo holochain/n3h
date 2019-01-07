@@ -180,6 +180,7 @@ class N3hMock extends AsyncClass {
             type: 'dhtMeta',
             _id: opt.data._id,
             agentId: opt.data.agentId,
+            fromAgentId: opt.data.fromAgentId,
             address: opt.data.address,
             attribute: opt.data.attribute,
             content: opt.data.content
@@ -235,6 +236,7 @@ class N3hMock extends AsyncClass {
             dnaAddress,
             agentId: data.agentId,
             address: data.address,
+            fromAgentId: data.fromAgentId,
             attribute: data.attribute,
             content: data.content
           })
@@ -257,7 +259,7 @@ class N3hMock extends AsyncClass {
     return this._memory[dnaAddress]
   }
 
-  _CatDnaAgent(DnaHash, AgentId) {
+  _CatDnaAgent (DnaHash, AgentId) {
     return DnaHash + '::' + AgentId
   }
 
