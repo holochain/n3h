@@ -351,13 +351,11 @@ class N3hHackMode extends AsyncClass {
       if (hl.dnaAddress in this._memory) {
         const ref = this._memory[hl.dnaAddress].mem
         for (let hash of hl.hashList) {
-          if (!ref.has(hash)) {
-            this._p2p.send(fromId, {
-              type: 'getData',
-              dnaAddress: hl.dnaAddress,
-              hash
-            })
-          }
+          this._p2p.send(fromId, {
+            type: 'getData',
+            dnaAddress: hl.dnaAddress,
+            hash
+          })
         }
       }
     }
@@ -399,6 +397,7 @@ class N3hHackMode extends AsyncClass {
       const mem = new Mem()
       mem.registerIndexer((store, data) => {
         if (data && data.type === 'dht') {
+          log.t('got dht', data)
           this._ipc.send('json', {
             method: 'storeDht',
             _id: data._id,
@@ -411,7 +410,7 @@ class N3hHackMode extends AsyncClass {
       })
       mem.registerIndexer((store, data) => {
         if (data && data.type === 'dhtMeta') {
-          log.e('got dhtMeta', data)
+          log.t('got dhtMeta', data)
           this._ipc.send('json', {
             method: 'storeDhtMeta',
             _id: data._id,
@@ -428,6 +427,7 @@ class N3hHackMode extends AsyncClass {
         mem,
         agentToTransportId: mem.registerIndexer((store, data) => {
           if (data && data.type === 'agent') {
+            log.t('got peer', data)
             store[data.agentId] = data.transportId
             this._ipc.send('json', {
               method: 'peerConnected',
