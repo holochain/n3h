@@ -349,7 +349,6 @@ class N3hHackMode extends AsyncClass {
 
     for (let hl of hashList) {
       if (hl.dnaAddress in this._memory) {
-        const ref = this._memory[hl.dnaAddress].mem
         for (let hash of hl.hashList) {
           this._p2p.send(fromId, {
             type: 'getData',
