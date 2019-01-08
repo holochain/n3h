@@ -82,7 +82,7 @@ class IpcServer extends AsyncClass {
 
   sendOne (zmqid, name, data) {
     this.$checkDestroyed()
-      this._send(zmqid, name, data)
+    this._send(zmqid, name, data)
   }
 
   // -- private -- //
