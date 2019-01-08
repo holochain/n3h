@@ -79,6 +79,9 @@ class Mem {
   }
 
   insert (data) {
+    if (!data || typeof data.address !== 'string' || !data.address.length) {
+      throw new Error('cannot insert without string address')
+    }
     const entry = this._getEntry(data.address)
     const strData = JSON.stringify(data)
     if (entry.entry !== strData) {
@@ -91,6 +94,9 @@ class Mem {
   }
 
   insertMeta (data) {
+    if (!data || typeof data.address !== 'string' || !data.address.length) {
+      throw new Error('cannot insert without string address')
+    }
     const entry = this._getEntry(data.address)
     const strData = JSON.stringify(data)
     const hash = getHash(strData)
