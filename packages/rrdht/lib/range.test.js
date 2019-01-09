@@ -92,7 +92,7 @@ describe('Range Suite', () => {
       [mks('00000000', 'ffffffff'), mks('fffffffe', '00000001'), true],
       [mks('ffffffff', '00000001'), mks('ffffffff', '00000001'), true],
       [mks('ffffffff', '00000001'), mks('00000000', '00000001'), false],
-      [mks('ffffffff', '00000002'), mks('00000000', '00000001'), true],
+      [mks('ffffffff', '00000002'), mks('00000000', '00000001'), true]
     ].forEach(vals => {
       const rA = vals[0]
       const rB = vals[1]
@@ -182,7 +182,7 @@ describe('Range Suite', () => {
         {
           within: [
             mks('00000002', '00000001'),
-            mks('00000003', '00000001'),
+            mks('00000003', '00000001')
           ],
           coverageCount: 1,
           nextHole: 2

@@ -25,9 +25,6 @@ class RangeStore extends AsyncClass {
   /**
    */
   async setRadius (loc, radius) {
-    if (typeof loc !== 'number' || typeof radius !== 'number') {
-      throw new Error('setRadius takes two number values')
-    }
     this._range = range.rFromRadius(loc, radius)
     await this._prune()
   }
@@ -35,9 +32,6 @@ class RangeStore extends AsyncClass {
   /**
    */
   wouldStore (loc) {
-    if (typeof loc !== 'number') {
-      throw new Error('wouldStore takes a number value')
-    }
     return range.rCoversPoint(this._range, loc)
   }
 

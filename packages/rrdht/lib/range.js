@@ -282,11 +282,6 @@ function _cut (rSource, rCutBy) {
   // we don't allow cutting a range into multiple segments
   // so, if the beginning of rCutBy is within us, trim everything following
 
-  const rN = _norm({
-    beg,
-    len
-  })
-
   dist = _forwardDist(beg, rCutBy.beg)
   if (dist > 0 && dist <= len) {
     len = dist
