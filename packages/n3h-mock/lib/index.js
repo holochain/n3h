@@ -86,7 +86,7 @@ class N3hMock extends AsyncClass {
   // Received 'message' from IPC: process it
   _handleIpcMessage (opt) {
 
-    if (opt.name === 'ping') {
+    if (opt.name === 'ping' || opt.name === 'pong') {
       return
     }
 
