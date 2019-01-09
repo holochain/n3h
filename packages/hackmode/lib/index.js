@@ -115,7 +115,7 @@ class N3hHackMode extends AsyncClass {
   }
 
   _handleIpcMessage (opt) {
-    if (opt.name === 'ping') {
+    if (opt.name === 'ping' || opt.name === 'pong') {
       return
     }
 
@@ -134,7 +134,11 @@ class N3hHackMode extends AsyncClass {
           })
           return
         case 'connect':
-          this._p2p.connect(opt.data.address)
+          this._p2p.connect(opt.data.address).then(() => {
+            log.t('connected', opt.data.address)
+          }, (err) => {
+            log.e('connect (' + opt.data.address + ') failed', err.toString())
+          })
           return
         case 'trackApp':
           this._track(opt.data.dnaAddress, opt.data.agentId)
@@ -191,7 +195,7 @@ class N3hHackMode extends AsyncClass {
           })
           return
         case 'publishDhtMeta':
-          this._getMemRef(opt.data.dnaAddress).mem.insert({
+          this._getMemRef(opt.data.dnaAddress).mem.insertMeta({
             type: 'dhtMeta',
             _id: opt.data._id,
             agentId: opt.data.agentId,
@@ -345,15 +349,12 @@ class N3hHackMode extends AsyncClass {
 
     for (let hl of hashList) {
       if (hl.dnaAddress in this._memory) {
-        const ref = this._memory[hl.dnaAddress].mem
         for (let hash of hl.hashList) {
-          if (!ref.has(hash)) {
-            this._p2p.send(fromId, {
-              type: 'getData',
-              dnaAddress: hl.dnaAddress,
-              hash
-            })
-          }
+          this._p2p.send(fromId, {
+            type: 'getData',
+            dnaAddress: hl.dnaAddress,
+            hash
+          })
         }
       }
     }
@@ -377,8 +378,15 @@ class N3hHackMode extends AsyncClass {
   _processGetDataResp (dnaAddress, data) {
     if (dnaAddress in this._memory) {
       const ref = this._memory[dnaAddress].mem
-      if (ref.insert(data)) {
-        log.t('newGossip', dnaAddress, JSON.stringify(data))
+      if (data.entry && data.entry.address && data.entry.address.length) {
+        if (ref.insert(data.entry)) {
+          log.t('newGossipEntry', dnaAddress, JSON.stringify(data.entry))
+        }
+      }
+      for (let meta of data.meta) {
+        if (ref.insertMeta(meta)) {
+          log.t('newGossipMeta', dnaAddress, meta.address, JSON.stringify(meta))
+        }
       }
     }
   }
@@ -386,8 +394,9 @@ class N3hHackMode extends AsyncClass {
   _getMemRef (dnaAddress) {
     if (!(dnaAddress in this._memory)) {
       const mem = new Mem()
-      mem.registerIndexer((store, hash, data) => {
+      mem.registerIndexer((store, data) => {
         if (data && data.type === 'dht') {
+          log.t('got dht', data)
           this._ipc.send('json', {
             method: 'storeDht',
             _id: data._id,
@@ -398,9 +407,9 @@ class N3hHackMode extends AsyncClass {
           })
         }
       })
-      mem.registerIndexer((store, hash, data) => {
+      mem.registerIndexer((store, data) => {
         if (data && data.type === 'dhtMeta') {
-          log.e('got dhtMeta', data)
+          log.t('got dhtMeta', data)
           this._ipc.send('json', {
             method: 'storeDhtMeta',
             _id: data._id,
@@ -415,8 +424,9 @@ class N3hHackMode extends AsyncClass {
       })
       this._memory[dnaAddress] = {
         mem,
-        agentToTransportId: mem.registerIndexer((store, hash, data) => {
+        agentToTransportId: mem.registerIndexer((store, data) => {
           if (data && data.type === 'agent') {
+            log.t('got peer', data)
             store[data.agentId] = data.transportId
             this._ipc.send('json', {
               method: 'peerConnected',
@@ -436,6 +446,7 @@ class N3hHackMode extends AsyncClass {
       type: 'agent',
       dnaAddress: dnaAddress,
       agentId: agentId,
+      address: agentId,
       transportId: this._p2p.getId()
     })
   }

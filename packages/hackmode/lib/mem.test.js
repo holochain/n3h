@@ -8,10 +8,10 @@ describe('HackMode Mem Suite', () => {
   beforeEach(() => {
     m = new Mem()
     m.insert({
-      v: 'test1'
+      address: 'test1'
     })
     m.insert({
-      v: 'test2'
+      address: 'test2'
     })
   })
 
@@ -20,19 +20,22 @@ describe('HackMode Mem Suite', () => {
   })
 
   it('should json', () => {
-    expect(JSON.stringify(m)).equals('{"OYAEmbRpxTognzO4iFhiaytimxCxgw43Wdj1AJ4XYJo=":{"v":"test1"},"Nmu2RpmSXt5X5J9DlgV76scoEayztSXYHoRmcjlki+k=":{"v":"test2"}}')
+    expect(JSON.stringify(m)).equals('{"test1":{"entry":{"address":"test1"},"meta":[]},"test2":{"entry":{"address":"test2"},"meta":[]}}')
   })
 
   it('should get', () => {
-    expect(m.get('OYAEmbRpxTognzO4iFhiaytimxCxgw43Wdj1AJ4XYJo=')).deep.equals({
-      v: 'test1'
+    expect(m.get('test1')).deep.equals({
+      entry: {
+        address: 'test1'
+      },
+      meta: []
     })
   })
 
   it('should gossip hash hash', () => {
     expect(m.getGossipHashHash()).deep.equals({
-      '25': 'AauR62PJpQO/h3s/VsE9EywS2QfpGTs9lMk5G5T3qsY=',
-      '53': '1FAPsc4wYjNuokxtnJUlnmk55otWF6Dc1UM7suTf64Q='
+      '24': 'I8XwOtgtojmOKzo7qJwSetie154IwJnxJV0HMiVjEY0=',
+      '27': 'CNs5L9IOXSl6+PrJ2DXGLJQgMc/yyuyE4Fj4FTkgxQ4='
     })
   })
 
@@ -57,7 +60,7 @@ describe('HackMode Mem Suite', () => {
     hh[loc] = 'fake'
     const res = m.getGossipHashesForGossipLocList(m.getGossipLocListForGossipHashHash(hh))
     expect(res).deep.equals([
-      'OYAEmbRpxTognzO4iFhiaytimxCxgw43Wdj1AJ4XYJo='
+      'test2'
     ])
   })
 })

@@ -13,7 +13,6 @@ tweetlog.set('t')
 const log = tweetlog('@mock@')
 
 class N3hMock extends AsyncClass {
-
   /// Network mock init.
   /// Normally spawned by holochain_net where config is passed via environment variables
   async init () {
@@ -85,7 +84,6 @@ class N3hMock extends AsyncClass {
 
   // Received 'message' from IPC: process it
   _handleIpcMessage (opt) {
-
     if (opt.name === 'ping') {
       return
     }

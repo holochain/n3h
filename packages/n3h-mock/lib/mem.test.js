@@ -24,5 +24,4 @@ describe('Mock Mem Suite', () => {
       v: 'test1'
     })
   })
-
 })
