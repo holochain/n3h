@@ -1,35 +1,27 @@
 const crypto = require('crypto')
 
-const getLoc = exports.getLoc = function getLoc (hash) {
-  let loc = hash.readInt8(0)
-  for (let i = 1; i < 32; i += 1) {
-    loc = loc ^ hash.readInt8(i)
+// bit of a hack, treat the address as utf8,
+// then xor into a single byte
+const getLoc = exports.getLoc = function getLoc (address) {
+  const buf = Buffer.from(address, 'utf8')
+  let loc = buf.readInt8(0)
+  for (let i = 1; i < buf.byteLength; ++i) {
+    loc = loc ^ buf.readInt8(i)
   }
-  const b = Buffer.alloc(1)
-  b.writeInt8(loc, 0)
-  return b.toString('hex')
+  return loc.toString(16)
 }
 
-const getHash = exports.getHash = function getHash (buffer) {
+const getHash = exports.getHash = function getHash (str) {
   const hasher = crypto.createHash('sha256')
-  hasher.update(buffer)
-  return hasher.digest()
-}
-
-const getEntry = exports.getEntry = function getEntry (data) {
-  const buffer = Buffer.from(JSON.stringify(data), 'utf8')
-  const hash = getHash(buffer)
-  return {
-    loc: getLoc(hash),
-    hash: hash.toString('base64'),
-    buffer
-  }
+  hasher.update(Buffer.from(str, 'utf8'))
+  return hasher.digest().toString('base64')
 }
 
 class Mem {
   constructor () {
-    this._data = {}
+    this._data = new Map()
     this._indexers = []
+    this._locHashes = {}
   }
 
   registerIndexer (fn) {
@@ -38,70 +30,135 @@ class Mem {
     return store
   }
 
-  insert (data) {
-    const entry = getEntry(data)
-    if (!(entry.loc in this._data)) {
-      this._data[entry.loc] = {}
+  /**
+   * we need a way to generate consistent hashes
+   * (that is, work around insertion order)
+   */
+  _genLocHashes () {
+    this._locHashes = {}
+    for (let [loc, sub] of this._data) {
+      const locData = []
+
+      const addrs = Array.from(sub.keys()).sort()
+      for (let addr of addrs) {
+        const entry = sub.get(addr)
+        const meta = []
+
+        const metaHashes = Array.from(entry.meta.keys()).sort()
+        for (let metaHash of metaHashes) {
+          const metaItem = entry.meta.get(metaHash)
+          meta.push([metaHash, metaItem])
+        }
+
+        locData.push([addr, entry.entry, meta])
+      }
+
+      this._locHashes[loc] = getHash(JSON.stringify(locData))
     }
-    if (entry.hash in this._data[entry.loc]) {
-      return false
-    }
-    this._data[entry.loc][entry.hash] = entry
-    for (let idx of this._indexers) {
-      idx[1](idx[0], entry.hash, data)
-    }
-    return true
   }
 
-  has (hash) {
-    const loc = getLoc(Buffer.from(hash, 'base64'))
-    if (!(loc in this._data)) {
-      return false
+  _getEntry (address) {
+    const loc = getLoc(address)
+    if (!this._data.has(loc)) {
+      this._data.set(loc, new Map())
     }
-    if (hash in this._data[loc]) {
+    const ref = this._data.get(loc)
+    if (!ref.has(address)) {
+      ref.set(address, {
+        entry: '{}',
+        meta: new Map()
+      })
+    }
+    return ref.get(address)
+  }
+
+  _publishIndex (data) {
+    for (let idx of this._indexers) {
+      idx[1](idx[0], data)
+    }
+  }
+
+  insert (data) {
+    if (!data || typeof data.address !== 'string' || !data.address.length) {
+      throw new Error('cannot insert without string address')
+    }
+    const entry = this._getEntry(data.address)
+    const strData = JSON.stringify(data)
+    if (entry.entry !== strData) {
+      entry.entry = strData
+      this._genLocHashes()
+      this._publishIndex(data)
       return true
     }
     return false
   }
 
-  get (hash) {
-    const loc = getLoc(Buffer.from(hash, 'base64'))
-    if (!(loc in this._data)) {
+  insertMeta (data) {
+    if (!data || typeof data.address !== 'string' || !data.address.length) {
+      throw new Error('cannot insert without string address')
+    }
+    const entry = this._getEntry(data.address)
+    const strData = JSON.stringify(data)
+    const hash = getHash(strData)
+    if (!entry.meta.has(hash)) {
+      entry.meta.set(hash, strData)
+      this._genLocHashes()
+      this._publishIndex(data)
+      return true
+    }
+    return false
+  }
+
+  has (address) {
+    const loc = getLoc(address)
+    if (!this._data.has(loc)) {
+      return false
+    }
+    const ref = this._data.get(loc)
+    if (ref.has(address)) {
+      return true
+    }
+    return false
+  }
+
+  get (address) {
+    const loc = getLoc(address)
+    if (!this._data.has(loc)) {
       return
     }
-    if (hash in this._data[loc]) {
-      return JSON.parse(this._data[loc][hash].buffer.toString('utf8'))
+    const ref = this._data.get(loc)
+    if (ref.has(address)) {
+      const entry = ref.get(address)
+      const out = {
+        entry: JSON.parse(entry.entry),
+        meta: []
+      }
+      for (let metaItem of entry.meta.values()) {
+        out.meta.push(JSON.parse(metaItem))
+      }
+      return out
     }
   }
 
   toJSON () {
     const out = {}
-    for (let loc in this._data) {
-      for (let hash in this._data[loc]) {
-        out[hash] = JSON.parse(this._data[loc][hash].buffer.toString('utf8'))
+    for (let sub of this._data.values()) {
+      for (let addr of sub.keys()) {
+        out[addr] = this.get(addr)
       }
     }
     return out
   }
 
-  getHashHashForLoc (loc) {
-    return getHash(Buffer.concat(Object.keys(this._data[loc]).map(
-      h => Buffer.from(h, 'base64')))).toString('base64')
-  }
-
   getGossipHashHash () {
-    const out = {}
-    for (let loc in this._data) {
-      out[loc] = this.getHashHashForLoc(loc)
-    }
-    return out
+    return JSON.parse(JSON.stringify(this._locHashes))
   }
 
   getGossipLocListForGossipHashHash (gossipHashHash) {
     const out = []
     for (let loc in gossipHashHash) {
-      if (loc in this._data) {
-        if (gossipHashHash[loc] !== this.getHashHashForLoc(loc)) {
+      if (loc in this._locHashes) {
+        if (gossipHashHash[loc] !== this._locHashes[loc]) {
           out.push(loc)
         }
       } else {
@@ -114,9 +171,9 @@ class Mem {
   getGossipHashesForGossipLocList (gossipLocList) {
     const out = []
     for (let loc of gossipLocList) {
-      if (loc in this._data) {
-        for (let hash in this._data[loc]) {
-          out.push(hash)
+      if (this._data.has(loc)) {
+        for (let addr of this._data.get(loc).keys()) {
+          out.push(addr)
         }
       }
     }
