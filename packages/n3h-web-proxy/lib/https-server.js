@@ -47,15 +47,7 @@ async function decryptKey (key, passphrase) {
   }
 }
 
-exports.createServer = async function createServer (passphrase, options) {
-  if (typeof passphrase !== 'string' || !passphrase.length) {
-    throw new Error('passphrase required')
-  }
-  options || (options = {})
-  options.port || (options.port = 8443)
-  options.rsaBits || (options.rsaBits = 4096)
-  options.tlsFile || (options.tlsFile = 'tls-data.json')
-
+exports.getCert = async (passphrase, options) => {
   let crt = null
   let key = null
 
@@ -70,6 +62,23 @@ exports.createServer = async function createServer (passphrase, options) {
   const { privateKey, finger } = await decryptKey(key, passphrase)
 
   console.log('loaded rsa fingerprint', finger)
+
+  return {
+    crt,
+    privateKey
+  }
+}
+
+exports.createServer = async function createServer (passphrase, options) {
+  if (typeof passphrase !== 'string' || !passphrase.length) {
+    throw new Error('passphrase required')
+  }
+  options || (options = {})
+  options.port || (options.port = 8443)
+  options.rsaBits || (options.rsaBits = 4096)
+  options.tlsFile || (options.tlsFile = 'tls-data.json')
+
+  const { crt, privateKey } = await exports.getCert(passphrase, options)
 
   const app = express()
   const srv = https.createServer({
@@ -96,6 +105,7 @@ exports.createServer = async function createServer (passphrase, options) {
     referrerPolicy: true
   }))
   app.use(helmet.noCache())
+  app.enable('trust proxy')
 
   app.post('/', async (req, res) => {
     const body = await new Promise((resolve, reject) => {
@@ -124,6 +134,13 @@ exports.createServer = async function createServer (passphrase, options) {
   })
 
   app.ws('/', (ws, req) => {
+    console.log(req.ips, req.ip,
+      req.connection.remoteAddress,
+      req.connection.remoteFamily,
+      req.connection.remotePort,
+      req.connection.localAddress,
+      req.connection.localPort
+    )
     ws.on('message', (msg) => {
       ws.send('echo: ' + msg)
     })

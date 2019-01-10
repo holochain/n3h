@@ -20,6 +20,7 @@
     "standard": "^12.0.1"
   },
   "dependencies": {
+    "@holochain/n3h-common": "0.0.1",
     "express": "^4.16.4",
     "express-ws": "^4.0.0",
     "helmet": "^3.15.0",
