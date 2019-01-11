@@ -5,7 +5,7 @@
 
 [![Twitter Follow](https://img.shields.io/twitter/follow/holochain.svg?style=social&label=Follow)](https://twitter.com/holochain)
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache-2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## Overview
 n3h delivers the networking component for [holochain-rust](https://github.com/holochain/holochain-rust).  This allows us to abstract away the complexity of p2p networking from the core Holochain functionality.
@@ -51,7 +51,7 @@ npm run new
 ```
 
 ## License
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache-2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 Copyright (C) 2019, Holochain Trust
 
