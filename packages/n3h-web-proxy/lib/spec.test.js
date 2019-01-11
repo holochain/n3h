@@ -1,9 +1,9 @@
 const { expect } = require('chai')
 
-const { Connection } = require('./mock')
+const { Connection } = require('./spec')
 
 describe('mock Suite', () => {
-  it('hey?', async () => {
+  it('full api', async () => {
     const c = await new Connection()
 
     const b = []
@@ -16,10 +16,12 @@ describe('mock Suite', () => {
     c.on('close', c => b.push(['close', c]))
 
     await c.bind('testBindSpec')
-    const testId = b[1][1].id
     await c.connect('testConSpec')
+    const testId = (await c.keys())[0]
     await c.send(testId, Buffer.from('test message'))
+    b.push(['get', await c.get(testId)])
     await c.setMeta(testId, { test: 'hello' })
+    b.push(['get', await c.get(testId)])
     await c.send(testId, Buffer.from('test message 2'))
     await c.close(testId)
 
@@ -76,6 +78,19 @@ describe('mock Suite', () => {
           'spec': '/rem/test/addr'
         },
         'echo: test message'
+      ],
+      [
+        "get",
+        {
+          "spec": "/rem/test/addr"
+        }
+      ],
+      [
+        "get",
+        {
+          "spec": "/rem/test/addr",
+          "test": "hello"
+        }
       ],
       [
         'message',

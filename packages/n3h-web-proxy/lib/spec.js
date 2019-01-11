@@ -67,6 +67,18 @@ class Connection extends AsyncClass {
 
   /**
    */
+  async keys () {
+    return Array.from(this._cons.keys())
+  }
+
+  /**
+   */
+  async get (id) {
+    return this._getCon(id)
+  }
+
+  /**
+   */
   async setMeta (id, obj) {
     const con = this._getCon(id)
 
