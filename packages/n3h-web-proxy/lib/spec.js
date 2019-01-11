@@ -21,36 +21,34 @@ class Connection extends AsyncClass {
   /**
    */
   async bind (bindSpec) {
-    await this.emit('bind', bindSpec)
+    await this._emitBind(bindSpec)
 
     // simulate a remote connection
     const con = this._registerCon('in:' + this.$createUid(), '/rem/test/addr')
-    await this.emit('connection', JSON.parse(JSON.stringify(con)))
+    await this._emitConnection(con.id)
 
     // simulate a remote message
-    await this.emit('message', con, Buffer.from('test-in'))
+    await this._emitMessage(con.id, Buffer.from('test-in'))
 
     // simulate some kind of error
-    await this.emit('error', new Error('ignore-me'))
+    await this._emitError(new Error('ignore-me'))
   }
 
   /**
    */
   async connect (conSpec) {
     const con = this._registerCon('out:' + this.$createUid(), conSpec)
-    await this.emit('connect', JSON.parse(JSON.stringify(con)))
+    await this._emitConnect(con.id)
 
     // simulate a remote message
-    await this.emit('message', con, Buffer.from('test-out'))
+    await this._emitMessage(con.id, Buffer.from('test-out'))
   }
 
   /**
    */
   async send (id, buf) {
-    const con = this._getCon(id)
-
     // simulate an echo
-    await this.emit('message', con, Buffer.concat([
+    await this._emitMessage(id, Buffer.concat([
       Buffer.from('echo: '),
       buf
     ]))
@@ -59,9 +57,7 @@ class Connection extends AsyncClass {
   /**
    */
   async close (id) {
-    const con = this._getCon(id)
-
-    await this.emit('close', con)
+    await this._emitClose(id)
     this._cons.delete(id)
   }
 
@@ -93,6 +89,42 @@ class Connection extends AsyncClass {
   }
 
   // -- private -- //
+
+  /**
+   */
+  _emitError (e) {
+    return this.emit('error', e)
+  }
+
+  /**
+   */
+  _emitBind (bindSpec) {
+    return this.emit('bind', bindSpec)
+  }
+
+  /**
+   */
+  _emitConnect (id) {
+    return this.emit('connect', this._getCon(id))
+  }
+
+  /**
+   */
+  _emitConnection (id) {
+    return this.emit('connection', this._getCon(id))
+  }
+
+  /**
+   */
+  _emitMessage (id, buffer) {
+    return this.emit('message', this._getCon(id), buffer)
+  }
+
+  /**
+   */
+  _emitClose (id) {
+    return this.emit('close', this._getCon(id))
+  }
 
   /**
    */

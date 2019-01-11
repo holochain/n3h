@@ -80,16 +80,16 @@ describe('mock Suite', () => {
         'echo: test message'
       ],
       [
-        "get",
+        'get',
         {
-          "spec": "/rem/test/addr"
+          'spec': '/rem/test/addr'
         }
       ],
       [
-        "get",
+        'get',
         {
-          "spec": "/rem/test/addr",
-          "test": "hello"
+          'spec': '/rem/test/addr',
+          'test': 'hello'
         }
       ],
       [
