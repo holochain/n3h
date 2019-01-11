@@ -3,6 +3,7 @@ const { AsyncClass } = require('@holochain/n3h-common')
 /**
  * emits:
  *  - error - some kind of asynchronous failure
+ *  - conError - an error with a particular connection
  *  - bind - we were bound
  *  - connect - we have connected
  *  - connection - incoming connection
@@ -12,71 +13,69 @@ const { AsyncClass } = require('@holochain/n3h-common')
 class Connection extends AsyncClass {
   /**
    */
-  async init () {
+  async init (Backend, initOptions) {
     await super.init()
 
+    this._backend = await new Backend(this, initOptions)
     this._cons = new Map()
+
+    this.$pushDestructor(async () => {
+      await this._backend.destroy()
+      this._backend = null
+      this._cons = null
+    })
   }
 
   /**
    */
   async bind (bindSpec) {
-    await this._emitBind(bindSpec)
-
-    // simulate a remote connection
-    const con = this._registerCon('in:' + this.$createUid(), '/rem/test/addr')
-    await this._emitConnection(con.id)
-
-    // simulate a remote message
-    await this._emitMessage(con.id, Buffer.from('test-in'))
-
-    // simulate some kind of error
-    await this._emitError(new Error('ignore-me'))
+    this.$checkDestroyed()
+    return this._backend.bind(bindSpec)
   }
 
   /**
    */
   async connect (conSpec) {
-    const con = this._registerCon('out:' + this.$createUid(), conSpec)
-    await this._emitConnect(con.id)
-
-    // simulate a remote message
-    await this._emitMessage(con.id, Buffer.from('test-out'))
+    this.$checkDestroyed()
+    return this._backend.connect(conSpec)
   }
 
   /**
    */
   async send (id, buf) {
-    // simulate an echo
-    await this._emitMessage(id, Buffer.concat([
-      Buffer.from('echo: '),
-      buf
-    ]))
+    this.$checkDestroyed()
+    return this._backend.send(id, buf)
   }
 
   /**
    */
   async close (id) {
-    await this._emitClose(id)
-    this._cons.delete(id)
+    this.$checkDestroyed()
+    return this._backend.close(id)
   }
 
   /**
    */
   async keys () {
+    this.$checkDestroyed()
     return Array.from(this._cons.keys())
   }
 
   /**
    */
   async get (id) {
-    return this._getCon(id)
+    this.$checkDestroyed()
+    return this.$getCon(id)
   }
 
   /**
    */
   async setMeta (id, obj) {
-    const con = this._getCon(id)
+    if (this.$isDestroyed()) {
+      return
+    }
+
+    const con = this.$getCon(id)
 
     for (let n in obj) {
       if (n === 'spec' || n === 'id') {
@@ -88,47 +87,83 @@ class Connection extends AsyncClass {
     this._cons.set(id, JSON.stringify(con))
   }
 
-  // -- private -- //
+  // -- protected -- //
 
   /**
    */
-  _emitError (e) {
+  $emitError (e) {
+    if (this.$isDestroyed()) {
+      return
+    }
+
     return this.emit('error', e)
   }
 
   /**
    */
-  _emitBind (bindSpec) {
+  $emitConError (id, e) {
+    if (this.$isDestroyed()) {
+      return
+    }
+
+    return this.emit('conError', this.$getCon(id), e)
+  }
+
+  /**
+   */
+  $emitBind (bindSpec) {
+    if (this.$isDestroyed()) {
+      return
+    }
+
     return this.emit('bind', bindSpec)
   }
 
   /**
    */
-  _emitConnect (id) {
-    return this.emit('connect', this._getCon(id))
+  $emitConnect (id) {
+    if (this.$isDestroyed()) {
+      return
+    }
+
+    return this.emit('connect', this.$getCon(id))
   }
 
   /**
    */
-  _emitConnection (id) {
-    return this.emit('connection', this._getCon(id))
+  $emitConnection (id) {
+    if (this.$isDestroyed()) {
+      return
+    }
+
+    return this.emit('connection', this.$getCon(id))
   }
 
   /**
    */
-  _emitMessage (id, buffer) {
-    return this.emit('message', this._getCon(id), buffer)
+  $emitMessage (id, buffer) {
+    if (this.$isDestroyed()) {
+      return
+    }
+
+    return this.emit('message', this.$getCon(id), buffer)
   }
 
   /**
    */
-  _emitClose (id) {
-    return this.emit('close', this._getCon(id))
+  $emitClose (id) {
+    if (this.$isDestroyed()) {
+      return
+    }
+
+    return this.emit('close', this.$getCon(id))
   }
 
   /**
    */
-  _getCon (id) {
+  $getCon (id) {
+    this.$checkDestroyed()
+
     if (!this._cons.has(id)) {
       throw new Error('invalid id: ' + id)
     }
@@ -137,13 +172,26 @@ class Connection extends AsyncClass {
 
   /**
    */
-  _registerCon (id, spec) {
-    id = 'mockCon:' + id
+  $registerCon (id, spec) {
+    if (this.$isDestroyed()) {
+      return
+    }
+
     this._cons.set(id, JSON.stringify({
       id,
       spec
     }))
-    return this._getCon(id)
+    return this.$getCon(id)
+  }
+
+  /**
+   */
+  $removeCon (id) {
+    if (this.$isDestroyed()) {
+      return
+    }
+
+    this._cons.delete(id)
   }
 }
 

@@ -1,14 +1,80 @@
 const { expect } = require('chai')
 
+const { AsyncClass } = require('@holochain/n3h-common')
+
 const { Connection } = require('./spec')
+
+/**
+ */
+class ConnectionBackendMock extends AsyncClass {
+  /**
+   */
+  async init (spec) {
+    await super.init()
+
+    this._spec = spec
+
+    this.$pushDestructor(async () => {
+      await this._spec.$emitError(new Error('yay, cleanup'))
+      this._spec = null
+    })
+  }
+
+  /**
+   */
+  async bind (bindSpec) {
+    await this._spec.$emitBind(bindSpec)
+
+    // simulate a remote connection
+    const con = this._spec.$registerCon('mockCon:in:' + this.$createUid(), '/rem/test/addr')
+    await this._spec.$emitConnection(con.id)
+
+    // simulate a remote message
+    await this._spec.$emitMessage(con.id, Buffer.from('test-in'))
+
+    // simulate some kind of error
+    await this._spec.$emitError(new Error('ignore-me'))
+  }
+
+  /**
+   */
+  async connect (conSpec) {
+    const con = this._spec.$registerCon('mockCon:out:' + this.$createUid(), conSpec)
+    await this._spec.$emitConnect(con.id)
+
+    // simulate a remote message
+    await this._spec.$emitMessage(con.id, Buffer.from('test-out'))
+
+    // simulate some kind of error
+    await this._spec.$emitConError(con.id, new Error('ignore-con'))
+  }
+
+  /**
+   */
+  async send (id, buf) {
+    // simulate an echo
+    await this._spec.$emitMessage(id, Buffer.concat([
+      Buffer.from('echo: '),
+      buf
+    ]))
+  }
+
+  /**
+   */
+  async close (id) {
+    await this._spec.$emitClose(id)
+    this._spec.$removeCon(id)
+  }
+}
 
 describe('mock Suite', () => {
   it('full api', async () => {
-    const c = await new Connection()
+    const c = await new Connection(ConnectionBackendMock)
 
     const b = []
 
     c.on('error', e => b.push(['error', e]))
+    c.on('conError', (c, e) => b.push(['conError', c, e]))
     c.on('bind', s => b.push(['bind', s]))
     c.on('connect', c => b.push(['connect', c]))
     c.on('connection', c => b.push(['connection', c]))
@@ -24,6 +90,7 @@ describe('mock Suite', () => {
     b.push(['get', await c.get(testId)])
     await c.send(testId, Buffer.from('test message 2'))
     await c.close(testId)
+    await c.destroy()
 
     // normalize
     for (let i of b) {
@@ -34,6 +101,8 @@ describe('mock Suite', () => {
         i[2] = i[2].toString()
       } else if (i[0] === 'error') {
         i[1] = i[1].toString()
+      } else if (i[0] === 'conError') {
+        i[2] = i[2].toString()
       }
     }
 
@@ -73,6 +142,13 @@ describe('mock Suite', () => {
         'test-out'
       ],
       [
+        'conError',
+        {
+          'spec': 'testConSpec'
+        },
+        'Error: ignore-con'
+      ],
+      [
         'message',
         {
           'spec': '/rem/test/addr'
@@ -106,6 +182,10 @@ describe('mock Suite', () => {
           'spec': '/rem/test/addr',
           'test': 'hello'
         }
+      ],
+      [
+        'error',
+        'Error: yay, cleanup'
       ]
     ])
   })
