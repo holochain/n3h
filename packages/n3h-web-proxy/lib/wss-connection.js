@@ -23,7 +23,21 @@ class ConnectionBackendWss extends AsyncClass {
     this._servers = []
     this._cons = new Map()
 
+    this._pingTimer = setInterval(async () => {
+      for (let [id, ws] of this._cons) {
+        if (Date.now() - ws._$_lastMsg > 500) {
+          ws.close(1001, 'stale connection')
+          await this._handleClose(id)
+        } else if (Date.now() - ws._$_lastMsg >= 200) {
+          ws.ping()
+        }
+      }
+    }, 200)
+
     this.$pushDestructor(async () => {
+      clearInterval(this._pingTimer)
+      this._pingTimer = null
+
       let wait = null
 
       for (let con of this._cons.values()) {
@@ -49,16 +63,19 @@ class ConnectionBackendWss extends AsyncClass {
       throw new Error('unimplemented protocol: (' + parsed.protocol + ') use wss:')
     }
 
-    const port = parseInt(parsed.port)
-    if (port < 1000) {
-      throw new Error('invalid port, please specify >= 1000')
+    const port = parseInt(parsed.port, 10)
+    if (port !== 0 && port < 1000) {
+      throw new Error('invalid port, please specify 0 or >= 1000')
     }
 
     const host = parsed.hostname
     const path = parsed.pathname
 
     const srv = await new WssServer({
-      passphrase: 'hello'
+      passphrase: 'hello',
+      host,
+      port,
+      path
     })
 
     srv.on('connection', async (ws, req) => {
@@ -68,27 +85,7 @@ class ConnectionBackendWss extends AsyncClass {
 
       const id = 'wss:in:' + this.$createUid()
 
-      ws.on('error', async e => {
-        if (this.$isDestroyed()) {
-          return
-        }
-        await this._spec.$emitConError(id, e)
-      })
-
-      ws.on('close', async (code, reason) => {
-        if (this.$isDestroyed()) {
-          return
-        }
-        await this._spec.$emitConError(new Error('connection closed (' + code + ', ' + reason + ')'))
-        await this._spec.$emitClose(id)
-      })
-
-      ws.on('message', async msg => {
-        if (this.$isDestroyed()) {
-          return
-        }
-        await this._spec.$emitMessage(id, msg)
-      })
+      this._wsHandlers(id, ws)
 
       this._cons.set(id, ws)
       this._spec.$registerCon(id, 'remote-wss://' + req.connection.remoteAddress + ':' + req.connection.remotePort)
@@ -105,7 +102,7 @@ class ConnectionBackendWss extends AsyncClass {
     console.log('listening at ' + srv.address())
 
     this._servers.push(srv)
-    await this._spec.$emitBind(srv.address())
+    await this._spec.$emitBind([srv.address()])
   }
 
   /**
@@ -126,30 +123,7 @@ class ConnectionBackendWss extends AsyncClass {
           agent
         })
 
-        ws.on('error', async e => {
-          if (this.$isDestroyed()) {
-            return
-          }
-
-          await this._spec.$emitConError(id, e)
-        })
-
-        ws.on('close', async (code, reason) => {
-          if (this.$isDestroyed()) {
-            return
-          }
-
-          await this._spec.$emitConError(new Error('connection closed (' + code + ', ' + reason + ')'))
-          await this._spec.$emitClose(id)
-        })
-
-        ws.on('message', async msg => {
-          if (this.$isDestroyed()) {
-            return
-          }
-
-          await this._spec.$emitMessage(id, msg)
-        })
+        this._wsHandlers(id, ws)
 
         ws.on('open', () => {
           resolve(ws)
@@ -192,10 +166,60 @@ class ConnectionBackendWss extends AsyncClass {
     const ws = this._cons.get(id)
     ws.close(1000)
 
-    await this._spec.$emitClose(id)
+    await this._handleClose(id)
+  }
 
-    this._spec.$removeCon(id)
-    this._cons.delete(id)
+  // -- private -- //
+
+  _wsHandlers (id, ws) {
+    const lastMsg = () => {
+      ws._$_lastMsg = Date.now()
+    }
+
+    ws.on('error', async e => {
+      if (this.$isDestroyed()) {
+        return
+      }
+
+      await this._spec.$emitConError(id, e)
+    })
+
+    ws.on('close', async (code, reason) => {
+      if (this.$isDestroyed()) {
+        return
+      }
+
+      await this._handleClose(id)
+    })
+
+    ws.on('message', async msg => {
+      if (this.$isDestroyed()) {
+        return
+      }
+
+      lastMsg()
+
+      await this._spec.$emitMessage(id, msg)
+    })
+
+    ws.on('ping', buf => {
+      lastMsg()
+    })
+
+    ws.on('pong', buf => {
+      lastMsg()
+    })
+  }
+
+  async _handleClose (id) {
+    if (this._cons.has(id)) {
+      this._cons.delete(id)
+    }
+
+    if (this._spec.has(id)) {
+      await this._spec.$emitClose(id)
+      this._spec.$removeCon(id)
+    }
   }
 }
 

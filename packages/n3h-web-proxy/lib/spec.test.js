@@ -23,7 +23,7 @@ class ConnectionBackendMock extends AsyncClass {
   /**
    */
   async bind (bindSpec) {
-    await this._spec.$emitBind(bindSpec)
+    await this._spec.$emitBind([bindSpec])
 
     // simulate a remote connection
     const con = this._spec.$registerCon('mockCon:in:' + this.$createUid(), '/rem/test/addr')
@@ -83,11 +83,11 @@ describe('mock Suite', () => {
 
     await c.bind('testBindSpec')
     await c.connect('testConSpec')
-    const testId = (await c.keys())[0]
+    const testId = c.keys().next().value
     await c.send(testId, Buffer.from('test message'))
-    b.push(['get', await c.get(testId)])
+    b.push(['get', c.get(testId)])
     await c.setMeta(testId, { test: 'hello' })
-    b.push(['get', await c.get(testId)])
+    b.push(['get', c.get(testId)])
     await c.send(testId, Buffer.from('test message 2'))
     await c.close(testId)
     await c.destroy()
@@ -109,7 +109,9 @@ describe('mock Suite', () => {
     expect(b).deep.equals([
       [
         'bind',
-        'testBindSpec'
+        [
+          'testBindSpec'
+        ]
       ],
       [
         'connection',

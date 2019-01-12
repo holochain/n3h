@@ -1,4 +1,5 @@
 const { AsyncClass } = require('@holochain/n3h-common')
+const { URL } = require('url')
 
 /**
  * emits:
@@ -56,21 +57,30 @@ class Connection extends AsyncClass {
 
   /**
    */
-  async keys () {
+  keys () {
     this.$checkDestroyed()
-    return Array.from(this._cons.keys())
+    return this._cons.keys()
   }
 
   /**
    */
-  async get (id) {
+  has (id) {
+    if (this.$isDestroyed()) {
+      return false
+    }
+    return this._cons.has(id)
+  }
+
+  /**
+   */
+  get (id) {
     this.$checkDestroyed()
     return this.$getCon(id)
   }
 
   /**
    */
-  async setMeta (id, obj) {
+  setMeta (id, obj) {
     if (this.$isDestroyed()) {
       return
     }
@@ -114,6 +124,24 @@ class Connection extends AsyncClass {
   $emitBind (bindSpec) {
     if (this.$isDestroyed()) {
       return
+    }
+
+    let good = false
+    if (Array.isArray(bindSpec)) {
+      good = true
+      for (let spec of bindSpec) {
+        if (typeof spec !== 'string') {
+          // throw if parse error
+          new URL(spec) // eslint-disable-line no-new
+
+          good = false
+          break
+        }
+      }
+    }
+
+    if (!good) {
+      throw new Error('bindSpec must be an array of uri strings')
     }
 
     return this.emit('bind', bindSpec)
