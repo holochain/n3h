@@ -6,6 +6,7 @@ const { $sleep } = require('@holochain/n3h-common')
 describe('Wss Connection Suite', () => {
   it('full api', async () => {
     const c = await new Connection(ConnectionBackendWss, {
+      passphrase: 'hello',
       rsaBits: 1024
     })
 
@@ -31,20 +32,27 @@ describe('Wss Connection Suite', () => {
     c.on('message', (c, buf) => b.push(['message', c, buf]))
     c.on('close', c => b.push(['close', c]))
 
+    console.log('bind')
     await c.bind('wss://0.0.0.0:0/hello-test')
 
     const srvAddr = b[0][1][0]
 
+    console.log('connect')
     await c.connect(srvAddr)
 
     const con1 = b[1][1].id
     const con2 = b[2][1].id
 
+    console.log('send1')
     await waitSend(con1, Buffer.from('test1'))
+
+    console.log('send2')
     await waitSend(con2, Buffer.from('test2'))
 
+    console.log('close1')
     await c.close(con1)
 
+    console.log('wait close2')
     await (async () => {
       for (;;) {
         await $sleep(10)
@@ -56,6 +64,7 @@ describe('Wss Connection Suite', () => {
       }
     })()
 
+    console.log('destroy')
     await c.destroy()
 
     expect(b.map(b => b[0])).deep.equals([
@@ -67,5 +76,7 @@ describe('Wss Connection Suite', () => {
       'close',
       'close'
     ])
+
+    console.log('done')
   })
 })

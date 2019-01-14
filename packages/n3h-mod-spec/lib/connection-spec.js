@@ -2,7 +2,23 @@ const { AsyncClass } = require('@holochain/n3h-common')
 const { URL } = require('url')
 
 /**
- * emits:
+ * A connection is not transport specific,
+ * but let us use TCP as a concrete example.
+ *
+ * A TCP module that follows this "Connection" spec would be both a server
+ * and a client. It would be able to bind to multiple network interfaces
+ * and ports, as well as connect to multiple remote tcp listeners.
+ *
+ * It manages connections through "ID"s that are unique at least to this
+ * javascript execution process.
+ *
+ * It allows you to store JSON-ifyable immutable data along with these "ID"s.
+ *
+ * Create a "Connection" spec instance by passing it a concrete implementation
+ *
+ *    `const con = await new Connection(ConnectionBackendTcp, {})`
+ *
+ * Emits the following events:
  *  - error - some kind of asynchronous failure
  *  - conError - an error with a particular connection
  *  - bind - we were bound
@@ -13,6 +29,9 @@ const { URL } = require('url')
  */
 class Connection extends AsyncClass {
   /**
+   * async constructor
+   * @param {class} Backend - the backend to use
+   * @param {object} initOptions - backend specific initialization options
    */
   async init (Backend, initOptions) {
     await super.init()
@@ -28,6 +47,8 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * Do anything necessary to set up a server / start listening
+   * @param {string} [bindSpec] - if specified, should be a uri
    */
   async bind (bindSpec) {
     this.$checkDestroyed()
@@ -35,6 +56,8 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * Do anything necessary to establisg a connection to a remote server
+   * @param {string} [conSpec] - if specified, should be a uri
    */
   async connect (conSpec) {
     this.$checkDestroyed()
@@ -42,6 +65,12 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * send data to a remote node, specified by `id`
+   * send framing should be handled by the backend.
+   * messages should arrive whole on the remote end.
+   *
+   * @param {string} id - the connection identifier to send to
+   * @param {Buffer} buf - the binary data to transmit
    */
   async send (id, buf) {
     this.$checkDestroyed()
@@ -49,6 +78,9 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * close a connection to a specific remote node, specified by `id`
+   *
+   * @param {string} id - the connection identifier to close
    */
   async close (id) {
     this.$checkDestroyed()
@@ -56,6 +88,9 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * list all open connection `id`s (identifiers)
+   *
+   * @return {iterator}
    */
   keys () {
     this.$checkDestroyed()
@@ -63,6 +98,9 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * is there an open connection identified by `id`?
+   *
+   * @return {boolean}
    */
   has (id) {
     if (this.$isDestroyed()) {
@@ -72,6 +110,11 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * return all metadata associated with `id`
+   *
+   * @param {string} id - the connection identifier to fetch
+   *
+   * @return {object} connection metadata
    */
   get (id) {
     this.$checkDestroyed()
@@ -79,6 +122,11 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * append additional metadata items to the connection metadata
+   * events that are published with this connection will contain this new data
+   *
+   * @param {string} id - the connection identifier to augment
+   * @param {object} obj - all key/value pairs in obj will be appended
    */
   setMeta (id, obj) {
     if (this.$isDestroyed()) {
@@ -100,6 +148,7 @@ class Connection extends AsyncClass {
   // -- protected -- //
 
   /**
+   * protected helper function allowing backends to emit 'error' events
    */
   $emitError (e) {
     if (this.$isDestroyed()) {
@@ -110,6 +159,7 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * protected helper function allowing backends to emit 'conError' events
    */
   $emitConError (id, e) {
     if (this.$isDestroyed()) {
@@ -120,6 +170,7 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * protected helper function allowing backends to emit 'bind' events
    */
   $emitBind (bindSpec) {
     if (this.$isDestroyed()) {
@@ -147,6 +198,7 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * protected helper function allowing backends to emit 'connect' events
    */
   $emitConnect (id) {
     if (this.$isDestroyed()) {
@@ -157,6 +209,7 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * protected helper function allowing backends to emit 'connection' events
    */
   $emitConnection (id) {
     if (this.$isDestroyed()) {
@@ -167,6 +220,7 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * protected helper function allowing backends to emit 'message' events
    */
   $emitMessage (id, buffer) {
     if (this.$isDestroyed()) {
@@ -177,6 +231,7 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * protected helper function allowing backends to emit 'close' events
    */
   $emitClose (id) {
     if (this.$isDestroyed()) {
@@ -187,6 +242,7 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * protected helper function allowing backends to fetch connection metadata
    */
   $getCon (id) {
     this.$checkDestroyed()
@@ -198,6 +254,7 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * protected helper function allowing backends to register new connections
    */
   $registerCon (id, spec) {
     if (this.$isDestroyed()) {
@@ -212,6 +269,7 @@ class Connection extends AsyncClass {
   }
 
   /**
+   * protected helper function allowing backends to unregister closed connections
    */
   $removeCon (id) {
     if (this.$isDestroyed()) {

@@ -11,12 +11,33 @@ const agent = new https.Agent({
 })
 
 /**
+ * A Tls Secure WebSocketServer Backend for the n3h mod "Connection" spec
+ *
+ * ```
+ * const con = await new Connection(ConnectionBackendWss, {
+ *   passphrase: 'test-passphrase',
+ *   rsaBits: 4096
+ * })
+ * ```
  */
 class ConnectionBackendWss extends AsyncClass {
   /**
+   * async constructor
    */
   async init (spec, initOptions) {
     await super.init()
+
+    if (!initOptions || typeof initOptions !== 'object') {
+      throw new Error('initOptions must be an object')
+    }
+
+    if (typeof initOptions.passphrase !== 'string' || !initOptions.passphrase.length) {
+      throw new Error('passphrase must be specified')
+    }
+
+    this._rsaBits = initOptions.rsaBits
+    this._tlsFile = initOptions.tlsFile
+    this._passphrase = initOptions.passphrase
 
     this._spec = spec
 
@@ -55,6 +76,8 @@ class ConnectionBackendWss extends AsyncClass {
   }
 
   /**
+   * bind to network interface
+   * @param {string} bindSpec - should be a uri with protocol `wss:`
    */
   async bind (bindSpec) {
     const parsed = new URL(bindSpec)
@@ -72,7 +95,9 @@ class ConnectionBackendWss extends AsyncClass {
     const path = parsed.pathname
 
     const srv = await new WssServer({
-      passphrase: 'hello',
+      passphrase: this._passphrase,
+      rsaBits: this._rsaBits,
+      tlsFile: this._tlsFile,
       host,
       port,
       path
@@ -106,6 +131,8 @@ class ConnectionBackendWss extends AsyncClass {
   }
 
   /**
+   * connect to remote websocket server
+   * @param {string} conSpec - should be a uri with protocol `wss:`
    */
   async connect (conSpec) {
     const parsed = new URL(conSpec)
@@ -140,6 +167,9 @@ class ConnectionBackendWss extends AsyncClass {
   }
 
   /**
+   * send a message to a remote peer
+   * @param {string} id - the remote peer identifier
+   * @param {Buffer} buf - the binary data to transmit
    */
   async send (id, buf) {
     if (this.$isDestroyed()) {
@@ -154,6 +184,8 @@ class ConnectionBackendWss extends AsyncClass {
   }
 
   /**
+   * close a connection to a remote peer
+   * @param {string} id - the remote peer identifier
    */
   async close (id) {
     if (this.$isDestroyed()) {
@@ -171,6 +203,11 @@ class ConnectionBackendWss extends AsyncClass {
 
   // -- private -- //
 
+  /**
+   * helper for setting up event handling on a websocket connection
+   * this connection could be a remote connecting to us
+   * or it could be us connecting to a remote server.
+   */
   _wsHandlers (id, ws) {
     const lastMsg = () => {
       ws._$_lastMsg = Date.now()
@@ -211,6 +248,9 @@ class ConnectionBackendWss extends AsyncClass {
     })
   }
 
+  /**
+   * clean up our own internal tracking in the event of a closed connection
+   */
   async _handleClose (id) {
     if (this._cons.has(id)) {
       this._cons.delete(id)

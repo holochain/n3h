@@ -10,6 +10,10 @@ const https = require('https')
 const { AsyncClass } = require('@holochain/n3h-common')
 
 /**
+ * Generate a new self-signed tls certificate, and encrypted
+ * private key, both pem encoded.
+ *
+ * (persist them to "tlsFile")
  */
 async function genCert (passphrase, rsaBits, tlsFile) {
   const keys = forge.pki.rsa.generateKeyPair(rsaBits)
@@ -41,6 +45,8 @@ async function genCert (passphrase, rsaBits, tlsFile) {
 }
 
 /**
+ * Given an encrypted pem encoded tls private key,
+ * return an unencrypted pem encoded tls private key.
  */
 async function decryptKey (key, passphrase) {
   const privateKey = forge.pki.decryptRsaPrivateKey(key, passphrase)
@@ -55,6 +61,7 @@ async function decryptKey (key, passphrase) {
 }
 
 /**
+ * load a cert and privateKey from "tlsFile", or generate new, saving them.
  */
 async function getCert (passphrase, rsaBits, tlsFile) {
   let crt = null
@@ -79,9 +86,21 @@ async function getCert (passphrase, rsaBits, tlsFile) {
 }
 
 /**
+ * Begin listening to a port / servicing it as a tls secured WebSocketServer.
+ *
+ * @param {object} options
+ * @param {string} options.passphrase - passphrase for decrypting privateKey
+ * @param {number} [options.port] - default 8443
+ * @param {string} [options.host] - default '0.0.0.0'
+ * @param {string} [options.path] - default '/'
+ * @param {number} [options.rsaBits] - how strong is the tls cert private key?
+ *                                   - default 4096
+ * @param {string} [options.tlsFile] - where to store the private key / cert
+ *                                   - default './tls-data.json'
  */
 class WssServer extends AsyncClass {
   /**
+   * `const srv = await new WssServer({passphrase: 'test'})`
    */
   async init (options) {
     await super.init()
@@ -182,12 +201,18 @@ class WssServer extends AsyncClass {
   }
 
   /**
+   * get the address this websocket server was bound to
+   * (note, in the case of 0.0.0.0, this is just picking the first non loopback)
    */
   address () {
     return this._address
   }
 
+  // -- private -- //
+
   /**
+   * if node tells us we are bound to 0.0.0.0, try to find a real interface
+   * ... we need people to be able to connect to us here.
    */
   async _calcAddress () {
     const addr = this._srv.address()
