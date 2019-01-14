@@ -1,6 +1,6 @@
 const { expect } = require('chai')
-const { Connection } = require('./spec')
-const { ConnectionBackendWss } = require('./wss-connection')
+const { Connection } = require('@holochain/n3h-mod-spec')
+const { ConnectionBackendWss } = require('./index')
 const { $sleep } = require('@holochain/n3h-common')
 
 describe('Wss Connection Suite', () => {

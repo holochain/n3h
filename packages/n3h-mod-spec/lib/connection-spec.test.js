@@ -2,7 +2,7 @@ const { expect } = require('chai')
 
 const { AsyncClass } = require('@holochain/n3h-common')
 
-const { Connection } = require('./spec')
+const { Connection } = require('./index')
 
 /**
  */
@@ -68,9 +68,57 @@ class ConnectionBackendMock extends AsyncClass {
 }
 
 describe('mock Suite', () => {
-  it('full api', async () => {
-    const c = await new Connection(ConnectionBackendMock)
+  let c
 
+  beforeEach(async () => {
+    c = await new Connection(ConnectionBackendMock)
+  })
+
+  afterEach(async () => {
+    await c.destroy()
+  })
+
+  it('should not allow bad bind', async () => {
+    try {
+      await c.bind(42)
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
+  it('should not allow setMeta spec', async () => {
+    const b = []
+    c.on('connect', c => b.push(['connect', c]))
+
+    await c.connect('testConSpec')
+    const testId = c.keys().next().value
+
+    expect(() => {
+      c.setMeta(testId, { 'spec': 'test' })
+    }).throws()
+  })
+
+  it('should not throw fns when destroyed', async () => {
+    await c.destroy()
+
+    expect(c.has('id')).equals(false)
+    c.setMeta('id', {})
+
+    await Promise.all([
+      c.$emitError(new Error('test')),
+      c.$emitConError('id', new Error('test')),
+      c.$emitBind([]),
+      c.$emitConnect('id'),
+      c.$emitConnection('id'),
+      c.$emitMessage('id', Buffer.alloc(0)),
+      c.$emitClose('id'),
+      c.$registerCon('id', 'spec'),
+      c.$removeCon('id')
+    ])
+  })
+
+  it('full api', async () => {
     const b = []
 
     c.on('error', e => b.push(['error', e]))
@@ -81,9 +129,11 @@ describe('mock Suite', () => {
     c.on('message', (c, buf) => b.push(['message', c, buf]))
     c.on('close', c => b.push(['close', c]))
 
-    await c.bind('testBindSpec')
+    await c.bind('testBindSpec://')
     await c.connect('testConSpec')
     const testId = c.keys().next().value
+    b.push(['has', c.has(testId)])
+    b.push(['has', c.has('fake-bad-id')])
     await c.send(testId, Buffer.from('test message'))
     b.push(['get', c.get(testId)])
     await c.setMeta(testId, { test: 'hello' })
@@ -110,7 +160,7 @@ describe('mock Suite', () => {
       [
         'bind',
         [
-          'testBindSpec'
+          'testBindSpec://'
         ]
       ],
       [
@@ -149,6 +199,14 @@ describe('mock Suite', () => {
           'spec': 'testConSpec'
         },
         'Error: ignore-con'
+      ],
+      [
+        'has',
+        true
+      ],
+      [
+        'has',
+        false
       ],
       [
         'message',

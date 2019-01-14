@@ -131,12 +131,11 @@ class Connection extends AsyncClass {
       good = true
       for (let spec of bindSpec) {
         if (typeof spec !== 'string') {
-          // throw if parse error
-          new URL(spec) // eslint-disable-line no-new
-
           good = false
           break
         }
+        // throw if parse error
+        new URL(spec) // eslint-disable-line no-new
       }
     }
 
