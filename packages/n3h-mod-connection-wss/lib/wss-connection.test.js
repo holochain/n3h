@@ -5,6 +5,15 @@ const { $sleep } = require('@holochain/n3h-common')
 
 describe('Wss Connection Suite', () => {
   it('full api', async () => {
+    const now = Date.now()
+    const lstep = (...args) => {
+      const ts = Date.now() - now
+      console.log('[' + ts + ' ms]', ...args)
+    }
+    for (let t = 200; t < 1800; t += 200) {
+      setTimeout(() => { lstep('time tick ' + t) }, t)
+    }
+
     const c = await new Connection(ConnectionBackendWss, {
       passphrase: 'hello',
       rsaBits: 1024
@@ -32,27 +41,27 @@ describe('Wss Connection Suite', () => {
     c.on('message', (c, buf) => b.push(['message', c, buf]))
     c.on('close', c => b.push(['close', c]))
 
-    console.log('bind')
+    lstep('bind')
     await c.bind('wss://0.0.0.0:0/hello-test')
 
     const srvAddr = b[0][1][0]
 
-    console.log('connect')
+    lstep('connect')
     await c.connect(srvAddr)
 
     const con1 = b[1][1].id
     const con2 = b[2][1].id
 
-    console.log('send1')
+    lstep('send1')
     await waitSend(con1, Buffer.from('test1'))
 
-    console.log('send2')
+    lstep('send2')
     await waitSend(con2, Buffer.from('test2'))
 
-    console.log('close1')
+    lstep('close1')
     await c.close(con1)
 
-    console.log('wait close2')
+    lstep('wait close2')
     await (async () => {
       for (;;) {
         await $sleep(10)
@@ -64,7 +73,7 @@ describe('Wss Connection Suite', () => {
       }
     })()
 
-    console.log('destroy')
+    lstep('destroy')
     await c.destroy()
 
     expect(b.map(b => b[0])).deep.equals([
@@ -77,6 +86,6 @@ describe('Wss Connection Suite', () => {
       'close'
     ])
 
-    console.log('done')
+    lstep('done')
   })
 })
