@@ -1,3 +1,7 @@
+const SINGLETON = {
+  uId: Math.random()
+}
+
 /**
  * Bizarre class that makes some things easier but less idiomatic
  * - eventemitter style on/emit, but async/await friendly
@@ -7,21 +11,37 @@
  * to construct, you will need to await it, like:
  *   `const inst = await new AsyncClass()`
  *
+ * normally, use the `init()` function, rather than constructor
+ *
+ *   ```
+ *   class Sub extends AsyncClass {
+ *     async init () {
+ *       await super.init()
+ *
+ *       // init stuff here
+ *     }
+ *   }
+ *   ```
+ *
+ * MANUAL construction:
+ *
  * to subclass you will also need to await `this` after calling super
  *   ```
  *   class Sub extends AsyncClass {
  *     constructor () {
- *       super(destroy)
+ *       super()
  *       return new Promise(async (resolve, reject) => {
  *         const self = await this
  *         // any subclass specific setup on `self` here
  *         resolve(self)
  *       })
  *     }
+ *   }
  *   ```
  */
 class AsyncClass {
   /**
+   * Don't override directly... prefer init
    */
   constructor (...params) {
     return AsyncClass.$construct(this, async (self) => {
@@ -38,6 +58,8 @@ class AsyncClass {
   }
 
   /**
+   * async function, invoked on `new`
+   * please override this, but call `await super.init()` in yours
    */
   async init () {
     this._destroyed = false
@@ -101,6 +123,7 @@ class AsyncClass {
   // -- protected -- //
 
   /**
+   * helper for constructing async classes
    */
   static $construct (inst, fn) {
     return new Promise(async (resolve, reject) => {
@@ -121,6 +144,7 @@ class AsyncClass {
   }
 
   /**
+   * @return {boolean} - `true` if `destroy()` was called
    */
   $isDestroyed () {
     return this._destroyed
@@ -136,6 +160,7 @@ class AsyncClass {
   }
 
   /**
+   * add any number of functions to execute when `destroy()` is called
    */
   $pushDestructor (...destructors) {
     if (!this._calledSuperInit) {
@@ -148,6 +173,16 @@ class AsyncClass {
       }
       this._destroy.unshift(destructor)
     }
+  }
+
+  /**
+   * get a "unique" identifier string
+   * guaranteed to at least be unique to this js thread
+   * @return {string}
+   */
+  $createUid () {
+    SINGLETON.uId += Math.random() + 0.00001
+    return SINGLETON.uId.toString(36)
   }
 }
 
