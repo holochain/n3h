@@ -5,19 +5,33 @@ const { $sleep } = require('@holochain/n3h-common')
 
 describe('Wss Connection Suite', () => {
   let c = null
+  let b = []
 
   beforeEach(async function () {
     this.timeout(5000)
+    b = []
 
     c = await new Connection(ConnectionBackendWss, {
       passphrase: 'hello',
       rsaBits: 1024
     })
+
+    c.on('error', e => b.push(['error', e]))
+    c.on('bind', s => b.push(['bind', s]))
+    c.on('connect', c => b.push(['connect', c]))
+    c.on('connection', c => b.push(['connection', c]))
+    c.on('message', (c, buf) => b.push(['message', c, buf]))
+    c.on('close', c => b.push(['close', c]))
+
+    console.log('binding, may generate cert')
+    await c.bind('wss://0.0.0.0:0/hello-test')
+    console.log('binding complete')
   })
 
   afterEach(async () => {
     await c.destroy()
     c = null
+    b = null
   })
 
   it('full api', async () => {
@@ -26,14 +40,6 @@ describe('Wss Connection Suite', () => {
       const ts = Date.now() - now
       console.log('[' + ts + ' ms]', ...args)
     }
-
-    /*
-    for (let t = 200; t < 1800; t += 200) {
-      setTimeout(() => { lstep('time tick ' + t) }, t)
-    }
-    */
-
-    const b = []
 
     const waitSend = async (id, buf) => {
       let bidx = b.length
@@ -47,16 +53,6 @@ describe('Wss Connection Suite', () => {
         }
       }
     }
-
-    c.on('error', e => b.push(['error', e]))
-    c.on('bind', s => b.push(['bind', s]))
-    c.on('connect', c => b.push(['connect', c]))
-    c.on('connection', c => b.push(['connection', c]))
-    c.on('message', (c, buf) => b.push(['message', c, buf]))
-    c.on('close', c => b.push(['close', c]))
-
-    lstep('bind')
-    await c.bind('wss://0.0.0.0:0/hello-test')
 
     const srvAddr = b[0][1][0]
 
