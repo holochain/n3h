@@ -4,20 +4,34 @@ const { ConnectionBackendWss } = require('./index')
 const { $sleep } = require('@holochain/n3h-common')
 
 describe('Wss Connection Suite', () => {
+  let c = null
+
+  beforeEach(async function () {
+    this.timeout(5000)
+
+    c = await new Connection(ConnectionBackendWss, {
+      passphrase: 'hello',
+      rsaBits: 1024
+    })
+  })
+
+  afterEach(async () => {
+    await c.destroy()
+    c = null
+  })
+
   it('full api', async () => {
     const now = Date.now()
     const lstep = (...args) => {
       const ts = Date.now() - now
       console.log('[' + ts + ' ms]', ...args)
     }
+
+    /*
     for (let t = 200; t < 1800; t += 200) {
       setTimeout(() => { lstep('time tick ' + t) }, t)
     }
-
-    const c = await new Connection(ConnectionBackendWss, {
-      passphrase: 'hello',
-      rsaBits: 1024
-    })
+    */
 
     const b = []
 
