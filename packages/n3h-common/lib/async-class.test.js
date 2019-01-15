@@ -27,6 +27,11 @@ describe('AsyncClass Suite', () => {
     await i.destroy()
   })
 
+  it('should generate ids', async () => {
+    const i = await new StubClass()
+    expect(i.$createUid()).not.equals(i.$createUid())
+  })
+
   it('should be ok to destroy twice', async () => {
     const i = await new StubClass()
     await i.destroy()
