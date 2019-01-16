@@ -6,7 +6,6 @@ jobs:
       node_js: "8"
       install:
       before_script:
-        - npm install lerna
         - npm run bootstrap
     - name: "linux"
       os: linux
@@ -14,7 +13,6 @@ jobs:
       node_js: "8"
       install:
       before_script:
-        - npm install lerna
         - npm run bootstrap
     - name: "osx"
       os: osx
@@ -22,6 +20,4 @@ jobs:
       node_js: "8"
       install:
       before_script:
-        - npm install lerna
         - npm run bootstrap
-        

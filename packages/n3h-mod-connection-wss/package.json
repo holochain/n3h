@@ -1,0 +1,52 @@
+{
+  "name": "@holochain/n3h-mod-connection-wss",
+  "version": "0.0.1",
+  "description": "n3h connection spec implementation - tls secure web sockets",
+  "main": "lib/index.js",
+  "scripts": {
+    "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
+    "mocha": "mocha lib/**/*.test.js bin/**/*.test.js",
+    "nyc": "nyc npm run mocha",
+    "test": "npm run lint && npm run nyc",
+    "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^5.2.0",
+    "nyc": "^12.0.2",
+    "opn": "^5.4.0",
+    "sinon": "^7.1.1",
+    "standard": "^12.0.1"
+  },
+  "dependencies": {
+    "@holochain/n3h-common": "0.0.1",
+    "@holochain/n3h-mod-spec": "0.0.1",
+    "express": "^4.16.4",
+    "express-ws": "^4.0.0",
+    "helmet": "^3.15.0",
+    "node-forge": "^0.7.6",
+    "ws": "^6.1.2"
+  },
+  "standard": {
+    "env": {
+      "mocha": true
+    }
+  },
+  "nyc": {
+    "check-coverage": false,
+    "per-file": false,
+    "lines": 80,
+    "statements": 80,
+    "functions": 80,
+    "branches": 80,
+    "all": true,
+    "include": [
+      "./lib/**/*.js"
+    ],
+    "reporter": [
+      "lcov",
+      "text-summary"
+    ]
+  }
+}
