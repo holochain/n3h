@@ -36,11 +36,12 @@ const DhtEvent = createEventSpec({
    * data item. Note that this dht tracker has not actually marked this item
    * for holding until the implementors pass this event back in.
    */
-  peerHoldRequest: (peerAddress, peerTransport, peerData) => {
+  peerHoldRequest: (peerAddress, peerTransport, peerData, peerTs) => {
     // assertBase64String(peerAddress) // determines neighborhood
     // assertBase64String(peerTransport) // dht generated transport meta data
     // assertBase64String(peerData) // implementor supplied peer meta data
-    return { peerAddress, peerTransport, peerData }
+    // assertNumber(peerTs) // utc milliseconds timestamp for crdt
+    return { peerAddress, peerTransport, peerData, peerTs }
   },
 
   /**
@@ -103,21 +104,36 @@ class Dht extends AsyncClass {
     })
   }
 
+  /**
+   * post a DhtEvent instance to the processing loop
+   */
+  post (evt) {
+    if (this.$isDestroyed()) {
+      return
+    }
+
+    if (!DhtEvent.isEvent(evt)) {
+      throw new Error('can only post DhtEvent instances')
+    }
+
+    this._backend.post(evt)
+  }
+
   // -- protected -- //
 
   /**
    * protected helper function for emitting dht events
    */
-  $emitEvent (e) {
+  $emitEvent (evt) {
     if (this.$isDestroyed()) {
       return
     }
 
-    if (!DhtEvent.isEvent(e)) {
+    if (!DhtEvent.isEvent(evt)) {
       throw new Error('can only emit DhtEvent instances')
     }
 
-    return this.emit('event', e)
+    return this.emit('event', evt)
   }
 }
 
