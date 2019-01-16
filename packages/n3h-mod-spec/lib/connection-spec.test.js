@@ -5,6 +5,7 @@ const { AsyncClass } = require('@holochain/n3h-common')
 const { Connection } = require('./index')
 
 /**
+ * mock backend for validating "Connection" spec
  */
 class ConnectionBackendMock extends AsyncClass {
   /**
@@ -67,7 +68,7 @@ class ConnectionBackendMock extends AsyncClass {
   }
 }
 
-describe('mock Suite', () => {
+describe('Connection Spec Suite', () => {
   let c
 
   beforeEach(async () => {

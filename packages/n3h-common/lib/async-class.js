@@ -41,6 +41,16 @@ const SINGLETON = {
  */
 class AsyncClass {
   /**
+   * get a "unique" identifier string
+   * guaranteed to at least be unique to this js thread
+   * @return {string}
+   */
+  static createUid () {
+    SINGLETON.uId += Math.random() + 0.00001
+    return SINGLETON.uId.toString(36)
+  }
+
+  /**
    * Don't override directly... prefer init
    */
   constructor (...params) {
@@ -181,8 +191,7 @@ class AsyncClass {
    * @return {string}
    */
   $createUid () {
-    SINGLETON.uId += Math.random() + 0.00001
-    return SINGLETON.uId.toString(36)
+    return AsyncClass.createUid()
   }
 }
 
