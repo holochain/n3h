@@ -216,47 +216,47 @@ class N3hMock extends AsyncClass {
 
   _getMemRef (dnaAddress) {
     if (!(dnaAddress in this._memory)) {
-    const mem = new Mem()
-    mem.registerIndexer((store, hash, data) => {
-      if (data && data.type === 'dht') {
-        this._ipc.send('json', {
-          method: 'handleStoreDht',
-          _id: data._id,
-          dnaAddress,
-          agentId: data.agentId,
-          address: data.address,
-          content: data.content
-        })
-      }
-    })
-    mem.registerIndexer((store, hash, data) => {
-      if (data && data.type === 'dhtMeta') {
-        log.e('got dhtMeta', data)
-        this._ipc.send('json', {
-          method: 'handleStoreDhtMeta',
-          _id: data._id,
-          dnaAddress,
-          agentId: data.agentId,
-          address: data.address,
-          fromAgentId: data.fromAgentId,
-          attribute: data.attribute,
-          content: data.content
-        })
-      }
-    })
-    this._memory[dnaAddress] = {
-      mem,
-      agentToTransportId: mem.registerIndexer((store, hash, data) => {
-        if (data && data.type === 'agent') {
-          store[data.agentId] = data.transportId
+      const mem = new Mem()
+      mem.registerIndexer((store, hash, data) => {
+        if (data && data.type === 'dht') {
           this._ipc.send('json', {
-            method: 'peerConnected',
-            dnaAddress: dnaAddress,
-            agentId: data.agentId
+            method: 'handleStoreDht',
+            _id: data._id,
+            dnaAddress,
+            agentId: data.agentId,
+            address: data.address,
+            content: data.content
           })
         }
       })
-    }
+      mem.registerIndexer((store, hash, data) => {
+        if (data && data.type === 'dhtMeta') {
+          log.e('got dhtMeta', data)
+          this._ipc.send('json', {
+            method: 'handleStoreDhtMeta',
+            _id: data._id,
+            dnaAddress,
+            agentId: data.agentId,
+            address: data.address,
+            fromAgentId: data.fromAgentId,
+            attribute: data.attribute,
+            content: data.content
+          })
+        }
+      })
+      this._memory[dnaAddress] = {
+        mem,
+        agentToTransportId: mem.registerIndexer((store, hash, data) => {
+          if (data && data.type === 'agent') {
+            store[data.agentId] = data.transportId
+            this._ipc.send('json', {
+              method: 'peerConnected',
+              dnaAddress: dnaAddress,
+              agentId: data.agentId
+            })
+          }
+        })
+      }
     }
     return this._memory[dnaAddress]
   }
