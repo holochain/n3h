@@ -14,7 +14,7 @@ jobs:
         - rustc --version
         - rustup --version
         - cargo --version
-        - npm run bootstrap
+        - npm run bootstrap-ci
       script:
         - npm test
     - name: "linux"
@@ -28,7 +28,7 @@ jobs:
         - node -v
         - npm -v
         - npm ci
-        - npm run bootstrap
+        - npm run bootstrap-ci
       script:
         - npm test
     - name: "osx"
@@ -42,6 +42,6 @@ jobs:
         - node -v
         - npm -v
         - npm ci
-        - npm run bootstrap
+        - npm run bootstrap-ci
       script:
         - npm test

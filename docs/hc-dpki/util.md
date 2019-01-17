@@ -30,7 +30,7 @@ using base64url encoding (https://tools.ietf.org/html/rfc4648#section-5)
 Generate an identity string with a pair of public keys
 
 **Kind**: global function  
-**Returns**: <code>string</code> - - the base64url encoded identity (with checksum)  
+**Returns**: <code>string</code> - - the base64url encoded identity (with parity bytes)  
 
 | Param | Type | Description |
 | --- | --- | --- |

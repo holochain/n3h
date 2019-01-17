@@ -8,7 +8,8 @@
     "new": "node tools/bin/monoman.js new",
     "test": "npm run tools-lint && lerna run test && npm run docs",
     "clean": "lerna clean",
-    "bootstrap": "lerna bootstrap --hoist --no-ci"
+    "bootstrap": "lerna bootstrap --hoist --no-ci",
+    "bootstrap-ci": "lerna bootstrap -- --production"
   },
   "license": "Apache-2.0",
   "devDependencies": {
