@@ -1,23 +1,27 @@
+language: rust
+dist: trusty
+
+rust:
+  - stable
+
+before_install:
+  - source $HOME/.nvm/nvm.sh
+  - nvm install 8
+  - nvm use 8
+  - node -v
+  - npm -v
+
 jobs:
   include:
     - name: "windows"
       os: windows
-      language: node_js
-      node_js: "8"
-      install:
       before_script:
         - npm run bootstrap
     - name: "linux"
       os: linux
-      language: node_js
-      node_js: "8"
-      install:
       before_script:
         - npm run bootstrap
     - name: "osx"
       os: osx
-      language: node_js
-      node_js: "8"
-      install:
       before_script:
         - npm run bootstrap
