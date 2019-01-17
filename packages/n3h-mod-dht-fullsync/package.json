@@ -21,7 +21,8 @@
   },
   "dependencies": {
     "@holochain/n3h-common": "0.0.1",
-    "@holochain/n3h-mod-spec": "0.0.1"
+    "@holochain/n3h-mod-spec": "0.0.1",
+    "msgpack-lite": "^0.1.26"
   },
   "standard": {
     "env": {
@@ -29,7 +30,7 @@
     }
   },
   "nyc": {
-    "check-coverage": true,
+    "check-coverage": false,
     "per-file": false,
     "lines": 80,
     "statements": 80,

@@ -57,13 +57,13 @@ describe('Dht Spec Suite', () => {
       ['gossipTo', [ b64List, b64 ], { peerList: b64List, bundle: b64 }],
       ['unreliableGossipTo', [ b64List, b64 ], {
         peerList: b64List, bundle: b64 }],
-      ['peerHoldRequest', [ b64, b64, b64 ], {
-        peerAddress: b64, peerTransport: b64, peerData: b64 }],
+      ['peerHoldRequest', [ b64, str, b64, 42 ], {
+        peerAddress: b64, peerTransport: str, peerData: b64, peerTs: 42 }],
       ['dataHoldRequest', [ b64, b64 ], {
         dataAddress: b64, data: b64 }],
-      ['dataFetch', [ b64, str ], { dataAddress: b64, msgId: str }],
-      ['dataFetchResponse', [ b64, b64, str ], {
-        dataAddress: b64, data: b64, msgId: str }],
+      ['dataFetch', [ str, b64 ], { msgId: str, dataAddress: b64 }],
+      ['dataFetchResponse', [ str, b64 ], {
+        msgId: str, data: b64 }],
       ['dataPrune', [ b64 ], { dataAddress: b64 }]
     ].forEach(val => {
       it('event ' + val[0], async () => {

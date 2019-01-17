@@ -38,7 +38,7 @@ const DhtEvent = createEventSpec({
    */
   peerHoldRequest: (peerAddress, peerTransport, peerData, peerTs) => {
     // assertBase64String(peerAddress) // determines neighborhood
-    // assertBase64String(peerTransport) // dht generated transport meta data
+    // assertString(peerTransport) // uri transport connection info for peer
     // assertBase64String(peerData) // implementor supplied peer meta data
     // assertNumber(peerTs) // utc milliseconds timestamp for crdt
     return { peerAddress, peerTransport, peerData, peerTs }
@@ -60,21 +60,20 @@ const DhtEvent = createEventSpec({
    * This event should cause implementors to respond with a dataFetchResponse
    * event.
    */
-  dataFetch: (dataAddress, msgId) => {
-    // assertBase64String(dataAddress)
+  dataFetch: (msgId, dataAddress) => {
     // assertString(msgId)
-    return { dataAddress, msgId }
+    // assertBase64String(dataAddress)
+    return { msgId, dataAddress }
   },
 
   /**
    * Response to a dataFetch event. Set `data` to `null` to indicate the
    * requested data is not available (it will be removed from gossip).
    */
-  dataFetchResponse: (dataAddress, data, msgId) => {
-    // assertBase64String(dataAddress)
-    // assertBase64String(data)
+  dataFetchResponse: (msgId, data) => {
     // assertString(msgId)
-    return { dataAddress, data, msgId }
+    // assertBase64String(data)
+    return { msgId, data }
   },
 
   /**
@@ -117,6 +116,22 @@ class Dht extends AsyncClass {
     }
 
     this._backend.post(evt)
+  }
+
+  /**
+   */
+  getPeerLocal (peerAddress) {
+    this.$checkDestroyed()
+
+    return this._backend.getPeerLocal(peerAddress)
+  }
+
+  /**
+   */
+  async fetchDataLocal (dataAddress) {
+    this.$checkDestroyed()
+
+    return this._backend.fetchDataLocal(dataAddress)
   }
 
   // -- protected -- //
