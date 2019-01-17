@@ -8,7 +8,7 @@ jobs:
       language: node_js
       node_js:
         - "8"
-      before_script:
+      before_install:
         - curl -sSf https://build.travis-ci.org/files/rustup-init.sh | sh -s -- --default-toolchain=stable -y
         - export PATH=${TRAVIS_HOME}/.cargo/bin:$PATH
         - rustc --version
@@ -20,9 +20,8 @@ jobs:
     - name: "linux"
       os: linux
       language: rust
-      rust:
-        - stable
-      before_script:
+      rust: stable
+      before_install:
         - source $HOME/.nvm/nvm.sh
         - nvm install 8
         - nvm use 8
@@ -35,9 +34,8 @@ jobs:
     - name: "osx"
       os: osx
       language: rust
-      rust:
-        - stable
-      before_script:
+      rust: stable
+      before_install:
         - source $HOME/.nvm/nvm.sh
         - nvm install 8
         - nvm use 8
