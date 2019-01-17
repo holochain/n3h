@@ -153,10 +153,10 @@ class Keypair extends AsyncClass {
     // and the recipients the "client"
     const out = []
     for (let id of recipientIds) {
-      const recipPub = Buffer.from(id, 'base64').slice(32, 64)
+      const { encPub } = util.decodeId(id)
       // XXX lru cache these so we don't have to re-gen every time?
       const { tx } = mosodium.kx.serverSession(
-        this._encPub, this._encPriv, recipPub)
+        this._encPub, this._encPriv, encPub)
       symSecret.readable(_ss => {
         const { nonce, cipher } = mosodium.aead.enc(
           _ss, tx)
@@ -180,13 +180,13 @@ class Keypair extends AsyncClass {
    */
   decrypt (sourceId, cipher) {
     cipher = msgpack.decode(cipher)
-    sourceId = Buffer.from(sourceId, 'base64').slice(32, 64)
+    const { encPub } = util.decodeId(sourceId)
 
     // we will call the encryptor the "server"
     // and the recipient (us) the "client"
     // XXX cache?
     const { rx } = mosodium.kx.clientSession(
-      this._encPub, this._encPriv, sourceId)
+      this._encPub, this._encPriv, encPub)
 
     let symSecret = null
     for (let i = 0; i < cipher.length - 2; i += 2) {
