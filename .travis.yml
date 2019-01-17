@@ -18,11 +18,17 @@ jobs:
       os: windows
       before_script:
         - npm run bootstrap
+      script:
+        - npm test
     - name: "linux"
       os: linux
       before_script:
         - npm run bootstrap
+      script:
+        - npm test
     - name: "osx"
       os: osx
       before_script:
         - npm run bootstrap
+      script:
+        - npm test
