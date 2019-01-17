@@ -8,13 +8,12 @@ jobs:
       language: node_js
       node_js:
         - "8"
-      before_install:
+      before_script:
         - curl -sSf https://build.travis-ci.org/files/rustup-init.sh | sh -s -- --default-toolchain=stable -y
         - export PATH=${TRAVIS_HOME}/.cargo/bin:$PATH
         - rustc --version
         - rustup --version
         - cargo --version
-      before_script:
         - npm run bootstrap
       script:
         - npm test
@@ -23,14 +22,13 @@ jobs:
       language: rust
       rust:
         - stable
-      before_install:
+      before_script:
         - source $HOME/.nvm/nvm.sh
         - nvm install 8
         - nvm use 8
         - node -v
         - npm -v
         - npm ci
-      before_script:
         - npm run bootstrap
       script:
         - npm test
@@ -39,14 +37,13 @@ jobs:
       language: rust
       rust:
         - stable
-      before_install:
+      before_script:
         - source $HOME/.nvm/nvm.sh
         - nvm install 8
         - nvm use 8
         - node -v
         - npm -v
         - npm ci
-      before_script:
         - npm run bootstrap
       script:
         - npm test
