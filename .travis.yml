@@ -4,30 +4,42 @@ dist: trusty
 rust:
   - stable
 
-before_install:
-  - source $HOME/.nvm/nvm.sh
-  - nvm install 8
-  - nvm use 8
-  - node -v
-  - npm -v
-  - npm ci
-
 jobs:
   include:
     - name: "windows"
       os: windows
+      before_install:
+        - nvs add 8
+        - node -v
+        - npm -v
+        - nvs --version
+        - npm ci
       before_script:
         - npm run bootstrap
       script:
         - npm test
     - name: "linux"
       os: linux
+      before_install:
+        - source $HOME/.nvm/nvm.sh
+        - nvm install 8
+        - nvm use 8
+        - node -v
+        - npm -v
+        - npm ci
       before_script:
         - npm run bootstrap
       script:
         - npm test
     - name: "osx"
       os: osx
+      before_install:
+        - source $HOME/.nvm/nvm.sh
+        - nvm install 8
+        - nvm use 8
+        - node -v
+        - npm -v
+        - npm ci
       before_script:
         - npm run bootstrap
       script:
