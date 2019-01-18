@@ -1,49 +1,25 @@
 dist: trusty
 
+language: node_js
+node_js:
+  - 8
 
 jobs:
   include:
     - name: "windows"
       os: windows
-      language: node_js
-      node_js:
-        - "8"
-      before_install:
-        - curl -sSf https://build.travis-ci.org/files/rustup-init.sh | sh -s -- --default-toolchain=stable -y
-        - export PATH=${TRAVIS_HOME}/.cargo/bin:$PATH
-        - rustc --version
-        - rustup --version
-        - cargo --version
       before_script:
         - npm run bootstrap
       script:
         - npm test
     - name: "linux"
       os: linux
-      language: rust
-      rust: stable
-      before_install:
-        - source $HOME/.nvm/nvm.sh
-        - nvm install 8
-        - nvm use 8
-        - node -v
-        - npm -v
-        - npm ci
       before_script:
         - npm run bootstrap
       script:
         - npm test
     - name: "osx"
       os: osx
-      language: rust
-      rust: stable
-      before_install:
-        - source $HOME/.nvm/nvm.sh
-        - nvm install 8
-        - nvm use 8
-        - node -v
-        - npm -v
-        - npm ci
       before_script:
         - npm run bootstrap
       script:
