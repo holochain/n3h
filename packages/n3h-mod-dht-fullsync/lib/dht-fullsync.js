@@ -307,12 +307,12 @@ class DhtBackendFullsync extends AsyncClass {
       }
 
       const peerAddress = this._peerList[this._lastGossipIdx]
-      const ref = this._getPeerRef(peerAddress)
+      // const ref = this._getPeerRef(peerAddress)
 
       const msgId = this.$createUid()
 
       this._spec.$emitEvent(DhtEvent.gossipTo(
-        [ref.transport], gossip.locHashes(this._locHashes)))
+        [peerAddress], gossip.locHashes(this._locHashes)))
 
       this._gossipStack.push({
         type: 'waitInitialHashThingy',

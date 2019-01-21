@@ -36,9 +36,9 @@ describe('Wss Connection Suite', () => {
       console.log('[' + ts + ' ms]', ...args)
     }
 
-    const waitSend = async (id, buf) => {
+    const waitSend = async (idList, buf) => {
       let bidx = b.length
-      await c.send(id, buf)
+      await c.send(idList, buf)
       for (;;) {
         await $sleep(10)
         for (let i = bidx; i < b.length; ++i) {
@@ -58,10 +58,10 @@ describe('Wss Connection Suite', () => {
     const con2 = b[2].id
 
     lstep('send1')
-    await waitSend(con1, Buffer.from('test1').toString('base64'))
+    await waitSend([con1], Buffer.from('test1').toString('base64'))
 
     lstep('send2')
-    await waitSend(con2, Buffer.from('test2').toString('base64'))
+    await waitSend([con2], Buffer.from('test2').toString('base64'))
 
     lstep('close1')
     await c.close(con1)

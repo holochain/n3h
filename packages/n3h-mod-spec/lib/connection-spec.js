@@ -118,16 +118,30 @@ class Connection extends AsyncClass {
   }
 
   /**
-   * send data to a remote node, specified by `id`
+   * send data to remote nodes, specified in `idList`
    * send framing should be handled by the backend.
    * messages should arrive whole on the remote end.
    *
-   * @param {string} id - the connection identifier to send to
-   * @param {Buffer} buf - the binary data to transmit
+   * @param {array<string>} idList - the connection identifiers to send to
+   * @param {base64string} buf - the binary data to transmit
    */
-  async send (id, buf) {
+  async send (idList, buf) {
     this.$checkDestroyed()
-    return this._backend.send(id, buf)
+    return this._backend.send(idList, buf)
+  }
+
+  /**
+   * send data to remote nodes, specified in `idList`
+   * send framing should be handled by the backend.
+   * messages should arrive whole on the remote end.
+   * It is okay if this data does not reach its target
+   *
+   * @param {array<string>} idList - the connection identifiers to send to
+   * @param {base64string} buf - the binary data to transmit
+   */
+  async sendUnreliable (idList, buf) {
+    this.$checkDestroyed()
+    return this._backend.sendUnreliable(idList, buf)
   }
 
   /**

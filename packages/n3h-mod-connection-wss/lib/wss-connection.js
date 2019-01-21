@@ -169,19 +169,29 @@ class ConnectionBackendWss extends AsyncClass {
 
   /**
    * send a message to a remote peer
-   * @param {string} id - the remote peer identifier
+   * @param {array} idList - the remote peer identifiers
    * @param {Buffer} buf - the binary data to transmit
    */
-  async send (id, buf) {
+  async send (idList, buf) {
     if (this.$isDestroyed()) {
       return
     }
 
-    if (!this._cons.has(id)) {
-      throw new Error('unknown connection id: ' + id)
+    for (let id of idList) {
+      if (!this._cons.has(id)) {
+        throw new Error('unknown connection id: ' + id)
+      }
+      const ws = this._cons.get(id)
+      ws.send(buf)
     }
-    const ws = this._cons.get(id)
-    ws.send(buf)
+  }
+
+  /**
+   * wss does not have an unreliable send method
+   * just forward these to send
+   */
+  async sendUnreliable (idList, buf) {
+    return this.send(idList, buf)
   }
 
   /**

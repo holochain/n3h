@@ -6,6 +6,22 @@ describe('hackmode module glue Suite', () => {
   it('integration', async () => {
     const allNodes = []
 
+    const regNode = (node) => {
+      allNodes.push(node)
+      node.on('message', m => {
+        switch (m.type) {
+          case 'echo':
+            m.respond(Buffer.concat([
+              Buffer.from('echo: '),
+              m.data
+            ]))
+            break
+          default:
+            throw new Error('unexpected msg type ' + m.type)
+        }
+      })
+    }
+
     const dht = JSON.stringify({})
     const connection = JSON.stringify({
       passphrase: 'hello',
@@ -18,14 +34,14 @@ describe('hackmode module glue Suite', () => {
       connection: JSON.parse(connection),
       wssAdvertise: 'auto'
     })
-    allNodes.push(nodeBase)
+    regNode(nodeBase)
 
     const nodeFull = await new Node({
       dht: JSON.parse(dht),
       connection: JSON.parse(connection),
       wssAdvertise: 'auto'
     })
-    allNodes.push(nodeFull)
+    regNode(nodeFull)
 
     const baseConnectUri = nodeBase.getAdvertise()
 
@@ -37,9 +53,13 @@ describe('hackmode module glue Suite', () => {
         passphrase: 'hello',
         rsaBits: 1024
       },
-      wssRelayPeer: baseConnectUri
+      wssRelayPeers: [baseConnectUri]
     })
-    allNodes.push(nodeNat)
+    regNode(nodeNat)
+
+    // send
+    const res = await nodeFull.send(nodeBase.getId(), 'echo', Buffer.from('hello'))
+    console.log('@@ got @@', res.toString())
 
     await $sleep(1000)
 

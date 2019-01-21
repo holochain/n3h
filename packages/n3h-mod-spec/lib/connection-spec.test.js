@@ -53,12 +53,20 @@ class ConnectionBackendMock extends AsyncClass {
 
   /**
    */
-  async send (id, buf) {
+  async send (idList, buf) {
     // simulate an echo
-    await this._spec.$emitEvent(CEvent.message(id, Buffer.concat([
-      Buffer.from('echo: '),
-      Buffer.from(buf, 'base64')
-    ]).toString('base64')))
+    for (let id of idList) {
+      await this._spec.$emitEvent(CEvent.message(id, Buffer.concat([
+        Buffer.from('echo: '),
+        Buffer.from(buf, 'base64')
+      ]).toString('base64')))
+    }
+  }
+
+  /**
+   */
+  async sendUnreliable (idList, buf) {
+    return this.send(idList, buf)
   }
 
   /**
@@ -125,11 +133,12 @@ describe('Connection Spec Suite', () => {
     const testId = c.keys().next().value
     b.push({ type: 'has', data: c.has(testId) })
     b.push({ type: 'has', data: c.has('fake-bad-id') })
-    await c.send(testId, Buffer.from('test message'))
+    await c.send([testId], Buffer.from('test message'))
+    await c.sendUnreliable([testId], Buffer.from('test message'))
     b.push({ type: 'get', data: c.get(testId) })
     await c.setMeta(testId, { test: 'hello' })
     b.push({ type: 'get', data: c.get(testId) })
-    await c.send(testId, Buffer.from('test message 2'))
+    await c.send([testId], Buffer.from('test message 2'))
     await c.close(testId)
     await c.destroy()
 
@@ -205,6 +214,10 @@ describe('Connection Spec Suite', () => {
       [
         'has',
         false
+      ],
+      [
+        'message',
+        'echo: test message'
       ],
       [
         'message',
