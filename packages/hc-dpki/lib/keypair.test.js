@@ -4,6 +4,7 @@ const mosodium = require('@holochain/mosodium')
 mosodium.SecBuf.setLockLevel(mosodium.SecBuf.LOCK_NONE)
 
 const { Keypair } = require('./index')
+const util = require('./util')
 
 const seed0 = new mosodium.SecBuf(32)
 const seed1 = new mosodium.SecBuf(32)
@@ -20,7 +21,15 @@ describe('keypair Suite', () => {
   let pair1 = null
   let pair2 = null
 
+  let opstmp = null
+  let memtmp = null
+
   beforeEach(async () => {
+    opstmp = util.pwhashOpslimit
+    util.pwhashOpslimit = mosodium.pwhash.OPSLIMIT_INTERACTIVE
+    memtmp = util.pwhashMemlimit
+    util.pwhashMemlimit = mosodium.pwhash.MEMLIMIT_INTERACTIVE
+
     await Promise.all([
       (async () => {
         pair0 = await Keypair.newFromSeed(seed0)
@@ -40,10 +49,12 @@ describe('keypair Suite', () => {
       pair1.destroy(),
       pair2.destroy()
     ])
+    util.pwhashOpslimit = opstmp
+    util.pwhashMemlimit = memtmp
   })
 
   it('should gen a keypair', async () => {
-    expect(pair0.getId()).equals('O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl-7zU1TVtSCIrGpZk6X9sJHt4m')
+    expect(pair0.getId()).equals('HkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR')
   })
 
   it('should throw on bad opt', async () => {
@@ -58,7 +69,7 @@ describe('keypair Suite', () => {
   it('should throw on bad signPriv', async () => {
     try {
       await new Keypair({
-        pubkeys: 'O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl-7zU1TVtSCIrGpZk6X9sJHt4m',
+        pubkeys: 'HkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR',
         signPriv: 32
       })
     } catch (e) {
@@ -70,7 +81,7 @@ describe('keypair Suite', () => {
   it('should throw on bad encPriv', async () => {
     try {
       await new Keypair({
-        pubkeys: 'O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl-7zU1TVtSCIrGpZk6X9sJHt4m',
+        pubkeys: 'HkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR',
         encPriv: 32
       })
     } catch (e) {
@@ -82,7 +93,7 @@ describe('keypair Suite', () => {
   it('should throw on bad pubkeys', async () => {
     try {
       await new Keypair({
-        pubkeys: 'O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl-7zU1TVtSCIrGpZk6X9sJHt4n'
+        pubkeys: 'HkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQAAAA'
       })
     } catch (e) {
       return
@@ -146,7 +157,7 @@ describe('keypair Suite', () => {
 
   it('should throw on sign with no signpriv', async () => {
     const p = await new Keypair({
-      pubkeys: 'O2onvM62pC1io6jQKm8Nc2UyFXcd4kOmOsBIoYtZ2ilVfiPXNG8hPsWiNxOyokl-7zU1TVtSCIrGpZk6X9sJHt4m'
+      pubkeys: 'HkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR'
     })
     try {
       p.sign(Buffer.from('hello'))
