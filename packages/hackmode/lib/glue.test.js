@@ -2,8 +2,6 @@ const { $sleep } = require('@holochain/n3h-common')
 
 const { Node } = require('./glue')
 
-const NODE_COUNT = 2
-
 describe('hackmode module glue Suite', () => {
   it('integration', async () => {
     const allNodes = []

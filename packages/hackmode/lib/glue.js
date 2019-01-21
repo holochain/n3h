@@ -49,16 +49,11 @@ class Node extends AsyncClass {
     })
 
     this._dht.on('event', e => this._handleDhtEvent(e))
+    this._con.on('event', e => this._handleConEvent(e))
 
-    this._con.on('bind', b => b.forEach(b => this._addBinding(b)))
-    this._con.on('connection', c => this._addConnection(c))
-    this._con.on('connect', c => this._addConnection(c))
-    this._con.on('close', c => this._removeConnection(c))
-    this._con.on('message', (c, d) => this._handleMessage(c, d))
-
-    const bind = Array.isArray(options.connection.bind) ?
-      options.connection.bind :
-      []
+    const bind = Array.isArray(options.connection.bind)
+      ? options.connection.bind
+      : []
 
     await Promise.all(bind.map(b => this._con.bind(b)))
 
@@ -115,7 +110,7 @@ class Node extends AsyncClass {
   // -- private -- //
 
   _handleDhtEvent (e) {
-    console.log('--')
+    console.log('--dht--')
     console.log(e)
 
     switch (e.type) {
@@ -126,6 +121,34 @@ class Node extends AsyncClass {
         throw new Error('unhandled dht event type ' + e.type + ' ' + JSON.stringify(e))
     }
     console.log('--')
+  }
+
+  _handleConEvent (e) {
+    switch (e.type) {
+      case 'bind':
+        e.boundUriList.forEach(b => this._addBinding(b))
+        break
+      case 'connection':
+        this._addConnection(e.id)
+        break
+      case 'connect':
+        this._addConnection(e.id)
+        break
+      case 'message':
+        this._handleMessage(e.id, e.buffer)
+        break
+      case 'close':
+        this._removeConnection(e.id, e.data)
+        break
+      case 'error':
+        console.error(e)
+        break
+      case 'conError':
+        console.error(e)
+        break
+      default:
+        throw new Error('unhandled con event type ' + e.type + ' ' + JSON.stringify(e))
+    }
   }
 
   _addBinding (binding) {

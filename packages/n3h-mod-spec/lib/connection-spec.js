@@ -1,5 +1,58 @@
-const { AsyncClass } = require('@holochain/n3h-common')
-const { URL } = require('url')
+const { AsyncClass, createEventSpec } = require('@holochain/n3h-common')
+
+const ConnectionEvent = createEventSpec({
+  /**
+   */
+  error: (error) => {
+    // assertString(error)
+    return { error }
+  },
+
+  /**
+   */
+  conError: (id, error) => {
+    // assertString(id)
+    // assertString(error)
+    return { id, error }
+  },
+
+  /**
+   */
+  bind: (boundUriList) => {
+    // assertURIArray(boundUriList)
+    return { boundUriList }
+  },
+
+  /**
+   */
+  connect: (id) => {
+    // assertString(id)
+    return { id }
+  },
+
+  /**
+   */
+  connection: (id) => {
+    // assertString(id)
+    return { id }
+  },
+
+  /**
+   */
+  message: (id, buffer) => {
+    // assertString(id)
+    // assertBase64String(buffer)
+    return { id, buffer }
+  },
+
+  /**
+   */
+  close: (id, data) => {
+    // assertString(id)
+    // assertObject(data)
+    return { id, data }
+  }
+})
 
 /**
  * A connection is not transport specific,
@@ -148,97 +201,18 @@ class Connection extends AsyncClass {
   // -- protected -- //
 
   /**
-   * protected helper function allowing backends to emit 'error' events
+   * protected helper function for emitting connection events
    */
-  $emitError (e) {
+  $emitEvent (evt) {
     if (this.$isDestroyed()) {
       return
     }
 
-    return this.emit('error', e)
-  }
-
-  /**
-   * protected helper function allowing backends to emit 'conError' events
-   */
-  $emitConError (id, e) {
-    if (this.$isDestroyed()) {
-      return
+    if (!ConnectionEvent.isEvent(evt)) {
+      throw new Error('can only emit ConnectionEvent instances')
     }
 
-    return this.emit('conError', this.$getCon(id), e)
-  }
-
-  /**
-   * protected helper function allowing backends to emit 'bind' events
-   */
-  $emitBind (bindSpec) {
-    if (this.$isDestroyed()) {
-      return
-    }
-
-    let good = false
-    if (Array.isArray(bindSpec)) {
-      good = true
-      for (let spec of bindSpec) {
-        if (typeof spec !== 'string') {
-          good = false
-          break
-        }
-        // throw if parse error
-        new URL(spec) // eslint-disable-line no-new
-      }
-    }
-
-    if (!good) {
-      throw new Error('bindSpec must be an array of uri strings')
-    }
-
-    return this.emit('bind', bindSpec)
-  }
-
-  /**
-   * protected helper function allowing backends to emit 'connect' events
-   */
-  $emitConnect (id) {
-    if (this.$isDestroyed()) {
-      return
-    }
-
-    return this.emit('connect', this.$getCon(id))
-  }
-
-  /**
-   * protected helper function allowing backends to emit 'connection' events
-   */
-  $emitConnection (id) {
-    if (this.$isDestroyed()) {
-      return
-    }
-
-    return this.emit('connection', this.$getCon(id))
-  }
-
-  /**
-   * protected helper function allowing backends to emit 'message' events
-   */
-  $emitMessage (id, buffer) {
-    if (this.$isDestroyed()) {
-      return
-    }
-
-    return this.emit('message', this.$getCon(id), buffer)
-  }
-
-  /**
-   * protected helper function allowing backends to emit 'close' events
-   */
-  $emitClose (id) {
-    if (this.$isDestroyed()) {
-      return
-    }
-
-    return this.emit('close', this.$getCon(id))
+    return this.emit('event', evt)
   }
 
   /**
@@ -279,5 +253,7 @@ class Connection extends AsyncClass {
     this._cons.delete(id)
   }
 }
+
+Connection.ConnectionEvent = exports.ConnectionEvent = ConnectionEvent
 
 exports.Connection = Connection
