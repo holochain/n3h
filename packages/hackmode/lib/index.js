@@ -140,23 +140,23 @@ class N3hHackMode extends AsyncClass {
             log.e('connect (' + opt.data.address + ') failed', err.toString())
           })
           return
-        case 'trackApp':
+        case 'trackDna':
           this._track(opt.data.dnaAddress, opt.data.agentId)
           return
-        case 'send':
+        case 'sendMessage':
           ref = this._getMemRef(opt.data.dnaAddress)
           if (!(opt.data.toAgentId in ref.agentToTransportId)) {
             this._ipc.send('json', {
               method: 'failureResult',
               dnaAddress: opt.data.dnaAddress,
               toAgentId: opt.data.fromAgentId,
-              errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting send'
+              errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting sendMessage'
             })
             return
           }
           tId = ref.agentToTransportId[opt.data.toAgentId]
           this._p2p.send(tId, {
-            type: 'handleSend',
+            type: 'handleSendMessage',
             _id: opt.data._id,
             dnaAddress: opt.data.dnaAddress,
             toAgentId: opt.data.toAgentId,
@@ -164,20 +164,20 @@ class N3hHackMode extends AsyncClass {
             data: opt.data.data
           })
           return
-        case 'handleSendResult':
+        case 'handleSendMessageResult':
           ref = this._getMemRef(opt.data.dnaAddress)
           if (!(opt.data.toAgentId in ref.agentToTransportId)) {
             this._ipc.send('json', {
               method: 'failureResult',
               dnaAddress: opt.data.dnaAddress,
               toAgentId: opt.data.fromAgentId,
-              errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting handleSendResult'
+              errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting handleSendMessageResult'
             })
             return
           }
           tId = ref.agentToTransportId[opt.data.toAgentId]
           this._p2p.send(tId, {
-            type: 'sendResult',
+            type: 'sendMessageResult',
             _id: opt.data._id,
             dnaAddress: opt.data.dnaAddress,
             toAgentId: opt.data.toAgentId,
@@ -208,21 +208,25 @@ class N3hHackMode extends AsyncClass {
         case 'getDht':
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
+          opt.data.method = 'handleGetDht'
           this._ipc.send('json', opt.data)
           return
-        case 'getDhtResult':
+        case 'handleGetDhtResult':
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
+          opt.data.method = 'getDhtResult'
           this._ipc.send('json', opt.data)
           return
         case 'getDhtMeta':
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
+          opt.data.method = 'handleGetDhtMeta'
           this._ipc.send('json', opt.data)
           return
-        case 'getDhtMetaResult':
+        case 'handleGetDhtMetaResult':
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
+          opt.data.method = 'getDhtMetaResult'
           this._ipc.send('json', opt.data)
           return
       }
@@ -261,9 +265,9 @@ class N3hHackMode extends AsyncClass {
       case 'getDataResp':
         this._processGetDataResp(opt.data.dnaAddress, opt.data.data)
         return
-      case 'handleSend':
+      case 'handleSendMessage':
         this._ipc.send('json', {
-          method: 'handleSend',
+          method: 'handleSendMessage',
           _id: opt.data._id,
           dnaAddress: opt.data.dnaAddress,
           toAgentId: opt.data.toAgentId,
@@ -271,9 +275,9 @@ class N3hHackMode extends AsyncClass {
           data: opt.data.data
         })
         return
-      case 'sendResult':
+      case 'sendMessageResult':
         this._ipc.send('json', {
-          method: 'sendResult',
+          method: 'sendMessageResult',
           _id: opt.data._id,
           dnaAddress: opt.data.dnaAddress,
           toAgentId: opt.data.toAgentId,
@@ -398,7 +402,7 @@ class N3hHackMode extends AsyncClass {
         if (data && data.type === 'dht') {
           log.t('got dht', data)
           this._ipc.send('json', {
-            method: 'storeDht',
+            method: 'handleStoreDht',
             _id: data._id,
             dnaAddress,
             agentId: data.agentId,
@@ -411,7 +415,7 @@ class N3hHackMode extends AsyncClass {
         if (data && data.type === 'dhtMeta') {
           log.t('got dhtMeta', data)
           this._ipc.send('json', {
-            method: 'storeDhtMeta',
+            method: 'handleStoreDhtMeta',
             _id: data._id,
             dnaAddress,
             agentId: data.agentId,

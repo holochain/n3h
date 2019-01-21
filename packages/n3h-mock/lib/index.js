@@ -84,7 +84,7 @@ class N3hMock extends AsyncClass {
 
   // Received 'message' from IPC: process it
   _handleIpcMessage (opt) {
-    if (opt.name === 'ping') {
+    if (opt.name === 'ping' || opt.name === 'pong') {
       return
     }
 
@@ -109,10 +109,10 @@ class N3hMock extends AsyncClass {
           })
 
           return
-        case 'trackApp':
+        case 'trackDna':
           this._track(opt.data.dnaAddress, opt.data.agentId, opt.fromZmqId)
           return
-        case 'send':
+        case 'sendMessage':
           this._getMemRef(opt.data.dnaAddress)
 
           if (!(opt.data.toAgentId in this._senders)) {
@@ -127,7 +127,7 @@ class N3hMock extends AsyncClass {
 
           toZmqId = this._senders[opt.data.toAgentId]
           this._ipc.sendOne(toZmqId, 'json', {
-            method: 'handleSend',
+            method: 'handleSendMessage',
             _id: opt.data._id,
             dnaAddress: opt.data.dnaAddress,
             toAgentId: opt.data.toAgentId,
@@ -135,11 +135,11 @@ class N3hMock extends AsyncClass {
             data: opt.data.data
           })
           return
-        case 'handleSendResult':
+        case 'handleSendMessageResult':
           this._getMemRef(opt.data.dnaAddress)
 
           if (!(opt.data.toAgentId in this._senders)) {
-            log.t('send failed: unknown target node: ' + opt.data.toAgentId)
+            log.t('sendMessage failed: unknown target node: ' + opt.data.toAgentId)
             return
           }
           toZmqId = this._senders[opt.data.toAgentId]
@@ -149,13 +149,13 @@ class N3hMock extends AsyncClass {
               method: 'failureResult',
               dnaAddress: opt.data.dnaAddress,
               toAgentId: opt.data.fromAgentId,
-              errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting handleSendResult'
+              errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting handleSendMessageResult'
             })
             return
           }
           toZmqId = this._senders[opt.data.toAgentId]
           this._ipc.sendOne(toZmqId, 'json', {
-            method: 'sendResult',
+            method: 'sendMessageResult',
             _id: opt.data._id,
             dnaAddress: opt.data.dnaAddress,
             toAgentId: opt.data.toAgentId,
@@ -187,21 +187,25 @@ class N3hMock extends AsyncClass {
         case 'getDht':
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
+          opt.data.method = 'handleGetDht'
           this._ipc.send('json', opt.data)
           return
-        case 'getDhtResult':
+        case 'handleGetDhtResult':
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
+          opt.data.method = 'getDhtResult'
           this._ipc.send('json', opt.data)
           return
         case 'getDhtMeta':
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
+          opt.data.method = 'handleGetDhtMeta'
           this._ipc.send('json', opt.data)
           return
-        case 'getDhtMetaResult':
+        case 'handleGetDhtMetaResult':
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
+          opt.data.method = 'getDhtMetaResult'
           this._ipc.send('json', opt.data)
           return
       }
@@ -216,7 +220,7 @@ class N3hMock extends AsyncClass {
       mem.registerIndexer((store, hash, data) => {
         if (data && data.type === 'dht') {
           this._ipc.send('json', {
-            method: 'storeDht',
+            method: 'handleStoreDht',
             _id: data._id,
             dnaAddress,
             agentId: data.agentId,
@@ -229,7 +233,7 @@ class N3hMock extends AsyncClass {
         if (data && data.type === 'dhtMeta') {
           log.e('got dhtMeta', data)
           this._ipc.send('json', {
-            method: 'storeDhtMeta',
+            method: 'handleStoreDhtMeta',
             _id: data._id,
             dnaAddress,
             agentId: data.agentId,
