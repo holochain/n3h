@@ -28,6 +28,8 @@
     "msgpack-lite": "^0.1.26",
     "@holochain/n3h-common": "^0.0.1",
     "@holochain/n3h-ipc": "^0.0.1",
+    "@holochain/hc-dpki": "^0.0.1",
+    "@holochain/mosodium": "^0.0.1",
     "@holochain/tweetlog": "^0.0.1",
     "@holochain/n3h-mod-message-libp2p": "^0.0.1",
     "@holochain/n3h-mod-spec": "0.0.1",

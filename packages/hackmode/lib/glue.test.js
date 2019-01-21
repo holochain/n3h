@@ -6,31 +6,45 @@ const NODE_COUNT = 2
 
 describe('hackmode module glue Suite', () => {
   it('integration', async () => {
-    const nodes = []
-    let node0addr = null
+    const allNodes = []
 
-    for (let i = 0; i < NODE_COUNT; ++i) {
-      const node = await new Node({
-        dht: {},
-        connection: {
-          passphrase: 'hello',
-          rsaBits: 1024,
-          bind: ['wss://127.0.0.1:0/integration-test']
-        }
-      })
+    const dht = JSON.stringify({})
+    const connection = JSON.stringify({
+      passphrase: 'hello',
+      rsaBits: 1024,
+      bind: ['wss://127.0.0.1:0/integration-test']
+    })
 
-      if (i === 0) {
-        const b = node.getBindings()
-        node0addr = b.next().value
-      } else {
-        await node.connect(node0addr)
-      }
+    const nodeBase = await new Node({
+      dht: JSON.parse(dht),
+      connection: JSON.parse(connection),
+      wssAdvertise: 'auto'
+    })
+    allNodes.push(nodeBase)
 
-      nodes.push(node)
-    }
+    const nodeFull = await new Node({
+      dht: JSON.parse(dht),
+      connection: JSON.parse(connection),
+      wssAdvertise: 'auto'
+    })
+    allNodes.push(nodeFull)
+
+    const baseConnectUri = nodeBase.getAdvertise()
+
+    await nodeFull.connect(baseConnectUri)
+
+    const nodeNat = await new Node({
+      dht: JSON.parse(dht),
+      connection: {
+        passphrase: 'hello',
+        rsaBits: 1024
+      },
+      wssRelayPeer: baseConnectUri
+    })
+    allNodes.push(nodeNat)
 
     await $sleep(1000)
 
-    await Promise.all(nodes.map(n => n.destroy()))
+    await Promise.all(allNodes.map(n => n.destroy()))
   }).timeout(10000)
 })
