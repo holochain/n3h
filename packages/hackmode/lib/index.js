@@ -212,10 +212,27 @@ class N3hHackMode extends AsyncClass {
           this._ipc.send('json', opt.data)
           return
         case 'handleFetchDhtResult':
-          // erm... since we're fully connected,
-          // just redirect this back to itself for now...
-          opt.data.method = 'fetchDhtResult'
-          this._ipc.send('json', opt.data)
+          // Send back to requester
+          ref = this._getMemRef(opt.data.dnaAddress)
+          if (!(opt.data.requesterAgentId in ref.agentToTransportId)) {
+            this._ipc.send('json', {
+              method: 'failureResult',
+              dnaAddress: opt.data.dnaAddress,
+              toAgentId: opt.data.agentId,
+              errorInfo: 'No routing for agent id "' + opt.data.requesterAgentId + '" aborting handleFetchDhtResult'
+            })
+            return
+          }
+          tId = ref.agentToTransportId[opt.data.requesterAgentId]
+          this._p2p.send(tId, {
+            type: 'fetchDhtResult',
+            _id: opt.data._id,
+            dnaAddress: opt.data.dnaAddress,
+            requesterAgentId: opt.data.requesterAgentId,
+            agentId: opt.data.agentId,
+            address: opt.data.address,
+            content: opt.data.content
+          })
           return
         case 'fetchDhtMeta':
           // erm... since we're fully connected,
@@ -224,10 +241,28 @@ class N3hHackMode extends AsyncClass {
           this._ipc.send('json', opt.data)
           return
         case 'handleFetchDhtMetaResult':
-          // erm... since we're fully connected,
-          // just redirect this back to itself for now...
-          opt.data.method = 'fetchDhtMetaResult'
-          this._ipc.send('json', opt.data)
+          // Send back to requester
+          ref = this._getMemRef(opt.data.dnaAddress)
+          if (!(opt.data.requesterAgentId in ref.agentToTransportId)) {
+            this._ipc.send('json', {
+              method: 'failureResult',
+              dnaAddress: opt.data.dnaAddress,
+              toAgentId: opt.data.agentId,
+              errorInfo: 'No routing for agent id "' + opt.data.requesterAgentId + '" aborting handleFetchDhtMetaResult'
+            })
+            return
+          }
+          tId = ref.agentToTransportId[opt.data.requesterAgentId]
+          this._p2p.send(tId, {
+            type: 'fetchDhtMetaResult',
+            _id: opt.data._id,
+            dnaAddress: opt.data.dnaAddress,
+            requesterAgentId: opt.data.requesterAgentId,
+            agentId: opt.data.agentId,
+            address: opt.data.address,
+            attribute: opt.data.attribute,
+            content: opt.data.content
+          })
           return
       }
     }
@@ -235,6 +270,10 @@ class N3hHackMode extends AsyncClass {
     throw new Error('unexpected input ' + JSON.stringify(opt))
   }
 
+  /*
+   * Received a message from the network.
+   * Transcribe into a local IPC message.
+   */
   _handleP2pMessage (opt) {
     // log.w('@@@@', opt.data.type, JSON.stringify(opt.data))
     switch (opt.data.type) {
@@ -283,6 +322,29 @@ class N3hHackMode extends AsyncClass {
           toAgentId: opt.data.toAgentId,
           fromAgentId: opt.data.fromAgentId,
           data: opt.data.data
+        })
+        return
+      case 'fetchDhtResult':
+        this._ipc.send('json', {
+          method: 'fetchDhtResult',
+          _id: opt.data._id,
+          dnaAddress: opt.data.dnaAddress,
+          requesterAgentId: opt.data.requesterAgentId,
+          agentId: opt.data.agentId,
+          address: opt.data.address,
+          content: opt.data.content
+        })
+        return
+      case 'fetchDhtMetaResult':
+        this._ipc.send('json', {
+          method: 'fetchDhtMetaResult',
+          _id: opt.data._id,
+          dnaAddress: opt.data.dnaAddress,
+          requesterAgentId: opt.data.requesterAgentId,
+          agentId: opt.data.agentId,
+          address: opt.data.address,
+          attribute: opt.data.attribute,
+          content: opt.data.content
         })
         return
     }
