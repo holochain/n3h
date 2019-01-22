@@ -205,28 +205,28 @@ class N3hHackMode extends AsyncClass {
             content: opt.data.content
           })
           return
-        case 'getDht':
+        case 'fetchDht':
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
-          opt.data.method = 'handleGetDht'
+          opt.data.method = 'handleFetchDht'
           this._ipc.send('json', opt.data)
           return
-        case 'handleGetDhtResult':
+        case 'handleFetchDhtResult':
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
-          opt.data.method = 'getDhtResult'
+          opt.data.method = 'fetchDhtResult'
           this._ipc.send('json', opt.data)
           return
-        case 'getDhtMeta':
+        case 'fetchDhtMeta':
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
-          opt.data.method = 'handleGetDhtMeta'
+          opt.data.method = 'handleFetchDhtMeta'
           this._ipc.send('json', opt.data)
           return
-        case 'handleGetDhtMetaResult':
+        case 'handleFetchDhtMetaResult':
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
-          opt.data.method = 'getDhtMetaResult'
+          opt.data.method = 'fetchDhtMetaResult'
           this._ipc.send('json', opt.data)
           return
       }
@@ -434,7 +434,6 @@ class N3hHackMode extends AsyncClass {
             store[data.agentId] = data.transportId
             this._ipc.send('json', {
               method: 'peerConnected',
-              dnaAddress: dnaAddress,
               agentId: data.agentId
             })
           }
