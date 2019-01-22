@@ -264,6 +264,34 @@ class N3hHackMode extends AsyncClass {
             content: opt.data.content
           })
           return
+        case 'handleGetPublishingDataListResult':
+          // FIXME: Mark my request as resolved
+          // Update my book-keeping on what this agent has.
+          // Maybe publish stuff?
+          return
+        case 'failureResult':
+          // FIXME: Check if its a response to a request of mine
+          // if not relay to sender
+          ref = this._getMemRef(opt.data.dnaAddress)
+          if (!(opt.data.toAgentId in ref.agentToTransportId)) {
+            // Sending failureResult failed...
+            this._ipc.send('json', {
+              method: 'failureResult',
+              dnaAddress: opt.data.dnaAddress,
+              toAgentId: opt.data.agentId,
+              errorInfo: 'No routing for agent id "' + opt.data.requesterAgentId + '" aborting failureResult'
+            })
+            return
+          }
+          tId = ref.agentToTransportId[opt.data.toAgentId]
+          this._p2p.send(tId, {
+            type: 'failureResult',
+            _id: opt.data._id,
+            dnaAddress: opt.data.dnaAddress,
+            toAgentId: opt.data.toAgentId,
+            errorInfo: opt.data.errorInfo
+          })
+          return
       }
     }
 
@@ -345,6 +373,15 @@ class N3hHackMode extends AsyncClass {
           address: opt.data.address,
           attribute: opt.data.attribute,
           content: opt.data.content
+        })
+        return
+      case 'failureResult':
+        this._ipc.send('json', {
+          method: 'failureResult',
+          _id: opt.data._id,
+          dnaAddress: opt.data.dnaAddress,
+          toAgentId: opt.data.toAgentId,
+          errorInfo: opt.data.errorInfo
         })
         return
     }

@@ -208,6 +208,16 @@ class N3hMock extends AsyncClass {
           opt.data.method = 'fetchDhtMetaResult'
           this._ipc.send('json', opt.data)
           return
+        case 'handleGetPublishingDataListResult':
+          // FIXME: Mark my request as resolved
+          // Update my book-keeping on what this agent has.
+          // Maybe publish stuff?
+          return
+        case 'failureResult':
+          // FIXME: Check if its a response to a request of mine
+          // if not relay to sender
+          this._ipc.send('json', opt.data)
+          return
       }
     }
 
