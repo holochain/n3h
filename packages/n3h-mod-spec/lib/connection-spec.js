@@ -1,55 +1,55 @@
-const { AsyncClass, createEventSpec } = require('@holochain/n3h-common')
+const { AsyncClass, createEventSpec, type } = require('@holochain/n3h-common')
 
 const ConnectionEvent = createEventSpec({
   /**
    */
   error: (error) => {
-    // assertString(error)
+    type.assert.string(error)
     return { error }
   },
 
   /**
    */
   conError: (id, error) => {
-    // assertString(id)
-    // assertString(error)
+    type.assert.string(id)
+    type.assert.string(error)
     return { id, error }
   },
 
   /**
    */
   bind: (boundUriList) => {
-    // assertURIArray(boundUriList)
+    type.assert.arrayOf.url(boundUriList)
     return { boundUriList }
   },
 
   /**
    */
   connect: (id) => {
-    // assertString(id)
+    type.assert.string(id)
     return { id }
   },
 
   /**
    */
   connection: (id) => {
-    // assertString(id)
+    type.assert.string(id)
     return { id }
   },
 
   /**
    */
   message: (id, buffer) => {
-    // assertString(id)
-    // assertBase64String(buffer)
+    type.assert.string(id)
+    type.assert.base64String(buffer)
     return { id, buffer }
   },
 
   /**
    */
   close: (id, data) => {
-    // assertString(id)
-    // assertObject(data)
+    type.assert.string(id)
+    type.assert.object(data)
     return { id, data }
   }
 })

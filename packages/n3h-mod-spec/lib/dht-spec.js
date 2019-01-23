@@ -1,4 +1,4 @@
-const { AsyncClass, createEventSpec } = require('@holochain/n3h-common')
+const { AsyncClass, createEventSpec, type } = require('@holochain/n3h-common')
 
 const DhtEvent = createEventSpec({
   /**
@@ -6,7 +6,7 @@ const DhtEvent = createEventSpec({
    * pass it along to the dht backend for processing
    */
   remoteGossipBundle: (bundle) => {
-    // assertBase64String(bundle)
+    type.assert.base64String(bundle)
     return { bundle }
   },
 
@@ -15,8 +15,8 @@ const DhtEvent = createEventSpec({
    * to the specified list of peerIds in a reliable manner.
    */
   gossipTo: (peerList, bundle) => {
-    // assertBase64StringArray(peerList)
-    // assertBase64String(bundle)
+    type.assert.arrayOf.base64String(peerList)
+    type.assert.base64String(bundle)
     return { peerList, bundle }
   },
 
@@ -26,8 +26,8 @@ const DhtEvent = createEventSpec({
    * It is okay if not all peers on the list receive the message.
    */
   unreliableGossipTo: (peerList, bundle) => {
-    // assertStringArray(peerList)
-    // assertBase64String(bundle)
+    type.assert.arrayOf.base64String(peerList)
+    type.assert.base64String(bundle)
     return { peerList, bundle }
   },
 
@@ -37,10 +37,10 @@ const DhtEvent = createEventSpec({
    * for holding until the implementors pass this event back in.
    */
   peerHoldRequest: (peerAddress, peerTransport, peerData, peerTs) => {
-    // assertBase64String(peerAddress) // determines neighborhood
-    // assertString(peerTransport) // uri transport connection info for peer
-    // assertBase64String(peerData) // implementor supplied peer meta data
-    // assertNumber(peerTs) // utc milliseconds timestamp for crdt
+    type.assert.base64String(peerAddress) // determines neighborhood
+    type.assert.url(peerTransport) // uri transport connection info for peer
+    type.assert.base64String(peerData) // implementor supplied peer meta data
+    type.assert.number(peerTs) // utc milliseconds timestamp for crdt
     return { peerAddress, peerTransport, peerData, peerTs }
   },
 
@@ -50,8 +50,8 @@ const DhtEvent = createEventSpec({
    * for holding until the implementors pass this event back in.
    */
   dataHoldRequest: (dataAddress, data) => {
-    // assertBase64String(dataAddress) // determines neighborhood
-    // assertBase64String(data) // implementor supplied data to gossip
+    type.assert.base64String(dataAddress)
+    type.assert.base64String(data)
     return { dataAddress, data }
   },
 
@@ -61,8 +61,8 @@ const DhtEvent = createEventSpec({
    * event.
    */
   dataFetch: (msgId, dataAddress) => {
-    // assertString(msgId)
-    // assertBase64String(dataAddress)
+    type.assert.string(msgId)
+    type.assert.base64String(dataAddress)
     return { msgId, dataAddress }
   },
 
@@ -71,8 +71,8 @@ const DhtEvent = createEventSpec({
    * requested data is not available (it will be removed from gossip).
    */
   dataFetchResponse: (msgId, data) => {
-    // assertString(msgId)
-    // assertBase64String(data)
+    type.assert.string(msgId)
+    type.assert.base64String(data)
     return { msgId, data }
   },
 
@@ -82,7 +82,7 @@ const DhtEvent = createEventSpec({
    * but that can, of course, choose not to.
    */
   dataPrune: (dataAddress) => {
-    // assertBase64String(dataAddress)
+    type.assert.base64String(dataAddress)
     return { dataAddress }
   }
 })

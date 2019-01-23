@@ -10,6 +10,7 @@
 class K {
   constructor () {
     this.s = []
+    this.p = []
   }
 }
 
@@ -48,6 +49,7 @@ const addModifier = exports.addModifier = (n, f) => {
     get: function () {
       if (f) {
         this.s.push(f)
+        this.p.push(n)
       }
       return this
     }
@@ -92,7 +94,7 @@ addModifier('an')
  */
 addModifier('assert', (v, s, e) => {
   if (!e(v, s)) {
-    throw new Error('type assert fail')
+    throw new Error()
   }
 })
 
@@ -147,7 +149,14 @@ const addTerminal = exports.addTerminal = (n, f) => {
   Object.defineProperty(K.prototype, n, {
     get: function () {
       this.s.push(f)
-      return v => execNext(v, this.s.splice(0, this.s.length))
+      this.p.push(n)
+      return v => {
+        try {
+          return execNext(v, this.s.splice(0, this.s.length))
+        } catch (e) {
+          throw new Error('type check fail (' + this.p.join('.') + ')')
+        }
+      }
     }
   })
   Object.defineProperty(exports, n, {
@@ -170,3 +179,13 @@ addTerminal('string', v => typeof v === 'string')
  * @param {*} v - value
  */
 addTerminal('number', v => typeof v === 'number')
+
+/**
+ * is the value an object? (not null, not array)
+ *
+ * @function object
+ * @param {*} v - value
+ */
+addTerminal('object', v => {
+  return v && !Array.isArray(v) && typeof v === 'object'
+})

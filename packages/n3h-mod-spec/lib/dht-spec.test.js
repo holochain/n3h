@@ -50,8 +50,8 @@ describe('Dht Spec Suite', () => {
 
   describe('event in-out', () => {
     const b64 = Buffer.from('tst').toString('base64')
-    const b64List = JSON.stringify([b64])
-    const str = 'str'
+    const b64List = [b64]
+    const str = 'str://'
     ;[
       ['remoteGossipBundle', [ b64 ], { bundle: b64 }],
       ['gossipTo', [ b64List, b64 ], { peerList: b64List, bundle: b64 }],

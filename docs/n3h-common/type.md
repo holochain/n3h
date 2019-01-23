@@ -15,6 +15,7 @@ Library for runtime type checking
     * [~addTerminal(n, f)](#module_type..addTerminal)
     * [~string(v)](#module_type..string)
     * [~number(v)](#module_type..number)
+    * [~object(v)](#module_type..object)
 
 <a name="module_type..is"></a>
 
@@ -115,6 +116,17 @@ is the value a string
 
 ### type~number(v)
 is the value a number
+
+**Kind**: inner method of [<code>type</code>](#module_type)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| v | <code>\*</code> | value |
+
+<a name="module_type..object"></a>
+
+### type~object(v)
+is the value an object? (not null, not array)
 
 **Kind**: inner method of [<code>type</code>](#module_type)  
 
