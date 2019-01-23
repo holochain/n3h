@@ -50,7 +50,7 @@ describe('Executor Suite', () => {
   it('should schedule', async () => {
     e.schedule('sched', 2)
 
-    for (let i = 0; i < 10; ++i) {
+    for (let i = 0; i < 15; ++i) {
       e.post()
       await $sleep(1)
     }

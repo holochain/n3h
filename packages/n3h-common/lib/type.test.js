@@ -33,6 +33,7 @@ describe('type checking Suite', () => {
   })
 
   ;[
+    [42, 'number', false],
     [[], 'string', true],
     [[42], 'string', false],
     [['hi'], 'string', true]
@@ -50,5 +51,17 @@ describe('type checking Suite', () => {
   it('should support custom modifier', () => {
     expect(type.funkyMod.string({ sub: 'yo' })).equals(true)
     expect(type.funkyMod.string('yo')).equals(false)
+  })
+
+  it('should throw on dup modifier', () => {
+    expect(() => {
+      type.addModifier('string', () => {})
+    }).throws()
+  })
+
+  it('should throw on dup terminal', () => {
+    expect(() => {
+      type.addTerminal('string', () => {})
+    }).throws()
   })
 })
