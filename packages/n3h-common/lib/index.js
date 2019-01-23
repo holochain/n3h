@@ -5,3 +5,4 @@ exports.mkdirp = require('./mkdirp').mkdirp
 exports.ModMod = require('./modmod').ModMod
 exports.createEventSpec = require('./event').createEventSpec
 exports.Executor = require('./exec').Executor
+exports.type = require('./type')
