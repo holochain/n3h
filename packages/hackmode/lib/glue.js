@@ -176,6 +176,11 @@ class Node extends AsyncClass {
         }
         await Promise.all(wait)
         break
+      case 'peerHoldRequest':
+        // no validation / indexing for now,
+        // just pass it back in
+        this._dht.post(e)
+        break
       default:
         throw new Error('unhandled dht event type ' + e.type + ' ' + JSON.stringify(e))
     }
