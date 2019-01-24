@@ -87,6 +87,12 @@ const DhtEvent = createEventSpec({
   }
 })
 
+function assertPeerHoldRequest(e) {
+  if (!DhtEvent.isEvent(e) || e.type !== 'peerHoldRequest') {
+    throw new Error('expected peerHoldRequest DhtEvent, got ' + JSON.stringify(e))
+  }
+}
+
 /**
  */
 class Dht extends AsyncClass {
@@ -123,7 +129,27 @@ class Dht extends AsyncClass {
   getPeerLocal (peerAddress) {
     this.$checkDestroyed()
 
-    return this._backend.getPeerLocal(peerAddress)
+    const out = this._backend.getPeerLocal(peerAddress)
+
+    if (out) {
+      assertPeerHoldRequest(out)
+    }
+
+    return out
+  }
+
+  /**
+   */
+  async fetchPeer (peerAddress) {
+    this.$checkDestroyed()
+
+    const out = await this._backend.fetchPeer(peerAddress)
+
+    if (out) {
+      assertPeerHoldRequest(out)
+    }
+
+    return out
   }
 
   /**

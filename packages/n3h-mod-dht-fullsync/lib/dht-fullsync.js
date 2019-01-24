@@ -4,7 +4,8 @@ const gossip = require('./gossip')
 
 const {
   AsyncClass,
-  Executor
+  Executor,
+  $sleep
 } = require('@holochain/n3h-common')
 const { Dht } = require('@holochain/n3h-mod-spec')
 const DhtEvent = Dht.DhtEvent
@@ -100,6 +101,15 @@ class DhtBackendFullsync extends AsyncClass {
   async init (spec, initOptions) {
     await super.init()
 
+    this._thisPeer = initOptions.thisPeer
+    if (
+      !this._thisPeer ||
+      !DhtEvent.isEvent(this._thisPeer) ||
+      this._thisPeer.type !== 'peerHoldRequest'
+    ) {
+      throw new Error('thisPeer required on dht init')
+    }
+
     this._spec = spec
     this._exec = await new Executor()
 
@@ -118,6 +128,8 @@ class DhtBackendFullsync extends AsyncClass {
     this._locHashes = new Map()
 
     this._dataFetchWait = new Map()
+
+    this.post(this._thisPeer)
 
     this.$pushDestructor(async () => {
       await this._exec.destroy()
@@ -162,11 +174,36 @@ class DhtBackendFullsync extends AsyncClass {
 
     // not just renaming,
     // we also don't want them changing our object directly
-    return {
-      peerTransport: pRef.transport,
-      peerData: pRef.data,
-      peerTs: pRef.ts
+    return DhtEvent.peerHoldRequest(
+      peerAddress,
+      pRef.transport,
+      pRef.data,
+      pRef.ts
+    )
+  }
+
+  /**
+   */
+  async fetchPeer (peerAddress) {
+    this.$checkDestroyed()
+
+    let peer = this.getPeerLocal(peerAddress)
+
+    if (peer) {
+      return peer
     }
+
+    // for full sync... let's just wait a bit to see if we get one...
+    const start = Date.now()
+    while (Date.now() - start < 2000) {
+      await $sleep(200)
+      peer = this.getPeerLocal(peerAddress)
+      if (peer) {
+        return peer
+      }
+    }
+
+    return null
   }
 
   /**
@@ -304,9 +341,16 @@ class DhtBackendFullsync extends AsyncClass {
           type: 'wait',
           until: Date.now() + 500
         })
+        return
       }
 
       const peerAddress = this._peerList[this._lastGossipIdx]
+
+      // skip if this peer is us :)
+      if (peerAddress === this._thisPeer.peerAddress) {
+        return setImmediate(() => this._gossip())
+      }
+
       // const ref = this._getPeerRef(peerAddress)
 
       const msgId = this.$createUid()
@@ -333,6 +377,32 @@ class DhtBackendFullsync extends AsyncClass {
   }
 
   // -- specific event (task) handlers -- //
+
+  /**
+   */
+  async _onRemoteGossipBundle (task) {
+    const parsed = gossip.parse(task.bundle)
+
+    switch (parsed.type) {
+      case 'locHashes':
+        const reqList = []
+        for (let [l, lHash] of parsed.map) {
+          if (this._locHashes.has(l)) {
+            if (this._locHashes.get(l) === lHash) {
+              continue
+            }
+          }
+          console.error('loc MISMATCH (', l, ')', lHash, this._locHashes.get(l))
+          reqList.push(l)
+        }
+        if (reqList.length) {
+          process.exit(1)
+        }
+        break
+      default:
+        throw new Error('unexpected remote gossip type ' + parsed.type)
+    }
+  }
 
   /**
    */

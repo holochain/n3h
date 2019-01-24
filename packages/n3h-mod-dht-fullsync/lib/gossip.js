@@ -15,8 +15,10 @@ exports.parse = (b) => {
     case 'locHashes':
       const out = new Map()
       for (let i = 0; i < raw[1].byteLength; i += 33) {
-        out[raw[1].readUInt8(i)] =
+        out.set(
+          raw[1].readUInt8(i).toString(),
           raw[1].slice(i + 1, i + 33).toString('base64')
+        )
       }
       return {
         type: 'locHashes',

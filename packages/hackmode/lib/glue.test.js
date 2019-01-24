@@ -1,4 +1,5 @@
 const { $sleep } = require('@holochain/n3h-common')
+const { expect } = require('chai')
 
 const { Node } = require('./glue')
 
@@ -22,47 +23,59 @@ describe('hackmode module glue Suite', () => {
       })
     }
 
-    const dht = JSON.stringify({})
-    const connection = JSON.stringify({
-      passphrase: 'hello',
-      rsaBits: 1024,
-      bind: ['wss://127.0.0.1:0/integration-test']
-    })
-
-    const nodeBase = await new Node({
-      dht: JSON.parse(dht),
-      connection: JSON.parse(connection),
-      wssAdvertise: 'auto'
-    })
-    regNode(nodeBase)
-
-    const nodeFull = await new Node({
-      dht: JSON.parse(dht),
-      connection: JSON.parse(connection),
-      wssAdvertise: 'auto'
-    })
-    regNode(nodeFull)
-
-    const baseConnectUri = nodeBase.getAdvertise()
-
-    await nodeFull.connect(baseConnectUri)
-
-    const nodeNat = await new Node({
-      dht: JSON.parse(dht),
-      connection: {
+    try {
+      const dht = JSON.stringify({})
+      const connection = JSON.stringify({
         passphrase: 'hello',
-        rsaBits: 1024
-      },
-      wssRelayPeers: [baseConnectUri]
-    })
-    regNode(nodeNat)
+        rsaBits: 1024,
+        bind: ['wss://127.0.0.1:0/integration-test']
+      })
 
-    // send
-    const res = await nodeFull.send(nodeBase.getId(), 'echo', Buffer.from('hello'))
-    console.log('@@ got @@', res.toString())
+      const nodeBase = await new Node({
+        dht: JSON.parse(dht),
+        connection: JSON.parse(connection),
+        wssAdvertise: 'auto'
+      })
+      regNode(nodeBase)
 
-    await $sleep(1000)
+      const nodeFull = await new Node({
+        dht: JSON.parse(dht),
+        connection: JSON.parse(connection),
+        wssAdvertise: 'auto'
+      })
+      regNode(nodeFull)
 
-    await Promise.all(allNodes.map(n => n.destroy()))
+      const baseConnectUri = nodeBase.getAdvertise().peerTransport
+
+      await nodeFull.connect(baseConnectUri)
+
+      const nodeNat = await new Node({
+        dht: JSON.parse(dht),
+        connection: {
+          passphrase: 'hello',
+          rsaBits: 1024
+        },
+        wssRelayPeers: [baseConnectUri]
+      })
+      regNode(nodeNat)
+
+      let res = null
+
+      // send from full to base
+      res = await nodeFull.send(nodeBase.getId(), 'echo', Buffer.from('hello'))
+      expect(res.toString()).equals('echo: hello')
+
+      // send from nat to base
+      res = await nodeNat.send(nodeBase.getId(), 'echo', Buffer.from('hello2'))
+      expect(res.toString()).equals('echo: hello2')
+
+      // send from full to nat
+      res = await nodeFull.send(nodeNat.getId(), 'echo', Buffer.from('hello3'))
+      expect(res.toString()).equals('echo: hello3')
+
+      await $sleep(1000)
+    } finally {
+      await Promise.all(allNodes.map(n => n.destroy()))
+    }
   }).timeout(10000)
 })

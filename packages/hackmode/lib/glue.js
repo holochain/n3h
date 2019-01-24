@@ -36,12 +36,49 @@ class Node extends AsyncClass {
     console.log('== end node id ==')
 
     this._bindings = new Set()
-
-    this._dht = await new Dht(DhtBackendFullsync, options.dht)
-    this._con = await new Connection(ConnectionBackendWss, options.connection)
-
     this._conState = new Map()
     this._conById = new Map()
+
+    this._con = await new Connection(ConnectionBackendWss, options.connection)
+
+    this._con.on('event', e => this._handleConEvent(e))
+
+    const bind = Array.isArray(options.connection.bind)
+      ? options.connection.bind
+      : []
+
+    await Promise.all(bind.map(b => this._con.bind(b)))
+
+    this._wssAdvertise = null
+    let bootstrapPeer = null
+
+    if (typeof options.wssAdvertise === 'string') {
+      let uri = options.wssAdvertise
+      if (uri === 'auto') {
+        uri = this.getBindings().next().value
+      }
+      this._advertise(uri)
+    } else if (Array.isArray(options.wssRelayPeers) && options.wssRelayPeers.length) {
+      bootstrapPeer = options.wssRelayPeers[0]
+      if (options.wssRelayPeers.length > 1) {
+        throw new Error('multiple relay peers unimplemented')
+      }
+      const url = new URL(bootstrapPeer)
+      if (url.protocol !== 'wss:') {
+        throw new Error('can only relay through a direct wss: peer, not ' + url.protocol)
+      }
+      if (!url.searchParams.has('a')) {
+        throw new Error('invalid wssRelayPeer, no "a" param found on search string')
+      }
+      this._advertise('holorelay://' + url.searchParams.get('a'))
+    } else {
+      throw new Error('required either wssAdvertise or wssRelayPeers')
+    }
+
+    options.dht.thisPeer = this._wssAdvertise
+
+    this._dht = await new Dht(DhtBackendFullsync, options.dht)
+    this._dht.on('event', e => this._handleDhtEvent(e))
 
     this.$pushDestructor(async () => {
       await this._con.destroy()
@@ -58,39 +95,8 @@ class Node extends AsyncClass {
       this._bindings = null
     })
 
-    this._dht.on('event', e => this._handleDhtEvent(e))
-    this._con.on('event', e => this._handleConEvent(e))
-
-    const bind = Array.isArray(options.connection.bind)
-      ? options.connection.bind
-      : []
-
-    await Promise.all(bind.map(b => this._con.bind(b)))
-
-    this._wssAdvertise = null
-
-    if (typeof options.wssAdvertise === 'string') {
-      let uri = options.wssAdvertise
-      if (uri === 'auto') {
-        uri = this.getBindings().next().value
-      }
-      this._advertise(uri)
-    } else if (Array.isArray(options.wssRelayPeers) && options.wssRelayPeers.length) {
-      const peer = options.wssRelayPeers[0]
-      if (options.wssRelayPeers.length > 1) {
-        throw new Error('multiple relay peers unimplemented')
-      }
-      const url = new URL(peer)
-      if (url.protocol !== 'wss:') {
-        throw new Error('can only relay through a direct wss: peer, not ' + url.protocol)
-      }
-      if (!url.searchParams.has('a')) {
-        throw new Error('invalid wssRelayPeer, no "a" param found on search string')
-      }
-      await this._con.connect(peer)
-      this._advertise('holorelay://' + url.searchParams.get('a'))
-    } else {
-      throw new Error('required either wssAdvertise or wssRelayPeers')
+    if (bootstrapPeer) {
+      await this._con.connect(bootstrapPeer)
     }
   }
 
@@ -121,12 +127,17 @@ class Node extends AsyncClass {
   /**
    */
   async send (peerAddress, type, data) {
-    if (!this._conById.has(peerAddress)) {
-      console.error(peerAddress, this._conById)
-      throw new Error('no connection to ' + peerAddress)
+    // short circuit if we already have a connection open here
+    if (this._conById.has(peerAddress)) {
+      const state = this._conById.get(peerAddress)
+      return state.send(type, data)
     }
-    const state = this._conById.get(peerAddress)
-    return state.send(type, data)
+    const peer = await this._dht.fetchPeer(peerAddress)
+    if (!peer) {
+      throw new Error('could not message peer ' + peerAddress)
+    }
+    console.error('fetch got peer:', peer)
+    throw new Error('unimplemented')
   }
 
   // -- private -- //
@@ -138,14 +149,12 @@ class Node extends AsyncClass {
 
     console.log('WSS ADVERTISE', this._wssAdvertise)
 
-    const thisPeer = DhtEvent.peerHoldRequest(
+    this._wssAdvertise = DhtEvent.peerHoldRequest(
       this._keypair.getId(),
       this._wssAdvertise,
       Buffer.alloc(0).toString('base64'),
       Date.now()
     )
-
-    this._dht.post(thisPeer)
   }
 
   /**
@@ -156,13 +165,16 @@ class Node extends AsyncClass {
 
     switch (e.type) {
       case 'gossipTo':
+        let wait = []
         for (let peer of e.peerList) {
           if (peer === this._keypair.getId()) {
             console.log('ignoring gossipTo THIS PEER')
           } else {
-            console.log('aaa')
+            wait.push(this.send(peer, '$gossip$',
+              Buffer.from(e.bundle, 'base64')))
           }
         }
+        await Promise.all(wait)
         break
       default:
         throw new Error('unhandled dht event type ' + e.type + ' ' + JSON.stringify(e))
@@ -259,8 +271,19 @@ class ConState extends AsyncClass {
   /**
    */
   async handshake () {
-    this._remId = (await this._req('$id$')).toString()
-    this._node._conById.set(this._remId, this)
+    const rem = JSON.parse((await this._req('$id$')).toString())
+    if (!rem) {
+      console.error('handshake fail')
+      return
+    }
+    this._remAdvertise = DhtEvent.peerHoldRequest(
+      rem.peerAddress,
+      rem.peerTransport,
+      rem.peerData,
+      rem.peerTs
+    )
+    this._node._dht.post(this._remAdvertise)
+    this._node._conById.set(this._remAdvertise.peerAddress, this)
   }
 
   /**
@@ -290,7 +313,10 @@ class ConState extends AsyncClass {
         }
         break
       case '$id$':
-        this._res(id, Buffer.from(this._node._keypair.getId()))
+        this._res(id, Buffer.from(JSON.stringify(this._node._wssAdvertise)))
+        break
+      case '$gossip$':
+        this._node._dht.post(DhtEvent.remoteGossipBundle(data[2].toString('base64')))
         break
       default:
         await this.emit('message', {
