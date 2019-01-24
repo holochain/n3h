@@ -5,9 +5,10 @@ const DhtEvent = createEventSpec({
    * we have received a gossip bundle from a remote node,
    * pass it along to the dht backend for processing
    */
-  remoteGossipBundle: (bundle) => {
+  remoteGossipBundle: (fromPeerAddress, bundle) => {
+    type.assert.base64String(fromPeerAddress)
     type.assert.base64String(bundle)
-    return { bundle }
+    return { fromPeerAddress, bundle }
   },
 
   /**
@@ -87,7 +88,7 @@ const DhtEvent = createEventSpec({
   }
 })
 
-function assertPeerHoldRequest(e) {
+function assertPeerHoldRequest (e) {
   if (!DhtEvent.isEvent(e) || e.type !== 'peerHoldRequest') {
     throw new Error('expected peerHoldRequest DhtEvent, got ' + JSON.stringify(e))
   }

@@ -1,6 +1,6 @@
 const { expect } = require('chai')
 
-const { Dht } = require('@holochain/n3h-mod-spec')
+const { Dht, DhtEvent } = require('@holochain/n3h-mod-spec')
 const { DhtBackendFullsync } = require('./index')
 
 const TEST_URI_1 = 'fake://some/place'
@@ -14,7 +14,10 @@ describe('DhtBackendFullsync Suite', () => {
   let d = null
 
   beforeEach(async () => {
-    d = await new Dht(DhtBackendFullsync, {})
+    d = await new Dht(DhtBackendFullsync, {
+      thisPeer: DhtEvent.peerHoldRequest(
+        'test', 'yo://', '', Date.now())
+    })
     d.on('event', evt => {
       switch (evt.type) {
         case 'dataFetch':

@@ -385,18 +385,45 @@ class DhtBackendFullsync extends AsyncClass {
 
     switch (parsed.type) {
       case 'locHashes':
-        const reqList = []
+        const locMiss = []
+        const sendList = []
         for (let [l, lHash] of parsed.map) {
-          if (this._locHashes.has(l)) {
-            if (this._locHashes.get(l) === lHash) {
-              continue
+          if (!this._locHashes.has(l)) {
+            // we are missing this loc
+            locMiss.push(l)
+          } else if (this._locHashes.get(l) !== lHash) {
+            // this loc differs
+            sendList.push(l)
+          }
+        }
+        for (let l of this._locHashes.keys()) {
+          if (!parsed.map.has(l)) {
+            // remote is missing this loc
+            sendList.push(l)
+          }
+        }
+        if (locMiss.length || sendList.length) {
+          const ourPeerHashes = new Set()
+          const ourDataHashes = new Set()
+          for (let loc of sendList) {
+            if (this._peerStore.has(loc)) {
+              const pRef = this._peerStore.get(loc)
+              for (let peerAddress of pRef.keys()) {
+                ourPeerHashes.add(peerAddress)
+              }
+            }
+            if (this._dataStore.has(loc)) {
+              const dRef = this._dataStore.get(loc)
+              for (let dataAddress of dRef.keys()) {
+                ourDataHashes.add(dataAddress)
+              }
             }
           }
-          console.error('loc MISMATCH (', l, ')', lHash, this._locHashes.get(l))
-          reqList.push(l)
-        }
-        if (reqList.length) {
-          process.exit(1)
+          const bundle = gossip.hashDiff(
+            ourPeerHashes, ourDataHashes, locMiss)
+          const evt = DhtEvent.gossipTo(
+            [task.fromPeerAddress], bundle)
+          this._spec.$emitEvent(evt)
         }
         break
       default:

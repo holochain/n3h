@@ -316,7 +316,7 @@ class ConState extends AsyncClass {
         this._res(id, Buffer.from(JSON.stringify(this._node._wssAdvertise)))
         break
       case '$gossip$':
-        this._node._dht.post(DhtEvent.remoteGossipBundle(data[2].toString('base64')))
+        this._node._dht.post(DhtEvent.remoteGossipBundle(this._remAdvertise.peerAddress, data[2].toString('base64')))
         break
       default:
         await this.emit('message', {
