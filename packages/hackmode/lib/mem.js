@@ -94,10 +94,10 @@ class Mem {
   }
 
   insertMeta (data) {
-    if (!data || typeof data.address !== 'string' || !data.address.length) {
+    if (!data || typeof data.entryAddress !== 'string' || !data.entryAddress.length) {
       throw new Error('cannot insert without string address')
     }
-    const entry = this._getEntry(data.address)
+    const entry = this._getEntry(data.entryAddress)
     const strData = JSON.stringify(data)
     const hash = getHash(strData)
     if (!entry.meta.has(hash)) {
