@@ -38,6 +38,7 @@ class Node extends AsyncClass {
     this._bindings = new Set()
     this._conState = new Map()
     this._conById = new Map()
+    this._waitNodeConnection = new Map()
 
     this._con = await new Connection(ConnectionBackendWss, options.connection)
 
@@ -102,7 +103,7 @@ class Node extends AsyncClass {
     })
 
     if (bootstrapPeer) {
-      await this._con.connect(bootstrapPeer)
+      await this.connect(bootstrapPeer)
     }
   }
 
@@ -128,7 +129,7 @@ class Node extends AsyncClass {
   /**
    */
   async connect (addr) {
-    return this._con.connect(addr)
+    await this._newConnection(addr)
   }
 
   /**
@@ -151,6 +152,95 @@ class Node extends AsyncClass {
 
   /**
    */
+  async _newConnection (addr) {
+    const uri = new URL(addr)
+    switch (uri.protocol) {
+      case 'wss:':
+        return this._newConnectionDirect(uri)
+        break
+      case 'holorelay:':
+        return this._newConnectionRelay(uri)
+        break
+      default:
+        throw new Error('unhandled newConnection protocol: ' + uri.protocol)
+    }
+  }
+
+  /**
+   */
+  async _newConnectionRelay (uri) {
+    const relayAddress = uri.hostname
+    if (!uri.searchParams.has('a')) {
+      throw new Error('cannot connect to peer without nodeId ("a" param)')
+    }
+    const remId = uri.searchParams.get('a')
+    console.log('RELAY', relayAddress)
+    const relayState = await this._fetchConState(relayAddress)
+    const state = await new ConState(this,
+      async (data) => {
+        if (!(data instanceof Buffer)) {
+          throw new Error('data must be a buffer')
+        }
+        const relayState = await this._fetchConState(relayAddress)
+        return relayState.publish('$relay$', msgpack.encode([
+          remId, data]))
+      }
+    )
+    await this._registerConState('relay:' + relayAddress, state)
+  }
+
+  /**
+   */
+  async _newConnectionDirect (uri) {
+    if (!uri.searchParams.has('a')) {
+      throw new Error('cannot connect to peer without nodeId ("a" param)')
+    }
+    const remId = uri.searchParams.get('a')
+    return new Promise((resolve, reject) => {
+      try {
+        const timer = setTimeout(() => {
+          r.reject(new Error('timeout'))
+        }, 5000)
+        const cleanup = () => {
+          clearTimeout(timer)
+          if (this._waitNodeConnection.has(remId)) {
+            const a = this._waitNodeConnection.get(remId)
+            const idx = a.indexOf(r)
+            if (idx > -1) {
+              a.splice(idx, 1)
+            }
+            if (!a.length) {
+              this._waitNodeConnection.delete(remId)
+            }
+          }
+        }
+        const r = {
+          resolve: () => {
+            cleanup()
+            if (this._conById.has(remId)) {
+              return resolve(this._conById.get(remId))
+            }
+            return reject(new Error('connection not found'))
+          },
+          reject: e => {
+            cleanup()
+            reject(e)
+          }
+        }
+        if (this._waitNodeConnection.has(remId)) {
+          this._waitNodeConnection.get(remId).push(r)
+        } else {
+          this._waitNodeConnection.set(remId, [r])
+        }
+        return this._con.connect(uri)
+      } catch (e) {
+        reject(e)
+      }
+    })
+  }
+
+  /**
+   */
   async _fetchConState (peerAddress) {
     // short circuit if we already have a connection open here
     if (this._conById.has(peerAddress)) {
@@ -161,8 +251,8 @@ class Node extends AsyncClass {
     if (!peer) {
       throw new Error('could not message peer ' + peerAddress)
     }
-    console.error('fetch got peer:', peer)
-    throw new Error('unimplemented')
+    return this._newConnection(peer.peerTransport +
+      '?a=' + peer.peerAddress)
   }
 
   /**
@@ -179,8 +269,10 @@ class Node extends AsyncClass {
   /**
    */
   async _handleDhtEvent (e) {
+    /*
     console.log('--dht--')
     console.log(e)
+    */
 
     switch (e.type) {
       case 'gossipTo':
@@ -203,7 +295,8 @@ class Node extends AsyncClass {
       default:
         throw new Error('unhandled dht event type ' + e.type + ' ' + JSON.stringify(e))
     }
-    console.log('--')
+
+    // console.log('--')
   }
 
   /**
@@ -244,19 +337,54 @@ class Node extends AsyncClass {
 
   /**
    */
-  async _addConnection (cId) {
-    const state = await new ConState(this, cId)
-    state.on('message', (m) => {
-      this.emit('message', m)
-    })
+  async _registerConState (cId, state) {
     this._conState.set(cId, state)
+    state.on('message', async (m) => {
+      try {
+        switch (m.type) {
+          case '$relay$':
+            const data = msgpack.decode(m.data)
+            if (!this._conById.has(data[0])) {
+              throw new Error('trying to relay, but we have no connection! ' + data[0])
+            }
+            const state = this._conById.get(data[0])
+            if (!cId.startsWith('direct:')) {
+              throw new Error('cannot relay through non-direct connections')
+            }
+            const ccId = cId.replace(/^direct:/, '')
+            await this._con.send([ccId], data[1].toString('base64'))
+            break
+          default:
+            this.emit('message', m)
+            break
+        }
+      } catch (e) {
+        console.error(e)
+        process.exit(1)
+      }
+    })
+    await state.handshake()
     console.log('connection', cId)
-    await this._conState.get(cId).handshake()
+  }
+
+  /**
+   */
+  async _addConnection (cId) {
+    const state = await new ConState(this,
+      async (data) => {
+        if (!(data instanceof Buffer)) {
+          throw new Error('data must be a buffer')
+        }
+        return this._con.send([cId], data.toString('base64'))
+      }
+    )
+    await this._registerConState('direct:' + cId, state)
   }
 
   /**
    */
   async _removeConnection (cId) {
+    cId = 'direct:' + cId
     console.log('close', cId)
     if (this._conState.has(cId)) {
       const state = this._conState.get(cId)
@@ -271,8 +399,19 @@ class Node extends AsyncClass {
   /**
    */
   async _handleMessage (cId, data) {
+    cId = 'direct:' + cId
     if (this._conState.has(cId)) {
       await this._conState.get(cId).handleMessage(data)
+    }
+  }
+
+  /**
+   */
+  async _checkWaitNodeConnection (peerAddress) {
+    if (this._waitNodeConnection.has(peerAddress)) {
+      for (let r of this._waitNodeConnection.get(peerAddress)) {
+        r.resolve()
+      }
     }
   }
 }
@@ -284,10 +423,10 @@ exports.Node = Node
 class ConState extends AsyncClass {
   /**
    */
-  async init (node, conId) {
+  async init (node, sendFn) {
     await super.init()
     this._node = node
-    this._conId = conId
+    this._sendFn = sendFn
 
     this._wait = new Map()
   }
@@ -308,6 +447,7 @@ class ConState extends AsyncClass {
     )
     this._node._dht.post(this._remAdvertise)
     this._node._conById.set(this._remAdvertise.peerAddress, this)
+    await this._node._checkWaitNodeConnection(this._remAdvertise.peerAddress)
   }
 
   /**
@@ -319,7 +459,7 @@ class ConState extends AsyncClass {
   /**
    */
   async publish (type, data) {
-    await this._send(msgpack.encode([type, null, data]))
+    await this._sendFn(msgpack.encode([type, null, data]))
   }
 
   /**
@@ -362,30 +502,21 @@ class ConState extends AsyncClass {
     if (!(data instanceof Buffer)) {
       throw new Error('data must be a Buffer')
     }
-    await this._node._con.send([this._conId], msgpack.encode([
+    return this._sendFn(msgpack.encode([
       '$', id, data
-    ]).toString('base64'))
-  }
-
-  /**
-   */
-  async _send (data) {
-    if (!(data instanceof Buffer)) {
-      throw new Error('data must be a buffer')
-    }
-    return this._node._con.send([this._conId], data.toString('base64'))
+    ]))
   }
 
   /**
    */
   async _req (type, data) {
-    const timeoutStack = (new Error('stack')).stack
+    const timeoutStack = (new Error('timeout')).stack
     return new Promise(async (resolve, reject) => {
       try {
         const id = this.$createUid()
         const timer = setTimeout(() => {
           clean()
-          r.reject(new Error('timeout' + timeoutStack))
+          r.reject(new Error(timeoutStack))
         }, 5000)
         const clean = () => {
           clearTimeout(timer)
@@ -402,7 +533,7 @@ class ConState extends AsyncClass {
           }
         }
         this._wait.set(id, r)
-        await this._send(msgpack.encode([
+        await this._sendFn(msgpack.encode([
           type, id, data
         ]))
       } catch (e) {
