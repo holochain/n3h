@@ -1,4 +1,6 @@
-const { $sleep } = require('@holochain/n3h-common')
+const { $sleep, unhandledRejection } = require('@holochain/n3h-common')
+unhandledRejection.strict()
+
 const { expect } = require('chai')
 
 const { Node } = require('./glue')
@@ -45,7 +47,8 @@ describe('hackmode module glue Suite', () => {
       })
       regNode(nodeFull)
 
-      const baseConnectUri = nodeBase.getAdvertise().peerTransport
+      const baseConnectUri = nodeBase.getAdvertise()
+      console.log('BASE CONNECT URI', baseConnectUri)
 
       await nodeFull.connect(baseConnectUri)
 

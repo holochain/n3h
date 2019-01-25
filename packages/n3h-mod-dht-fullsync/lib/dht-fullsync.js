@@ -584,7 +584,6 @@ class DhtBackendFullsync extends AsyncClass {
         let pRef = this._peerStore.get(loc)
         if (pRef.has(peerAddress)) {
           pRef = pRef.get(peerAddress)
-          console.log('@@', typeof pRef, pRef)
           out.set(peerAddress, JSON.stringify(pRef))
         }
       }
@@ -598,9 +597,12 @@ class DhtBackendFullsync extends AsyncClass {
     for (let [peerAddress, peer] of peerMap) {
       const loc = getLoc(peerAddress)
       if (this._peerStore.has(loc)) {
-        const pRef = this._peerStore.get(loc)
-        if (pRef.has(peerAddress) && pRef.get(peerAddress).ts >= ts) {
-          continue
+        let pRef = this._peerStore.get(loc)
+        if (pRef.has(peerAddress)) {
+          pRef = this._peerStore.get(loc)
+          if (pRef.ts && pRef.ts >= ts) {
+            continue
+          }
         }
       }
       peer = JSON.parse(peer)

@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 const { N3hNode, N3hHackMode, N3hMock } = require('../lib/index')
+const { unhandledRejection } = require('@holochain/n3h-common')
+unhandledRejection.strict()
 
 async function main () {
 

@@ -41,7 +41,10 @@ class Node extends AsyncClass {
 
     this._con = await new Connection(ConnectionBackendWss, options.connection)
 
-    this._con.on('event', e => this._handleConEvent(e))
+    this._con.on('event', e => this._handleConEvent(e).catch(err => {
+      console.error('Handle Connection Event Error', e, err)
+      process.exit(1)
+    }))
 
     const bind = Array.isArray(options.connection.bind)
       ? options.connection.bind
@@ -78,7 +81,10 @@ class Node extends AsyncClass {
     options.dht.thisPeer = this._wssAdvertise
 
     this._dht = await new Dht(DhtBackendFullsync, options.dht)
-    this._dht.on('event', e => this._handleDhtEvent(e))
+    this._dht.on('event', e => this._handleDhtEvent(e).catch(err => {
+      console.error('Handle Dht Event Error', e, err)
+      process.exit(1)
+    }))
 
     this.$pushDestructor(async () => {
       await this._con.destroy()
@@ -115,7 +121,8 @@ class Node extends AsyncClass {
   /**
    */
   getAdvertise () {
-    return this._wssAdvertise
+    return this._wssAdvertise.peerTransport +
+      '?a=' + this._wssAdvertise.peerAddress
   }
 
   /**
@@ -125,12 +132,30 @@ class Node extends AsyncClass {
   }
 
   /**
+   * send a message to another node, expecting a response
    */
   async send (peerAddress, type, data) {
+    const state = await this._fetchConState(peerAddress)
+    return state.send(type, data)
+  }
+
+  /**
+   * publish a fire-and-forget message to another node
+   */
+  async publish (peerAddress, type, data) {
+    const state = await this._fetchConState(peerAddress)
+    return state.publish(type, data)
+  }
+
+  // -- private -- //
+
+  /**
+   */
+  async _fetchConState (peerAddress) {
     // short circuit if we already have a connection open here
     if (this._conById.has(peerAddress)) {
       const state = this._conById.get(peerAddress)
-      return state.send(type, data)
+      return state
     }
     const peer = await this._dht.fetchPeer(peerAddress)
     if (!peer) {
@@ -140,18 +165,12 @@ class Node extends AsyncClass {
     throw new Error('unimplemented')
   }
 
-  // -- private -- //
-
   /**
    */
   _advertise (uri) {
-    this._wssAdvertise = uri + '?a=' + this._keypair.getId()
-
-    console.log('WSS ADVERTISE', this._wssAdvertise)
-
     this._wssAdvertise = DhtEvent.peerHoldRequest(
       this._keypair.getId(),
-      this._wssAdvertise,
+      uri,
       Buffer.alloc(0).toString('base64'),
       Date.now()
     )
@@ -170,7 +189,7 @@ class Node extends AsyncClass {
           if (peer === this._keypair.getId()) {
             console.log('ignoring gossipTo THIS PEER')
           } else {
-            wait.push(this.send(peer, '$gossip$',
+            wait.push(this.publish(peer, '$gossip$',
               Buffer.from(e.bundle, 'base64')))
           }
         }
@@ -294,13 +313,13 @@ class ConState extends AsyncClass {
   /**
    */
   async send (type, data) {
-    if (typeof type !== 'string') {
-      throw new Error('type must be a string')
-    }
-    if (!(data instanceof Buffer)) {
-      throw new Error('data must be a buffer')
-    }
     return this._req(type, data)
+  }
+
+  /**
+   */
+  async publish (type, data) {
+    await this._send(msgpack.encode([type, null, data]))
   }
 
   /**
@@ -318,7 +337,7 @@ class ConState extends AsyncClass {
         }
         break
       case '$id$':
-        this._res(id, Buffer.from(JSON.stringify(this._node._wssAdvertise)))
+        await this._res(id, Buffer.from(JSON.stringify(this._node._wssAdvertise)))
         break
       case '$gossip$':
         this._node._dht.post(DhtEvent.remoteGossipBundle(this._remAdvertise.peerAddress, data[2].toString('base64')))
@@ -328,7 +347,7 @@ class ConState extends AsyncClass {
           type: data[0],
           data: data[2],
           respond: (rData) => {
-            this._res(id, rData)
+            return this._res(id, rData)
           }
         })
         break
@@ -350,13 +369,23 @@ class ConState extends AsyncClass {
 
   /**
    */
+  async _send (data) {
+    if (!(data instanceof Buffer)) {
+      throw new Error('data must be a buffer')
+    }
+    return this._node._con.send([this._conId], data.toString('base64'))
+  }
+
+  /**
+   */
   async _req (type, data) {
+    const timeoutStack = (new Error('stack')).stack
     return new Promise(async (resolve, reject) => {
       try {
         const id = this.$createUid()
         const timer = setTimeout(() => {
           clean()
-          r.reject(new Error('timeout'))
+          r.reject(new Error('timeout' + timeoutStack))
         }, 5000)
         const clean = () => {
           clearTimeout(timer)
@@ -373,9 +402,9 @@ class ConState extends AsyncClass {
           }
         }
         this._wait.set(id, r)
-        await this._node._con.send([this._conId], msgpack.encode([
+        await this._send(msgpack.encode([
           type, id, data
-        ]).toString('base64'))
+        ]))
       } catch (e) {
         reject(e)
       }
