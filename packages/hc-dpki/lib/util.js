@@ -14,7 +14,7 @@ const rsDecoder = new Decoder(6)
  */
 function encodeId (signPub, encPub) {
   const res = Buffer.concat([
-    Buffer.from([0x1e, 0x46]),
+    Buffer.from([0x86, 0x46]),
     rsEncoder.encode(Buffer.concat([signPub, encPub]))
   ])
   return res.toString('base64').replace(/\+/g, '-').replace(/\//g, '_')
@@ -31,7 +31,7 @@ exports.encodeId = encodeId
 function decodeId (id) {
   let tmp = Buffer.from(id.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
 
-  if (tmp[0] === 0x1e && tmp[1] === 0x46) {
+  if (tmp[0] === 0x86 && tmp[1] === 0x46) {
     tmp = tmp.slice(2)
   }
 

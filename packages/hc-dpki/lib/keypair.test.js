@@ -54,7 +54,7 @@ describe('keypair Suite', () => {
   })
 
   it('should gen a keypair', async () => {
-    expect(pair0.getId()).equals('HkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR')
+    expect(pair0.getId()).equals('hkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR')
   })
 
   it('should throw on bad opt', async () => {
@@ -69,7 +69,7 @@ describe('keypair Suite', () => {
   it('should throw on bad signPriv', async () => {
     try {
       await new Keypair({
-        pubkeys: 'HkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR',
+        pubkeys: 'hkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR',
         signPriv: 32
       })
     } catch (e) {
@@ -81,7 +81,7 @@ describe('keypair Suite', () => {
   it('should throw on bad encPriv', async () => {
     try {
       await new Keypair({
-        pubkeys: 'HkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR',
+        pubkeys: 'hkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR',
         encPriv: 32
       })
     } catch (e) {
@@ -93,7 +93,7 @@ describe('keypair Suite', () => {
   it('should throw on bad pubkeys', async () => {
     try {
       await new Keypair({
-        pubkeys: 'HkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQAAAA'
+        pubkeys: 'hkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQAAAA'
       })
     } catch (e) {
       return
@@ -157,7 +157,7 @@ describe('keypair Suite', () => {
 
   it('should throw on sign with no signpriv', async () => {
     const p = await new Keypair({
-      pubkeys: 'HkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR'
+      pubkeys: 'hkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR'
     })
     try {
       p.sign(Buffer.from('hello'))

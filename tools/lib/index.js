@@ -105,7 +105,13 @@ async function _genDocs (dir, project) {
   const docDir = path.resolve(path.join(__dirname, '..', '..', 'docs'))
 
   const pkgJsonFile = path.resolve(path.join(dir, 'package.json'))
-  const pkgJson = JSON.parse(fs.readFileSync(pkgJsonFile).toString())
+  let pkgJson = null
+  try {
+    pkgJson = JSON.parse(fs.readFileSync(pkgJsonFile).toString())
+  } catch (e) {
+    console.log('skipping', dir, 'package.json read error')
+    return
+  }
   if (
     typeof pkgJson['generate-docs'] !== 'object' ||
     Object.keys(pkgJson['generate-docs']).length < 1

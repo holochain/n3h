@@ -146,7 +146,7 @@ describe('seed Suite', () => {
 
     it('should derive application keypair', async () => {
       const kp = await dps.getApplicationKeypair(1952)
-      expect(kp.getId()).equals('HkbZDv3PGSl7Mos1US05z6c__UbODy-KJUuJKuInrp2d9siUhfis9fBFC4ZfC45n-j2fZ2KC5hWMVgPTreIbvCh-9mM_1RO2')
+      expect(kp.getId()).equals('hkbZDv3PGSl7Mos1US05z6c__UbODy-KJUuJKuInrp2d9siUhfis9fBFC4ZfC45n-j2fZ2KC5hWMVgPTreIbvCh-9mM_1RO2')
       await kp.destroy()
     })
 
