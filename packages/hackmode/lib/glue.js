@@ -1,4 +1,4 @@
-const { AsyncClass } = require('@holochain/n3h-common')
+const { AsyncClass, Track } = require('@holochain/n3h-common')
 const { Keypair } = require('@holochain/hc-dpki')
 const mosodium = require('@holochain/mosodium')
 const { URL } = require('url')
@@ -35,6 +35,7 @@ class Node extends AsyncClass {
     console.log(this._keypair.getId())
     console.log('== end node id ==')
 
+    this._requestTrack = await new Track()
     this._bindings = new Set()
     this._conState = new Map()
     this._conById = new Map()
@@ -88,6 +89,7 @@ class Node extends AsyncClass {
     }))
 
     this.$pushDestructor(async () => {
+      await this._requestTrack.destroy()
       await this._con.destroy()
       await this._dht.destroy()
       await this._keypair.destroy()
@@ -128,32 +130,36 @@ class Node extends AsyncClass {
 
   /**
    */
-  async connect (addr) {
-    await this._newConnection(addr)
+  async connect (peerTransport) {
+    await this._newConnection(peerTransport)
   }
 
   /**
-   * send a message to another node, expecting a response
    */
-  async send (peerAddress, type, data) {
-    const state = await this._fetchConState(peerAddress)
-    return state.send(type, data)
+  async request (peerAddress, type, data) {
+    if (!(data instanceof Buffer)) {
+      throw new Error('request only accepts data as Buffer')
+    }
+    const msgId = this.$createUid()
+    this.publish(peerAddress, type, msgpack.encode([msgId, data]))
+    return this._requestTrack.track(msgId)
   }
 
   /**
-   * publish a fire-and-forget message to another node
    */
   async publish (peerAddress, type, data) {
-    const state = await this._fetchConState(peerAddress)
-    return state.publish(type, data)
+    if (!(data instanceof Buffer)) {
+      throw new Error('publish only accepts data as Buffer')
+    }
+    throw new Error('unimplemented')
   }
 
   // -- private -- //
 
   /**
    */
-  async _newConnection (addr) {
-    const uri = new URL(addr)
+  async _newConnection (peerTransport) {
+    const uri = new URL(peerTransport)
     switch (uri.protocol) {
       case 'wss:':
         return this._newConnectionDirect(uri)

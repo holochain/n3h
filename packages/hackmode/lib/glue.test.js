@@ -65,15 +65,18 @@ describe('hackmode module glue Suite', () => {
       let res = null
 
       // send from full to base
-      res = await nodeFull.send(nodeBase.getId(), 'echo', Buffer.from('hello'))
+      res = await nodeFull.request(
+        nodeBase.getId(), 'echo', Buffer.from('hello'))
       expect(res.toString()).equals('echo: hello')
 
-      // send from nat to base
-      res = await nodeNat.send(nodeBase.getId(), 'echo', Buffer.from('hello2'))
+      // send from nat to full
+      res = await nodeNat.request(
+        nodeFull.getId(), 'echo', Buffer.from('hello2'))
       expect(res.toString()).equals('echo: hello2')
 
       // send from full to nat
-      res = await nodeFull.send(nodeNat.getId(), 'echo', Buffer.from('hello3'))
+      res = await nodeFull.request(
+        nodeNat.getId(), 'echo', Buffer.from('hello3'))
       expect(res.toString()).equals('echo: hello3')
 
       await $sleep(1000)

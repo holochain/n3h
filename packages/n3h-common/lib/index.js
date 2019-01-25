@@ -5,6 +5,7 @@ exports.mkdirp = require('./mkdirp').mkdirp
 exports.ModMod = require('./modmod').ModMod
 exports.createEventSpec = require('./event').createEventSpec
 exports.Executor = require('./exec').Executor
+exports.Track = require('./track').Track
 exports.type = require('./type')
 
 const rejectionHandler = {
