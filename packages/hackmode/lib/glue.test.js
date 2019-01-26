@@ -1,9 +1,11 @@
 const { $sleep, unhandledRejection } = require('@holochain/n3h-common')
 unhandledRejection.strict()
+const msgpack = require('msgpack-lite')
 
 const { expect } = require('chai')
 
-const { Node } = require('./glue')
+const { P2p } = require('@holochain/n3h-mod-spec')
+const { P2pBackendGlue } = require('./glue')
 
 describe('hackmode module glue Suite', () => {
   it('integration', async () => {
@@ -33,14 +35,14 @@ describe('hackmode module glue Suite', () => {
         bind: ['wss://127.0.0.1:0/integration-test']
       })
 
-      const nodeBase = await new Node({
+      const nodeBase = await new P2p(P2pBackendGlue, {
         dht: JSON.parse(dht),
         connection: JSON.parse(connection),
         wssAdvertise: 'auto'
       })
       regNode(nodeBase)
 
-      const nodeFull = await new Node({
+      const nodeFull = await new P2p(P2pBackendGlue, {
         dht: JSON.parse(dht),
         connection: JSON.parse(connection),
         wssAdvertise: 'auto'
@@ -50,9 +52,9 @@ describe('hackmode module glue Suite', () => {
       const baseConnectUri = nodeBase.getAdvertise()
       console.log('BASE CONNECT URI', baseConnectUri)
 
-      await nodeFull.connect(baseConnectUri)
+      await nodeFull.transportConnect(baseConnectUri)
 
-      const nodeNat = await new Node({
+      const nodeNat = await new P2p(P2pBackendGlue, {
         dht: JSON.parse(dht),
         connection: {
           passphrase: 'hello',
@@ -65,18 +67,27 @@ describe('hackmode module glue Suite', () => {
       let res = null
 
       // send from full to base
-      res = await nodeFull.request(
-        nodeBase.getId(), 'echo', Buffer.from('hello'))
+      res = await nodeFull.requestReliable(
+        [nodeBase.getId()], msgpack.encode({
+          type: 'echo',
+          data: 'hello'
+        }).toString('base64'))
       expect(res.toString()).equals('echo: hello')
 
       // send from nat to full
-      res = await nodeNat.request(
-        nodeFull.getId(), 'echo', Buffer.from('hello2'))
+      res = await nodeNat.requestReliable(
+        [nodeFull.getId()], msgpack.encode({
+          type: 'echo',
+          data: 'hello2'
+        }).toString('base64'))
       expect(res.toString()).equals('echo: hello2')
 
       // send from full to nat
-      res = await nodeFull.request(
-        nodeNat.getId(), 'echo', Buffer.from('hello3'))
+      res = await nodeFull.requestReliable(
+        [nodeNat.getId()], msgpack.encode({
+          type: 'echo',
+          data: 'hello3'
+        }).toString('base64'))
       expect(res.toString()).equals('echo: hello3')
 
       await $sleep(1000)

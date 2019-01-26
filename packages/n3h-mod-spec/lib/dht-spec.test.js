@@ -44,7 +44,7 @@ describe('Dht Spec Suite', () => {
 
   it('should emit events', async () => {
     const testBundle = Buffer.from('tst').toString('base64')
-    await d.$emitEvent(Dht.DhtEvent.remoteGossipBundle(testBundle))
+    await d.$emitEvent(Dht.DhtEvent.remoteGossipBundle(testBundle, testBundle))
     expect(e[0].bundle).equals('dHN0')
   })
 
@@ -53,7 +53,7 @@ describe('Dht Spec Suite', () => {
     const b64List = [b64]
     const str = 'str://'
     ;[
-      ['remoteGossipBundle', [ b64 ], { bundle: b64 }],
+      ['remoteGossipBundle', [ b64, b64 ], { fromPeerAddress: b64, bundle: b64 }],
       ['gossipTo', [ b64List, b64 ], { peerList: b64List, bundle: b64 }],
       ['unreliableGossipTo', [ b64List, b64 ], {
         peerList: b64List, bundle: b64 }],

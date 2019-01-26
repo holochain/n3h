@@ -12,3 +12,4 @@ function exportReq (mod) {
 
 exportReq(require('./connection-spec'))
 exportReq(require('./dht-spec'))
+exportReq(require('./p2p-spec'))

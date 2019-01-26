@@ -21,11 +21,13 @@ const { DhtBackendFullsync } = require('@holochain/n3h-mod-dht-fullsync')
  * @param {string} [options.wssAdvertise] - if set, advertise this node as directly connectable on a wss port. if the special string "auto" is supplied, use the equivalent of `getBindings().next().value` as the address.
  * @param {string} [options.wssRelayPeer] - if set, advertise this node as relaying through a specific peer target at this peerTransport address. must be a direct address, not another relay.
  */
-class Node extends AsyncClass {
+class P2pBackendGlue extends AsyncClass {
   /**
    */
-  async init (options) {
+  async init (spec, initOptions) {
     await super.init()
+
+    this._spec = spec
 
     const seed = new mosodium.SecBuf(32)
     seed.randomize()
@@ -35,21 +37,27 @@ class Node extends AsyncClass {
     console.log(this._keypair.getId())
     console.log('== end node id ==')
 
-    this._requestTrack = await new Track()
+    this._newConTrack = await new Track()
+    //this._requestTrack = await new Track()
     this._bindings = new Set()
-    this._conState = new Map()
-    this._conById = new Map()
-    this._waitNodeConnection = new Map()
 
-    this._con = await new Connection(ConnectionBackendWss, options.connection)
+    this._conByPeerAddress = new Map()
+
+    /*
+    this._conState = new Map()
+    this._waitNodeConnection = new Map()
+    this._outMsgs = new Map()
+    */
+
+    this._con = await new Connection(ConnectionBackendWss, initOptions.connection)
 
     this._con.on('event', e => this._handleConEvent(e).catch(err => {
       console.error('Handle Connection Event Error', e, err)
       process.exit(1)
     }))
 
-    const bind = Array.isArray(options.connection.bind)
-      ? options.connection.bind
+    const bind = Array.isArray(initOptions.connection.bind)
+      ? initOptions.connection.bind
       : []
 
     await Promise.all(bind.map(b => this._con.bind(b)))
@@ -57,15 +65,15 @@ class Node extends AsyncClass {
     this._wssAdvertise = null
     let bootstrapPeer = null
 
-    if (typeof options.wssAdvertise === 'string') {
-      let uri = options.wssAdvertise
+    if (typeof initOptions.wssAdvertise === 'string') {
+      let uri = initOptions.wssAdvertise
       if (uri === 'auto') {
         uri = this.getBindings().next().value
       }
       this._advertise(uri)
-    } else if (Array.isArray(options.wssRelayPeers) && options.wssRelayPeers.length) {
-      bootstrapPeer = options.wssRelayPeers[0]
-      if (options.wssRelayPeers.length > 1) {
+    } else if (Array.isArray(initOptions.wssRelayPeers) && initOptions.wssRelayPeers.length) {
+      bootstrapPeer = initOptions.wssRelayPeers[0]
+      if (initOptions.wssRelayPeers.length > 1) {
         throw new Error('multiple relay peers unimplemented')
       }
       const url = new URL(bootstrapPeer)
@@ -80,32 +88,35 @@ class Node extends AsyncClass {
       throw new Error('required either wssAdvertise or wssRelayPeers')
     }
 
-    options.dht.thisPeer = this._wssAdvertise
+    initOptions.dht.thisPeer = this._wssAdvertise
 
-    this._dht = await new Dht(DhtBackendFullsync, options.dht)
+    this._dht = await new Dht(DhtBackendFullsync, initOptions.dht)
     this._dht.on('event', e => this._handleDhtEvent(e).catch(err => {
       console.error('Handle Dht Event Error', e, err)
       process.exit(1)
     }))
 
     this.$pushDestructor(async () => {
-      await this._requestTrack.destroy()
+      await this._newConTrack.destroy()
+      //await this._requestTrack.destroy()
       await this._con.destroy()
       await this._dht.destroy()
       await this._keypair.destroy()
 
-      this._conById.clear()
-      this._conById = null
+      /*
+      this._conByPeerAddress.clear()
+      this._conByPeerAddress = null
 
       this._conState.clear()
       this._conState = null
+      */
 
       this._bindings.clear()
       this._bindings = null
     })
 
     if (bootstrapPeer) {
-      await this.connect(bootstrapPeer)
+      await this.transportConnect(bootstrapPeer)
     }
   }
 
@@ -130,34 +141,51 @@ class Node extends AsyncClass {
 
   /**
    */
-  async connect (peerTransport) {
-    await this._newConnection(peerTransport)
+  async transportConnect (peerTransport) {
+    await this._ensureConnection(peerTransport)
   }
 
   /**
    */
-  async request (peerAddress, type, data) {
-    if (!(data instanceof Buffer)) {
-      throw new Error('request only accepts data as Buffer')
-    }
-    const msgId = this.$createUid()
-    this.publish(peerAddress, type, msgpack.encode([msgId, data]))
-    return this._requestTrack.track(msgId)
+  async publishReliable (peerAddressList, data) {
+    return this._publish(peerAddressList, 'publish', data)
   }
 
   /**
    */
-  async publish (peerAddress, type, data) {
-    if (!(data instanceof Buffer)) {
-      throw new Error('publish only accepts data as Buffer')
-    }
-    throw new Error('unimplemented')
+  async publishUnreliable (peerAddressList, data) {
+    // todo - ignore address resolution misses here
+    return this.publishReliable(peerAddressList, data)
+  }
+
+  /**
+   */
+  async requestReliable (msgId, peerAddressList, data) {
+    console.log(' --- skipping request -- please implement --- ')
   }
 
   // -- private -- //
 
   /**
    */
+  async _publish (peerAddressList, type, data) {
+    const cIds = await Promise.all(peerAddressList.map(
+      a => this._ensureCIdForPeerAddress(a)))
+
+    return this._sendByCId(cIds, null, peerAddressList, type, data)
+  }
+
+  /**
+   */
+  async _sendByCId (cIdList, msgId, peerAddressList, type, data) {
+    if (!(data instanceof Buffer)) {
+      throw new Error('data must be a Buffer')
+    }
+    return this._con.send(cIdList, msgpack.encode([
+      msgId, peerAddressList, type, data]).toString('base64'))
+  }
+
+  /*
   async _newConnection (peerTransport) {
     const uri = new URL(peerTransport)
     switch (uri.protocol) {
@@ -172,8 +200,6 @@ class Node extends AsyncClass {
     }
   }
 
-  /**
-   */
   async _newConnectionRelay (uri) {
     const relayAddress = uri.hostname
     if (!uri.searchParams.has('a')) {
@@ -194,63 +220,46 @@ class Node extends AsyncClass {
     )
     await this._registerConState('relay:' + relayAddress, state)
   }
+  */
 
   /**
    */
-  async _newConnectionDirect (uri) {
+  async _ensureConnection (peerTransport) {
+    const uri = new URL(peerTransport)
+
     if (!uri.searchParams.has('a')) {
       throw new Error('cannot connect to peer without nodeId ("a" param)')
     }
     const remId = uri.searchParams.get('a')
-    return new Promise((resolve, reject) => {
-      try {
-        const timer = setTimeout(() => {
-          r.reject(new Error('timeout'))
-        }, 5000)
-        const cleanup = () => {
-          clearTimeout(timer)
-          if (this._waitNodeConnection.has(remId)) {
-            const a = this._waitNodeConnection.get(remId)
-            const idx = a.indexOf(r)
-            if (idx > -1) {
-              a.splice(idx, 1)
-            }
-            if (!a.length) {
-              this._waitNodeConnection.delete(remId)
-            }
-          }
-        }
-        const r = {
-          resolve: () => {
-            cleanup()
-            if (this._conById.has(remId)) {
-              return resolve(this._conById.get(remId))
-            }
-            return reject(new Error('connection not found'))
-          },
-          reject: e => {
-            cleanup()
-            reject(e)
-          }
-        }
-        if (this._waitNodeConnection.has(remId)) {
-          this._waitNodeConnection.get(remId).push(r)
-        } else {
-          this._waitNodeConnection.set(remId, [r])
-        }
-        return this._con.connect(uri)
-      } catch (e) {
-        reject(e)
-      }
-    })
+
+    // short circuit if we already have a connection
+    if (this._conByPeerAddress.has(remId)) {
+      return this._conByPeerAddress.get(remId)
+    }
+
+    if (this._newConTrack.has(remId)) {
+      return this._newConTrack.get(remId)
+    }
+
+    const promise = this._newConTrack.track(remId)
+
+    await this._con.connect(uri)
+
+    return promise
+  }
+
+  /**
+   */
+  async _ensureCIdForPeerAddress (peerAddress) {
+    throw new Error('unimplemented')
   }
 
   /**
    */
   async _fetchConState (peerAddress) {
     // short circuit if we already have a connection open here
-    if (this._conById.has(peerAddress)) {
-      const state = this._conById.get(peerAddress)
+    if (this._conByPeerAddress.has(peerAddress)) {
+      const state = this._conByPeerAddress.get(peerAddress)
       return state
     }
     const peer = await this._dht.fetchPeer(peerAddress)
@@ -282,16 +291,7 @@ class Node extends AsyncClass {
 
     switch (e.type) {
       case 'gossipTo':
-        let wait = []
-        for (let peer of e.peerList) {
-          if (peer === this._keypair.getId()) {
-            console.log('ignoring gossipTo THIS PEER')
-          } else {
-            wait.push(this.publish(peer, '$gossip$',
-              Buffer.from(e.bundle, 'base64')))
-          }
-        }
-        await Promise.all(wait)
+        await this._publish(e.peerList, '$gossip$', e.bundle)
         break
       case 'peerHoldRequest':
         // no validation / indexing for now,
@@ -350,10 +350,10 @@ class Node extends AsyncClass {
         switch (m.type) {
           case '$relay$':
             const data = msgpack.decode(m.data)
-            if (!this._conById.has(data[0])) {
+            if (!this._conByPeerAddress.has(data[0])) {
               throw new Error('trying to relay, but we have no connection! ' + data[0])
             }
-            const state = this._conById.get(data[0])
+            const state = this._conByPeerAddress.get(data[0])
             if (!cId.startsWith('direct:')) {
               throw new Error('cannot relay through non-direct connections')
             }
@@ -376,15 +376,8 @@ class Node extends AsyncClass {
   /**
    */
   async _addConnection (cId) {
-    const state = await new ConState(this,
-      async (data) => {
-        if (!(data instanceof Buffer)) {
-          throw new Error('data must be a buffer')
-        }
-        return this._con.send([cId], data.toString('base64'))
-      }
-    )
-    await this._registerConState('direct:' + cId, state)
+    return this._sendByCId([cId], null, [], '$advertise$',
+      msgpack.encode(this._wssAdvertise))
   }
 
   /**
@@ -394,8 +387,8 @@ class Node extends AsyncClass {
     console.log('close', cId)
     if (this._conState.has(cId)) {
       const state = this._conState.get(cId)
-      if (state._remId && this._conById.has(state._remId)) {
-        this._conById.delete(state._remId)
+      if (state._remId && this._conByPeerAddress.has(state._remId)) {
+        this._conByPeerAddress.delete(state._remId)
       }
       await state.destroy()
       this._conState.delete(cId)
@@ -405,9 +398,25 @@ class Node extends AsyncClass {
   /**
    */
   async _handleMessage (cId, data) {
-    cId = 'direct:' + cId
-    if (this._conState.has(cId)) {
-      await this._conState.get(cId).handleMessage(data)
+    data = msgpack.decode(Buffer.from(data, 'base64'))
+    if (!Array.isArray(data) || data.length !== 4) {
+      throw new Error('unexpected protocol data' + JSON.stringify(data))
+    }
+    const type = data[2]
+    switch (type) {
+      case '$advertise$':
+        const rem = msgpack.decode(data[3])
+        this._dht.post(DhtEvent.peerHoldRequest(
+          rem.peerAddress,
+          rem.peerTransport,
+          rem.peerData,
+          rem.peerTs
+        ))
+        this._conByPeerAddress.set(rem.peerAddress, cId)
+        this._newConTrack.resolve(rem.peerAddress, cId)
+        break
+      default:
+        throw new Error('unexpected protocol message type ' + type)
     }
   }
 
@@ -422,7 +431,7 @@ class Node extends AsyncClass {
   }
 }
 
-exports.Node = Node
+exports.P2pBackendGlue = P2pBackendGlue
 
 /**
  */
@@ -452,7 +461,7 @@ class ConState extends AsyncClass {
       rem.peerTs
     )
     this._node._dht.post(this._remAdvertise)
-    this._node._conById.set(this._remAdvertise.peerAddress, this)
+    this._node._conByPeerAddress.set(this._remAdvertise.peerAddress, this)
     await this._node._checkWaitNodeConnection(this._remAdvertise.peerAddress)
   }
 

@@ -46,6 +46,23 @@ class Track extends AsyncClass {
   }
 
   /**
+   * are we already tracking this id?
+   * @param {string} id - the id to check
+   */
+  has (id) {
+    return this._wait.has(id)
+  }
+
+  /**
+   */
+  get (id) {
+    if (!this._wait.has(id)) {
+      throw new Error(id + ' not registered')
+    }
+    return this._wait.get(id).promise
+  }
+
+  /**
    * obtain a promise that will be resolved / rejected based on `id`
    * @param {string} id - the id to track this promise
    */
@@ -54,7 +71,7 @@ class Track extends AsyncClass {
       throw new Error(id + ' already registered')
     }
     const timeoutStack = (new Error('timeout')).stack
-    return new Promise((resolve, reject) => {
+    const promise = new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         r.reject(timeoutStack)
       }, this._timeout)
@@ -74,6 +91,8 @@ class Track extends AsyncClass {
       }
       this._wait.set(id, r)
     })
+    this._wait.get(id).promise = promise
+    return promise
   }
 
   /**
