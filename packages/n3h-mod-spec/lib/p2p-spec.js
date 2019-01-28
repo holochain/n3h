@@ -141,14 +141,15 @@ class P2p extends AsyncClass {
           return this._backend.respondReliable(
             evt.msgId, evt.fromPeerAddress, data)
         }).catch(err => {
-          console.error('cannot handle exceptions in responses yet', err)
-          process.exit(1)
+          if (err.toString() !== 'Error: destroying') {
+            console.error('Exception In Response Handler', err)
+            process.exit(1)
+          }
         })
 
         const newMessage = P2pEvent.message(
           evt.fromPeerAddress, locMsgId, evt.data)
         return this.emit('event', newMessage)
-        break
       default:
         throw new Error('invalid P2pEvent type: ' + evt.type)
     }

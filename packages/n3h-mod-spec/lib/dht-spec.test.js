@@ -1,11 +1,34 @@
 const { expect } = require('chai')
 
-const { Dht } = require('./index')
+const { Dht, DhtEvent } = require('./index')
 const { AsyncClass } = require('@holochain/n3h-common')
 
 class DhtBackendMock extends AsyncClass {
-  async init () {
+  async init (spec) {
     await super.init()
+    this._spec = spec
+  }
+
+  post (evt) {
+    this._spec.$emitEvent(evt)
+  }
+
+  getPeerLocal () {
+    return DhtEvent.peerHoldRequest(
+      'abcd',
+      'test://',
+      'efgh',
+      0
+    )
+  }
+
+  fetchPeer () {
+    return DhtEvent.peerHoldRequest(
+      'ijkl',
+      'test://',
+      'mnop',
+      0
+    )
   }
 }
 
@@ -29,8 +52,39 @@ describe('Dht Spec Suite', () => {
     await d.destroy()
 
     await Promise.all([
-      d.$emitEvent(42)
+      d.$emitEvent(42),
+      d.post(null)
     ])
+  })
+
+  it('should throw on getPeerLocal after destroyed', async () => {
+    await d.destroy()
+    try {
+      await d.getPeerLocal(null)
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
+  it('should throw on fetchPeer after destroyed', async () => {
+    await d.destroy()
+    try {
+      await d.fetchPeer(null)
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
+  it('should throw on fetchDataLocal after destroyed', async () => {
+    await d.destroy()
+    try {
+      await d.fetchDataLocal(null)
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
   })
 
   it('should throw on bad event emit', async () => {
@@ -42,10 +96,41 @@ describe('Dht Spec Suite', () => {
     throw new Error('expected exception, got success')
   })
 
+  it('should throw on bad event post', async () => {
+    try {
+      await d.post(42)
+    } catch (e) {
+      return
+    }
+    throw new Error('expected exception, got success')
+  })
+
   it('should emit events', async () => {
     const testBundle = Buffer.from('tst').toString('base64')
     await d.$emitEvent(Dht.DhtEvent.remoteGossipBundle(testBundle, testBundle))
     expect(e[0].bundle).equals('dHN0')
+  })
+
+  it('should getPeerLocal', async () => {
+    const l = d.getPeerLocal()
+    expect(l).deep.equals({
+      peerAddress: 'abcd',
+      peerData: 'efgh',
+      peerTransport: 'test://',
+      peerTs: 0,
+      type: 'peerHoldRequest'
+    })
+  })
+
+  it('should getPeerLocal', async () => {
+    const l = await d.fetchPeer()
+    expect(l).deep.equals({
+      peerAddress: 'ijkl',
+      peerData: 'mnop',
+      peerTransport: 'test://',
+      peerTs: 0,
+      type: 'peerHoldRequest'
+    })
   })
 
   describe('event in-out', () => {
@@ -70,6 +155,10 @@ describe('Dht Spec Suite', () => {
         await d.$emitEvent(Dht.DhtEvent[val[0]](...val[1]))
         for (let k in val[2]) {
           expect(e[0][k]).deep.equals(val[2][k])
+        }
+        await d.post(Dht.DhtEvent[val[0]](...val[1]))
+        for (let k in val[2]) {
+          expect(e[1][k]).deep.equals(val[2][k])
         }
       })
     })
