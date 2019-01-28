@@ -187,6 +187,7 @@ class N3hHackMode extends AsyncClass {
             this._ipc.send('json', {
               method: 'failureResult',
               dnaAddress: opt.data.dnaAddress,
+              _id: opt.data._id,
               toAgentId: opt.data.fromAgentId,
               errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting sendMessage'
             })
@@ -208,6 +209,7 @@ class N3hHackMode extends AsyncClass {
             this._ipc.send('json', {
               method: 'failureResult',
               dnaAddress: opt.data.dnaAddress,
+              _id: opt.data._id,
               toAgentId: opt.data.fromAgentId,
               errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting handleSendMessageResult'
             })
@@ -284,14 +286,14 @@ class N3hHackMode extends AsyncClass {
           if (!(opt.data.requesterAgentId in ref.agentToTransportId)) {
             this._ipc.send('json', {
               method: 'failureResult',
-              _id: opt.data._id,
               dnaAddress: opt.data.dnaAddress,
+              _id: opt.data._id,
               toAgentId: opt.data.requesterAgentId,
               errorInfo: 'No routing for agent id "' + opt.data.requesterAgentId + '" aborting handleFetchEntryResult'
             })
             return
           }
-          log.t("sending fetchEntryResult: ", opt.data.address)
+          log.t('sending fetchEntryResult: ', opt.data.address)
           tId = ref.agentToTransportId[opt.data.requesterAgentId]
           this._p2p.send(tId, {
             type: 'fetchEntryResult',
@@ -329,6 +331,7 @@ class N3hHackMode extends AsyncClass {
           if (!(opt.data.requesterAgentId in ref.agentToTransportId)) {
             this._ipc.send('json', {
               method: 'failureResult',
+              _id: opt.data._id,
               dnaAddress: opt.data.dnaAddress,
               toAgentId: opt.data.requesterAgentId,
               errorInfo: 'No routing for agent id "' + opt.data.requesterAgentId + '" aborting handleFetchMetaResult'

@@ -137,6 +137,7 @@ class N3hMock extends AsyncClass {
             this._ipc.send('json', {
               method: 'failureResult',
               dnaAddress: opt.data.dnaAddress,
+              _id: opt.data._id,
               toAgentId: opt.data.fromAgentId,
               errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting send'
             })
@@ -166,6 +167,7 @@ class N3hMock extends AsyncClass {
             this._ipc.send('json', {
               method: 'failureResult',
               dnaAddress: opt.data.dnaAddress,
+              _id: opt.data._id,
               toAgentId: opt.data.fromAgentId,
               errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting handleSendMessageResult'
             })
