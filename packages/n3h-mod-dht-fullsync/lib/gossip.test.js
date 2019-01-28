@@ -1,8 +1,8 @@
 const gossip = require('./gossip')
 const { expect } = require('chai')
 
-const AGENT_ADD_1 = 'HkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR'
-const AGENT_ADD_2 = 'HkZ2jf8S4-Cgp40WLQEeAAa0IvPkoel5jqWtmhpPt07ONjsf_LnS8o0EUk5wHcmvKhYx1Jo6za3uIHOt2SEJgZN4HuU3ukg2'
+const AGENT_ADD_1 = 'hkY7aie8zrakLWKjqNAqbw1zZTIVdx3iQ6Y6wEihi1naKVV-I9c0byE-xaI3E7KiSX7vNTVNW1IIisalmTpf2wkeeIdQWQbR'
+const AGENT_ADD_2 = 'hkZ2jf8S4-Cgp40WLQEeAAa0IvPkoel5jqWtmhpPt07ONjsf_LnS8o0EUk5wHcmvKhYx1Jo6za3uIHOt2SEJgZN4HuU3ukg2'
 
 const TS_1 = 1548363711960
 const TS_2 = 1548000000000
