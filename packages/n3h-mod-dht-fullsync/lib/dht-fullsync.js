@@ -600,7 +600,7 @@ class DhtBackendFullsync extends AsyncClass {
         let pRef = this._peerStore.get(loc)
         if (pRef.has(peerAddress)) {
           pRef = this._peerStore.get(loc)
-          if (pRef.ts && pRef.ts >= ts) {
+          if (pRef.ts && pRef.ts >= peer.ts) {
             continue
           }
         }
