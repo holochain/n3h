@@ -28,11 +28,13 @@ class P2p extends AsyncClass {
     await super.init()
 
     this._requestTrack = await new Track()
+    this._respondTrack = await new Track()
     this._backend = await new Backend(this, initOptions)
     this._cons = new Map()
 
     this.$pushDestructor(async () => {
       await this._requestTrack.destroy()
+      await this._respondTrack.destroy()
       await this._backend.destroy()
       this._backend = null
       this._cons = null
@@ -112,12 +114,18 @@ class P2p extends AsyncClass {
     return this._requestTrack.track(msgId)
   }
 
+  /**
+   */
+  async respondReliable (msgId, data) {
+    return this._respondTrack.resolve(msgId, data)
+  }
+
   // -- protected -- //
 
   /**
    * protected helper function for emitting connection events
    */
-  $emitEvent (evt) {
+  async $emitEvent (evt) {
     if (this.$isDestroyed()) {
       return
     }
@@ -126,12 +134,29 @@ class P2p extends AsyncClass {
       throw new Error('can only emit P2pEvent instances')
     }
 
-    return this.emit('event', evt)
+    switch (evt.type) {
+      case 'message':
+        const locMsgId = this.$createUid()
+        this._respondTrack.track(locMsgId).then(async data => {
+          return this._backend.respondReliable(
+            evt.msgId, evt.fromPeerAddress, data)
+        }).catch(err => {
+          console.error('cannot handle exceptions in responses yet', err)
+          process.exit(1)
+        })
+
+        const newMessage = P2pEvent.message(
+          evt.fromPeerAddress, locMsgId, evt.data)
+        return this.emit('event', newMessage)
+        break
+      default:
+        throw new Error('invalid P2pEvent type: ' + evt.type)
+    }
   }
 
   /**
    */
-  $checkMsgIdResponse (evt) {
+  async $checkResolveRequest (evt) {
     if (this.$isDestroyed()) {
       return
     }
@@ -140,7 +165,7 @@ class P2p extends AsyncClass {
       throw new Error('can only check P2pEvent.message instances')
     }
 
-    this._requestTrack.resolve(evt.msgId, evt)
+    return this._requestTrack.resolve(evt.msgId, evt.data.toString('base64'))
   }
 }
 

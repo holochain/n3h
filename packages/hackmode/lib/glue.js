@@ -6,9 +6,10 @@ const msgpack = require('msgpack-lite')
 
 const {
   Connection,
-  Dht
+  Dht,
+  DhtEvent,
+  P2pEvent
 } = require('@holochain/n3h-mod-spec')
-const DhtEvent = Dht.DhtEvent
 
 const { ConnectionBackendWss } = require('@holochain/n3h-mod-connection-wss')
 const { DhtBackendFullsync } = require('@holochain/n3h-mod-dht-fullsync')
@@ -38,16 +39,9 @@ class P2pBackendGlue extends AsyncClass {
     console.log('== end node id ==')
 
     this._newConTrack = await new Track()
-    //this._requestTrack = await new Track()
     this._bindings = new Set()
 
     this._conByPeerAddress = new Map()
-
-    /*
-    this._conState = new Map()
-    this._waitNodeConnection = new Map()
-    this._outMsgs = new Map()
-    */
 
     this._con = await new Connection(ConnectionBackendWss, initOptions.connection)
 
@@ -98,18 +92,12 @@ class P2pBackendGlue extends AsyncClass {
 
     this.$pushDestructor(async () => {
       await this._newConTrack.destroy()
-      //await this._requestTrack.destroy()
       await this._con.destroy()
       await this._dht.destroy()
       await this._keypair.destroy()
 
-      /*
       this._conByPeerAddress.clear()
       this._conByPeerAddress = null
-
-      this._conState.clear()
-      this._conState = null
-      */
 
       this._bindings.clear()
       this._bindings = null
@@ -148,7 +136,10 @@ class P2pBackendGlue extends AsyncClass {
   /**
    */
   async publishReliable (peerAddressList, data) {
-    return this._publish(peerAddressList, 'publish', data)
+    return this._publish(
+      null, this._keypair.getId(), peerAddressList, '$publish$',
+      Buffer.from(data, 'base64')
+    )
   }
 
   /**
@@ -161,66 +152,48 @@ class P2pBackendGlue extends AsyncClass {
   /**
    */
   async requestReliable (msgId, peerAddressList, data) {
-    console.log(' --- skipping request -- please implement --- ')
+    return this._publish(
+      msgId, this._keypair.getId(), peerAddressList, '$request$',
+      Buffer.from(data, 'base64')
+    )
+  }
+
+  /**
+   */
+  async respondReliable (msgId, peerAddress, data) {
+    return this._publish(
+      msgId, this._keypair.getId(), [peerAddress], '$response$',
+      Buffer.from(data, 'base64')
+    )
   }
 
   // -- private -- //
 
   /**
    */
-  async _publish (peerAddressList, type, data) {
+  async _publish (msgId, fromPeerAddress, peerAddressList, type, data) {
+    if (!(data instanceof Buffer)) {
+      throw new Error('data must be a Buffer')
+    }
+
     const cIds = await Promise.all(peerAddressList.map(
       a => this._ensureCIdForPeerAddress(a)))
 
-    return this._sendByCId(cIds, null, peerAddressList, type, data)
+    return this._sendByCId(
+      cIds, msgId, fromPeerAddress, peerAddressList, type, data)
   }
 
   /**
    */
-  async _sendByCId (cIdList, msgId, peerAddressList, type, data) {
+  async _sendByCId (
+    cIdList, msgId, fromPeerAddress, peerAddressList, type, data
+  ) {
     if (!(data instanceof Buffer)) {
       throw new Error('data must be a Buffer')
     }
     return this._con.send(cIdList, msgpack.encode([
-      msgId, peerAddressList, type, data]).toString('base64'))
+      msgId, fromPeerAddress, peerAddressList, type, data]).toString('base64'))
   }
-
-  /*
-  async _newConnection (peerTransport) {
-    const uri = new URL(peerTransport)
-    switch (uri.protocol) {
-      case 'wss:':
-        return this._newConnectionDirect(uri)
-        break
-      case 'holorelay:':
-        return this._newConnectionRelay(uri)
-        break
-      default:
-        throw new Error('unhandled newConnection protocol: ' + uri.protocol)
-    }
-  }
-
-  async _newConnectionRelay (uri) {
-    const relayAddress = uri.hostname
-    if (!uri.searchParams.has('a')) {
-      throw new Error('cannot connect to peer without nodeId ("a" param)')
-    }
-    const remId = uri.searchParams.get('a')
-    console.log('RELAY', relayAddress)
-    const relayState = await this._fetchConState(relayAddress)
-    const state = await new ConState(this,
-      async (data) => {
-        if (!(data instanceof Buffer)) {
-          throw new Error('data must be a buffer')
-        }
-        const relayState = await this._fetchConState(relayAddress)
-        return relayState.publish('$relay$', msgpack.encode([
-          remId, data]))
-      }
-    )
-    await this._registerConState('relay:' + relayAddress, state)
-  }
-  */
 
   /**
    */
@@ -251,23 +224,26 @@ class P2pBackendGlue extends AsyncClass {
   /**
    */
   async _ensureCIdForPeerAddress (peerAddress) {
-    throw new Error('unimplemented')
-  }
-
-  /**
-   */
-  async _fetchConState (peerAddress) {
-    // short circuit if we already have a connection open here
     if (this._conByPeerAddress.has(peerAddress)) {
-      const state = this._conByPeerAddress.get(peerAddress)
-      return state
+      return this._conByPeerAddress.get(peerAddress)
     }
+
     const peer = await this._dht.fetchPeer(peerAddress)
     if (!peer) {
-      throw new Error('could not message peer ' + peerAddress)
+      throw new Error('could not connect to peer ' + peerAddress)
     }
-    return this._newConnection(peer.peerTransport +
-      '?a=' + peer.peerAddress)
+
+    const uri = new URL(peer.peerTransport)
+
+    switch (uri.protocol) {
+      case 'wss:':
+        return this._ensureConnection(
+          peer.peerTransport + '?a=' + peer.peerAddress)
+      case 'holorelay:':
+        return this._ensureCIdForPeerAddress(uri.hostname)
+      default:
+        throw new Error('unhandled peerTransport protocol ' + uri.protocol)
+    }
   }
 
   /**
@@ -284,14 +260,15 @@ class P2pBackendGlue extends AsyncClass {
   /**
    */
   async _handleDhtEvent (e) {
-    /*
-    console.log('--dht--')
-    console.log(e)
-    */
-
     switch (e.type) {
       case 'gossipTo':
-        await this._publish(e.peerList, '$gossip$', e.bundle)
+        await this._publish(
+          null,
+          this._keypair.getId(),
+          e.peerList,
+          '$gossip$',
+          Buffer.from(e.bundle, 'base64')
+        )
         break
       case 'peerHoldRequest':
         // no validation / indexing for now,
@@ -301,8 +278,6 @@ class P2pBackendGlue extends AsyncClass {
       default:
         throw new Error('unhandled dht event type ' + e.type + ' ' + JSON.stringify(e))
     }
-
-    // console.log('--')
   }
 
   /**
@@ -343,217 +318,80 @@ class P2pBackendGlue extends AsyncClass {
 
   /**
    */
-  async _registerConState (cId, state) {
-    this._conState.set(cId, state)
-    state.on('message', async (m) => {
-      try {
-        switch (m.type) {
-          case '$relay$':
-            const data = msgpack.decode(m.data)
-            if (!this._conByPeerAddress.has(data[0])) {
-              throw new Error('trying to relay, but we have no connection! ' + data[0])
-            }
-            const state = this._conByPeerAddress.get(data[0])
-            if (!cId.startsWith('direct:')) {
-              throw new Error('cannot relay through non-direct connections')
-            }
-            const ccId = cId.replace(/^direct:/, '')
-            await this._con.send([ccId], data[1].toString('base64'))
-            break
-          default:
-            this.emit('message', m)
-            break
-        }
-      } catch (e) {
-        console.error(e)
-        process.exit(1)
-      }
-    })
-    await state.handshake()
-    console.log('connection', cId)
-  }
-
-  /**
-   */
   async _addConnection (cId) {
-    return this._sendByCId([cId], null, [], '$advertise$',
-      msgpack.encode(this._wssAdvertise))
+    return this._sendByCId(
+      [cId], null, this._keypair.getId(), [], '$advertise$',
+      msgpack.encode(this._wssAdvertise)
+    )
   }
 
   /**
    */
   async _removeConnection (cId) {
-    cId = 'direct:' + cId
-    console.log('close', cId)
-    if (this._conState.has(cId)) {
-      const state = this._conState.get(cId)
-      if (state._remId && this._conByPeerAddress.has(state._remId)) {
-        this._conByPeerAddress.delete(state._remId)
-      }
-      await state.destroy()
-      this._conState.delete(cId)
-    }
+    throw new Error('unimplemented')
   }
 
   /**
    */
   async _handleMessage (cId, data) {
     data = msgpack.decode(Buffer.from(data, 'base64'))
-    if (!Array.isArray(data) || data.length !== 4) {
+    if (!Array.isArray(data) || data.length !== 5) {
       throw new Error('unexpected protocol data' + JSON.stringify(data))
     }
-    const type = data[2]
+
+    const msgId = data[0]
+    const fromPeerAddress = data[1]
+    const peerAddressList = data[2]
+    const type = data[3]
+    const message = data[4]
+
+    // if peerAddressList is not empty, then we need to make sure
+    // we are the destination. If not, we must forward to the correct nodes
+    if (peerAddressList.length) {
+      let isForUs = false
+      for (let a of peerAddressList) {
+        if (a === this._keypair.getId()) {
+          isForUs = true
+          break
+        }
+      }
+      if (!isForUs) {
+        return this._publish(
+          msgId, fromPeerAddress, peerAddressList, type, message)
+      }
+    }
+
     switch (type) {
       case '$advertise$':
-        const rem = msgpack.decode(data[3])
-        this._dht.post(DhtEvent.peerHoldRequest(
+        const rem = msgpack.decode(message)
+        this._conByPeerAddress.set(rem.peerAddress, cId)
+        this._con.setMeta(cId, rem)
+        this._newConTrack.resolve(rem.peerAddress, cId)
+        await this._dht.post(DhtEvent.peerHoldRequest(
           rem.peerAddress,
           rem.peerTransport,
           rem.peerData,
           rem.peerTs
         ))
-        this._conByPeerAddress.set(rem.peerAddress, cId)
-        this._newConTrack.resolve(rem.peerAddress, cId)
+        break
+      case '$gossip$':
+        await this._dht.post(DhtEvent.remoteGossipBundle(
+          fromPeerAddress, message.toString('base64')))
+        break
+      case '$request$':
+        await this._spec.$emitEvent(P2pEvent.message(
+          fromPeerAddress, msgId, message.toString('base64')
+        ))
+        break
+      case '$response$':
+        await this._spec.$checkResolveRequest(P2pEvent.message(
+          fromPeerAddress, msgId, message.toString('base64')
+        ))
         break
       default:
         throw new Error('unexpected protocol message type ' + type)
     }
   }
-
-  /**
-   */
-  async _checkWaitNodeConnection (peerAddress) {
-    if (this._waitNodeConnection.has(peerAddress)) {
-      for (let r of this._waitNodeConnection.get(peerAddress)) {
-        r.resolve()
-      }
-    }
-  }
 }
 
 exports.P2pBackendGlue = P2pBackendGlue
-
-/**
- */
-class ConState extends AsyncClass {
-  /**
-   */
-  async init (node, sendFn) {
-    await super.init()
-    this._node = node
-    this._sendFn = sendFn
-
-    this._wait = new Map()
-  }
-
-  /**
-   */
-  async handshake () {
-    const rem = JSON.parse((await this._req('$id$')).toString())
-    if (!rem) {
-      console.error('handshake fail')
-      return
-    }
-    this._remAdvertise = DhtEvent.peerHoldRequest(
-      rem.peerAddress,
-      rem.peerTransport,
-      rem.peerData,
-      rem.peerTs
-    )
-    this._node._dht.post(this._remAdvertise)
-    this._node._conByPeerAddress.set(this._remAdvertise.peerAddress, this)
-    await this._node._checkWaitNodeConnection(this._remAdvertise.peerAddress)
-  }
-
-  /**
-   */
-  async send (type, data) {
-    return this._req(type, data)
-  }
-
-  /**
-   */
-  async publish (type, data) {
-    await this._sendFn(msgpack.encode([type, null, data]))
-  }
-
-  /**
-   */
-  async handleMessage (data) {
-    data = msgpack.decode(Buffer.from(data, 'base64'))
-    if (!Array.isArray(data) || data.length !== 3) {
-      throw new Error('bad glue data: ' + JSON.stringify(data))
-    }
-    const id = data[1]
-    switch (data[0]) {
-      case '$':
-        if (this._wait.has(id)) {
-          this._wait.get(id).resolve(data[2])
-        }
-        break
-      case '$id$':
-        await this._res(id, Buffer.from(JSON.stringify(this._node._wssAdvertise)))
-        break
-      case '$gossip$':
-        this._node._dht.post(DhtEvent.remoteGossipBundle(this._remAdvertise.peerAddress, data[2].toString('base64')))
-        break
-      default:
-        await this.emit('message', {
-          type: data[0],
-          data: data[2],
-          respond: (rData) => {
-            return this._res(id, rData)
-          }
-        })
-        break
-    }
-  }
-
-  // -- private -- //
-
-  /**
-   */
-  async _res (id, data) {
-    if (!(data instanceof Buffer)) {
-      throw new Error('data must be a Buffer')
-    }
-    return this._sendFn(msgpack.encode([
-      '$', id, data
-    ]))
-  }
-
-  /**
-   */
-  async _req (type, data) {
-    const timeoutStack = (new Error('timeout')).stack
-    return new Promise(async (resolve, reject) => {
-      try {
-        const id = this.$createUid()
-        const timer = setTimeout(() => {
-          clean()
-          r.reject(new Error(timeoutStack))
-        }, 5000)
-        const clean = () => {
-          clearTimeout(timer)
-          this._wait.delete(id)
-        }
-        const r = {
-          resolve: (...args) => {
-            clean()
-            resolve(...args)
-          },
-          reject: (e) => {
-            clean()
-            reject(e)
-          }
-        }
-        this._wait.set(id, r)
-        await this._sendFn(msgpack.encode([
-          type, id, data
-        ]))
-      } catch (e) {
-        reject(e)
-      }
-    })
-  }
-}

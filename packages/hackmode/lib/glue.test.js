@@ -13,16 +13,15 @@ describe('hackmode module glue Suite', () => {
 
     const regNode = (node) => {
       allNodes.push(node)
-      node.on('message', m => {
-        switch (m.type) {
+      node.on('event', e => {
+        const data = msgpack.decode(Buffer.from(e.data, 'base64'))
+        switch (data.type) {
           case 'echo':
-            m.respond(Buffer.concat([
-              Buffer.from('echo: '),
-              m.data
-            ]))
+            node.respondReliable(
+              e.msgId, Buffer.from('echo: ' + data.data).toString('base64'))
             break
           default:
-            throw new Error('unexpected msg type ' + m.type)
+            throw new Error('unexpected request type: ' + data.type)
         }
       })
     }
@@ -72,7 +71,7 @@ describe('hackmode module glue Suite', () => {
           type: 'echo',
           data: 'hello'
         }).toString('base64'))
-      expect(res.toString()).equals('echo: hello')
+      expect(Buffer.from(res, 'base64').toString()).equals('echo: hello')
 
       // send from nat to full
       res = await nodeNat.requestReliable(
@@ -80,7 +79,7 @@ describe('hackmode module glue Suite', () => {
           type: 'echo',
           data: 'hello2'
         }).toString('base64'))
-      expect(res.toString()).equals('echo: hello2')
+      expect(Buffer.from(res, 'base64').toString()).equals('echo: hello2')
 
       // send from full to nat
       res = await nodeFull.requestReliable(
@@ -88,7 +87,7 @@ describe('hackmode module glue Suite', () => {
           type: 'echo',
           data: 'hello3'
         }).toString('base64'))
-      expect(res.toString()).equals('echo: hello3')
+      expect(Buffer.from(res, 'base64').toString()).equals('echo: hello3')
 
       await $sleep(1000)
     } finally {
