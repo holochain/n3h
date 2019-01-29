@@ -28,6 +28,7 @@ class N3hHackMode extends AsyncClass {
     this._memory = {}
     this._peerBook = {}
 
+    // Book: Array of entryAddress (or metaId) per dna
     this._publishedEntryBook = {}
     this._storedEntryBook = {}
     this._publishedMetaBook = {}
@@ -127,7 +128,7 @@ class N3hHackMode extends AsyncClass {
       return
     }
 
-    log.t('Received IPC message: ', opt)
+    // log.t('Received IPC message: ', opt)
 
     let ref
     let tId
@@ -228,12 +229,7 @@ class N3hHackMode extends AsyncClass {
         case 'publishEntry':
           // Note: opt.data is a EntryData
           // Bookkeep
-          this._bookkeepAddress(
-            this._publishedEntryBook,
-            opt.data.dnaAddress,
-            opt.data.providerAgentId,
-            opt.data.address
-          )
+          this._bookkeepAddress(this._publishedEntryBook, opt.data.dnaAddress, opt.data.address)
           // publish
           this._getMemRef(opt.data.dnaAddress).mem.insert({
             type: 'dhtEntry',
@@ -245,12 +241,7 @@ class N3hHackMode extends AsyncClass {
         case 'publishMeta':
           // Note: opt.data is a DhtMetaData
           // Bookkeep
-          this._bookkeepAddress(
-            this._publishedMetaBook,
-            opt.data.dnaAddress,
-            opt.data.providerAgentId,
-            opt.data.entryAddress
-          )
+          this._bookkeepAddress(this._publishedMetaBook, opt.data.dnaAddress, opt.data.entryAddress)
           // publish
           this._getMemRef(opt.data.dnaAddress).mem.insertMeta({
             type: 'dhtMeta',
@@ -263,14 +254,12 @@ class N3hHackMode extends AsyncClass {
         case 'fetchEntry':
           //  since we're fully connected, just redirect this back to itself for now...
           opt.data.method = 'handleFetchEntry'
-          log.t("sending to IPC: ", opt.data)
           this._ipc.send('json', opt.data)
           return
         case 'handleFetchEntryResult':
           // Note: opt.data is a FetchEntryResultData
           // if this message is a response from our own request, do a publish
           if (opt.data._id in this._requestBook) {
-            log.t("handleFetchEntryResult:", opt.data._id)
             delete this._requestBook[opt.data._id]
             this._getMemRef(opt.data.dnaAddress).mem.insert({
               type: 'dhtEntry',
@@ -293,7 +282,6 @@ class N3hHackMode extends AsyncClass {
             })
             return
           }
-          log.t('sending fetchEntryResult: ', opt.data.address)
           tId = ref.agentToTransportId[opt.data.requesterAgentId]
           this._p2p.send(tId, {
             type: 'fetchEntryResult',
@@ -403,7 +391,6 @@ class N3hHackMode extends AsyncClass {
             if (entryAddress in knownHoldingList) {
               continue
             }
-            this._bookkeepAddressWithBucket(this._storedEntryBook, bucketId, entryAddress)
             let fetchEntry = {
               method: 'handleFetchEntry',
               dnaAddress: opt.data.dnaAddress,
@@ -465,18 +452,18 @@ class N3hHackMode extends AsyncClass {
           // and do a getEntry for every new entry
           // for (let entryAddress in opt.data.metaList) {
           for (let i = 0; i < opt.data.metaList.length; i++) {
-            let metaId = opt.data.metaList[i]
+            let metaPair = opt.data.metaList[i]
+            let metaId = this._CatEntryAttribute(metaPair[0], metaPair[1])
             if (metaId in knownHoldingMetaList) {
               continue
             }
-            this._bookkeepAddressWithBucket(this._storedMetaBook, bucketId, metaId)
             let fetchMeta = {
               method: 'handleFetchMeta',
               dnaAddress: opt.data.dnaAddress,
               _id: this._createRequestWithBucket(bucketId),
               requesterAgentId: '',
-              entryAddress: metaId[0],
-              attribute: metaId[1]
+              entryAddress: metaPair[0],
+              attribute: metaPair[1]
             }
             this._ipc.send('json', fetchMeta)
           }
@@ -489,46 +476,44 @@ class N3hHackMode extends AsyncClass {
 
   /*
    * Received a message from the network.
-   * Transcribe into a local IPC message.
-   * send a
+   * Might send some messages back and
+   * transcribe received message into a local IPC message.
    */
   _handleP2pMessage (opt) {
     // log.w('@@@@', opt.data.type, JSON.stringify(opt.data))
     switch (opt.data.type) {
-      // send back a gossipRequestLocHashes and a gossipHashHashResp
       case 'gossipHashHash':
+        // send back a gossipRequestLocHashes and a gossipHashHashResp
         this._processGossipHashHash(opt.from, opt.data.gossipHashHash)
-
         const gossipHashHash = this._fullGossipHashHash()
-
         // log.t('gossip (resp) with', opt.from, JSON.stringify(gossipHashHash))
-
         this._p2p.send(opt.from, {
           type: 'gossipHashHashResp',
           gossipHashHash
         })
         return
-      // send back a gossipRequestLocHashes
       case 'gossipHashHashResp':
+        // send back a gossipRequestLocHashes
         this._processGossipHashHash(opt.from, opt.data.gossipHashHash)
         return
-      // send back a p2p gossipHashList
       case 'gossipRequestLocHashes':
+        // send back a gossipHashList
         this._processRequestLocHashes(opt.from, opt.data.locList)
         return
-      // send back many p2p getData
       case 'gossipHashList':
+        // send back many getData
         this._processGossipHashList(opt.from, opt.data.hashList)
         return
-      // send back a p2p getDataResp
       case 'getData':
+        // send back a getDataResp
         this._processGetData(opt.from, opt.data.dnaAddress, opt.data.hash)
         return
-      // store the data received
       case 'getDataResp':
+        // store the data received
         this._processGetDataResp(opt.data.dnaAddress, opt.data.data)
         return
       case 'handleSendMessage':
+        // transcribe to IPC
         this._ipc.send('json', {
           method: 'handleSendMessage',
           _id: opt.data._id,
@@ -539,6 +524,7 @@ class N3hHackMode extends AsyncClass {
         })
         return
       case 'sendMessageResult':
+        // transcribe to IPC
         this._ipc.send('json', {
           method: 'sendMessageResult',
           _id: opt.data._id,
@@ -549,6 +535,7 @@ class N3hHackMode extends AsyncClass {
         })
         return
       case 'fetchEntryResult':
+        // transcribe to IPC
         this._ipc.send('json', {
           method: 'fetchEntryResult',
           _id: opt.data._id,
@@ -561,6 +548,7 @@ class N3hHackMode extends AsyncClass {
         })
         return
       case 'fetchMetaResult':
+        // transcribe to IPC
         this._ipc.send('json', {
           method: 'fetchMetaResult',
           _id: opt.data._id,
@@ -574,6 +562,7 @@ class N3hHackMode extends AsyncClass {
         })
         return
       case 'failureResult':
+        // transcribe to IPC
         this._ipc.send('json', {
           method: 'failureResult',
           _id: opt.data._id,
@@ -618,8 +607,7 @@ class N3hHackMode extends AsyncClass {
     })
   }
 
-  /// Get all the hashes 'stored' at a loc?
-  /// p2p send gossipHashList
+  /// send back a gossipHashList: all the hashes that we 'stored' in every loc given in locList
   _processRequestLocHashes (fromId, locList) {
     // log.t('requestLocHashes', fromId, JSON.stringify(locList))
 
@@ -646,7 +634,7 @@ class N3hHackMode extends AsyncClass {
     })
   }
 
-  /// p2p send getData per hash in list
+  /// send back a getData per hash in list
   _processGossipHashList (fromId, hashList) {
     // log.t('hashList', fromId, JSON.stringify(hashList))
 
@@ -666,7 +654,7 @@ class N3hHackMode extends AsyncClass {
     }
   }
 
-  /// p2p send getDataResp (send data back)
+  /// send back a getDataResp
   _processGetData (fromId, dnaAddress, hash) {
     // log.t('getData', fromId, dnaAddress, hash)
     if (dnaAddress in this._memory) {
@@ -682,7 +670,7 @@ class N3hHackMode extends AsyncClass {
     }
   }
 
-  /// store data received by p2p
+  /// Received GetDataResp back from our request: store the data received
   _processGetDataResp (dnaAddress, data) {
     if (dnaAddress in this._memory) {
       const ref = this._memory[dnaAddress].mem
@@ -707,6 +695,7 @@ class N3hHackMode extends AsyncClass {
       mem.registerIndexer((store, data) => {
         if (data && data.type === 'dhtEntry') {
           log.t('got dhtEntry', data)
+          this._bookkeepAddress(this._storedEntryBook, dnaAddress, data.address)
           this._ipc.send('json', {
             method: 'handleStoreEntry',
             dnaAddress,
@@ -720,6 +709,8 @@ class N3hHackMode extends AsyncClass {
       mem.registerIndexer((store, data) => {
         if (data && data.type === 'dhtMeta') {
           log.t('got dhtMeta', data)
+          const metaId = this._CatEntryAttribute(data.entryAddress, data.attribute)
+          this._bookkeepAddress(this._storedMetaBook, dnaAddress, metaId)
           this._ipc.send('json', {
             method: 'handleStoreMeta',
             dnaAddress,
@@ -799,6 +790,11 @@ class N3hHackMode extends AsyncClass {
     return '' + DnaHash + '::' + AgentId
   }
 
+  // Make a metaId out of an entryAddress and an attribute
+  _CatEntryAttribute (entryAddress, attribute) {
+    return '' + entryAddress + '||' + attribute
+  }
+
   _generateRequestId () {
     this._requestCount += 1
     return 'req_' + this._requestCount
@@ -816,21 +812,16 @@ class N3hHackMode extends AsyncClass {
     return reqId
   }
 
-  _bookkeepAddress (book, dnaAddress, agentId, address) {
-    const bucketId = this._CatDnaAgent(dnaAddress, agentId)
-    this._bookkeepAddressWithBucket(book, bucketId, address)
-  }
-
-  _bookkeepAddressWithBucket (book, bucketId, address) {
-    if (!(bucketId in book)) {
+  _bookkeepAddress (book, dnaAddress, address) {
+    if (!(dnaAddress in book)) {
       let array = new Array()
       array.push(address)
-      book[bucketId] = array
+      book[dnaAddress] = array
       return
     }
-    let array = book[bucketId]
+    let array = book[dnaAddress]
     array.push(address)
-    book[bucketId] = array
+    book[dnaAddress] = array
   }
 
   _pauseGossip (msg, ms) {
