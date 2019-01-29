@@ -1,25 +1,23 @@
 const mosodium = require('@holochain/mosodium')
 const msgpack = require('msgpack-lite')
+const { Encoder, Decoder } = require('@holochain/n-bch-rs')
+
+const rsEncoder = new Encoder(6)
+const rsDecoder = new Decoder(6)
 
 /**
  * using base64url encoding (https://tools.ietf.org/html/rfc4648#section-5)
  * Generate an identity string with a pair of public keys
  * @param {Buffer} signPub - singing public key
  * @param {Buffer} encPub - encryption public key
- * @return {string} - the base64url encoded identity (with checksum)
+ * @return {string} - the base64url encoded identity (with parity bytes)
  */
 function encodeId (signPub, encPub) {
-  const hash = mosodium.hash.sha256(Buffer.concat([signPub, encPub]))
-
-  let c = hash.readInt16LE(0)
-  for (let i = 2; i < 32; i += 2) {
-    c = c ^ hash.readInt16LE(i)
-  }
-
-  const checksum = Buffer.alloc(2)
-  checksum.writeInt16LE(c, 0)
-
-  return Buffer.concat([signPub, encPub, checksum]).toString('base64').replace(/\+/g, '-').replace(/\//g, '_')
+  const res = Buffer.concat([
+    Buffer.from([0x86, 0x46]),
+    rsEncoder.encode(Buffer.concat([signPub, encPub]))
+  ])
+  return res.toString('base64').replace(/\+/g, '-').replace(/\//g, '_')
 }
 
 exports.encodeId = encodeId
@@ -31,7 +29,20 @@ exports.encodeId = encodeId
  * @return {object} - { signPub: Buffer, encPub: Buffer }
  */
 function decodeId (id) {
-  const tmp = Buffer.from(id.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
+  let tmp = Buffer.from(id.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
+
+  if (tmp[0] === 0x86 && tmp[1] === 0x46) {
+    tmp = tmp.slice(2)
+  }
+
+  if (tmp.byteLength !== 70) {
+    throw new Error('invalid agent id')
+  }
+
+  if (rsDecoder.is_corrupted(tmp)) {
+    tmp = rsDecoder.correct(tmp)
+  }
+
   return {
     signPub: tmp.slice(0, 32),
     encPub: tmp.slice(32, 64)
