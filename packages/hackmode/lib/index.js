@@ -812,7 +812,7 @@ class N3hHackMode extends AsyncClass {
 
   _bookkeepAddress (book, dnaAddress, address) {
     if (!(dnaAddress in book)) {
-      let array = new Array()
+      let array = []
       array.push(address)
       book[dnaAddress] = array
       return
