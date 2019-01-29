@@ -291,7 +291,6 @@ class N3hMock extends AsyncClass {
               requesterAgentId: '',
               address: entryAddress
             }
-            log.t('sending: ', fetchEntry)
             this._ipc.send('json', fetchEntry)
           }
           return

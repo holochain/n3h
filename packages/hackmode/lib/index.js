@@ -367,7 +367,6 @@ class N3hHackMode extends AsyncClass {
               requesterAgentId: '',
               address: entryAddress
             }
-            log.t('sending: ', fetchEntry)
             this._ipc.send('json', fetchEntry)
           }
           return
@@ -398,7 +397,6 @@ class N3hHackMode extends AsyncClass {
               requesterAgentId: '',
               address: entryAddress
             }
-            log.t('sending: ', fetchEntry)
             this._ipc.send('json', fetchEntry)
           }
           return
