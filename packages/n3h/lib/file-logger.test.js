@@ -28,10 +28,17 @@ describe('file-logger Suite', () => {
 
     // for windows... looks like we need to manually remove
     for (let file of fs.readdirSync(d.name)) {
-      fs.unlinkSync(path.join(d.name, file))
+      try {
+        fs.unlinkSync(path.join(d.name, file))
+      } catch (e) { /* pass */ }
     }
 
-    d.removeCallback()
+    await $sleep(0)
+
+    try {
+      d.removeCallback()
+    } catch (e) { /* pass */ }
+
     d = null
 
     l.cleanup()
