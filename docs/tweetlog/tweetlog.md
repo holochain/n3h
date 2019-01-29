@@ -38,7 +38,7 @@ log.e('circumstance a', new Error('something bad'))
         * [~unlistenAll()](#module_tweetlog..unlistenAll)
         * [~resetLevels()](#module_tweetlog..resetLevels)
         * [~gte(a, b)](#module_tweetlog..gte) ⇒ <code>boolean</code>
-        * [~should(level, [tag])](#module_tweetlog..should)
+        * [~should(level, [tag])](#module_tweetlog..should) ⇒ <code>boolean</code>
 
 <a name="module_tweetlog.Logger"></a>
 
@@ -196,11 +196,12 @@ Set global log level to info (i) and remove all tag overrides.
 
 <a name="module_tweetlog..should"></a>
 
-### tweetlog~should(level, [tag])
+### tweetlog~should(level, [tag]) ⇒ <code>boolean</code>
 Given a log level and tag, determine if logger would log this level.
 Can be used to short-circuit computationally intensive logging.
 
 **Kind**: inner method of [<code>tweetlog</code>](#module_tweetlog)  
+**Returns**: <code>boolean</code> - if this log would be logged  
 
 | Param | Type | Description |
 | --- | --- | --- |

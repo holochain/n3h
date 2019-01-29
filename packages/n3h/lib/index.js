@@ -1,8 +1,8 @@
 const path = require('path')
 const os = require('os')
 const { URL } = require('url')
-
 const { AsyncClass, mkdirp, ModMod } = require('@holochain/n3h-common')
+
 const { IpcServer } = require('@holochain/n3h-ipc')
 
 const DEFAULT_MODULES = [
@@ -19,22 +19,16 @@ exports.N3hMock = require('@holochain/n3h-mock').N3hMock
 class N3hNode extends AsyncClass {
   /**
    */
-  static async constructDefault (modules) {
-    return new N3hNode((modules || []).concat(DEFAULT_MODULES))
+  static async constructDefault (workDir, modules) {
+    return new N3hNode(workDir, (modules || []).concat(DEFAULT_MODULES))
   }
 
   /**
    */
-  async init (modules) {
+  async init (workDir, modules) {
     await super.init()
 
-    this._workDir = 'N3H_WORK_DIR' in process.env
-      ? process.env.N3H_WORK_DIR
-      : path.resolve(path.join(
-        os.homedir(), '.nh3'))
-
-    await mkdirp(this._workDir)
-    process.chdir(this._workDir)
+    this._workDir = workDir
 
     this._ipcUri = 'N3H_IPC_SOCKET' in process.env
       ? process.env.N3H_IPC_SOCKET

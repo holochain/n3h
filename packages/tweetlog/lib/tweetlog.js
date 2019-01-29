@@ -121,6 +121,7 @@
  * @function should
  * @param {string} level - single character log level (one of 'tdiwe')
  * @param {string} [tag] - the tag to check, or global if unspecified
+ * @return {boolean} if this log would be logged
  * @example
  *
  * const tweetlog = require('tweetlog')

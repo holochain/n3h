@@ -8,14 +8,12 @@ const { IpcServer } = require('@holochain/n3h-ipc')
 const { Mem } = require('./mem')
 
 const tweetlog = require('@holochain/tweetlog')
-tweetlog.set('t')
-
 const log = tweetlog('@mock@')
 
 class N3hMock extends AsyncClass {
   /// Network mock init.
   /// Normally spawned by holochain_net where config is passed via environment variables
-  async init () {
+  async init (workDir) {
     await super.init()
 
     log.t('Initializing...')
@@ -26,14 +24,7 @@ class N3hMock extends AsyncClass {
     this.senders_by_dna = {}
 
     // Set working directory from config (a temp folder) or default to $home/.n3h
-    this._workDir = 'N3H_WORK_DIR' in process.env
-      ? process.env.N3H_WORK_DIR
-      : path.resolve(path.join(
-        os.homedir(), '.nh3'))
-
-    // Move into working directory?
-    await mkdirp(this._workDir)
-    process.chdir(this._workDir)
+    this._workDir = workDir
 
     // Set ipcUri
     this._ipcUri = 'N3H_IPC_SOCKET' in process.env
