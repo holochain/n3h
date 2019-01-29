@@ -22,9 +22,18 @@ describe('file-logger Suite', () => {
     })
   })
 
-  afterEach(() => {
+  afterEach(async () => {
+    // some time for file creation to proceed
+    await $sleep(10)
+
+    // for windows... looks like we need to manually remove
+    for (let file of fs.readdirSync(d.name)) {
+      fs.unlinkSync(path.join(d.name, file))
+    }
+
     d.removeCallback()
     d = null
+
     l.cleanup()
     l = null
   })
@@ -38,7 +47,7 @@ describe('file-logger Suite', () => {
     await $sleep(10)
     l('w', 'test', 'four')
     await $sleep(0)
-    expect(fs.readdirSync(d.name).length).lessThan(3)
+    expect(fs.readdirSync(d.name).length).lessThan(4)
   })
 
   it('should log', async () => {
