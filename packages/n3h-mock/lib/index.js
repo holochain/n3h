@@ -504,7 +504,7 @@ class N3hMock extends AsyncClass {
 
   _bookkeepAddressWithBucket (book, bucketId, address) {
     if (!(bucketId in book)) {
-      let array = new Array()
+      let array = []
       array.push(address)
       book[bucketId] = array
       return
