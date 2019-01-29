@@ -1,6 +1,8 @@
 const crypto = require('crypto')
 
-// get loc out of a hash
+/**
+ * get loc out of a hash
+ */
 const getLoc = exports.getLoc = function getLoc (hash) {
   let loc = hash.readInt8(0)
   for (let i = 1; i < 32; i += 1) {
@@ -11,15 +13,19 @@ const getLoc = exports.getLoc = function getLoc (hash) {
   return b.toString('hex')
 }
 
-// hash a buffer
+/**
+ *  hash a buffer
+ */
 const getHash = exports.getHash = function getHash (buffer) {
   const hasher = crypto.createHash('sha256')
   hasher.update(buffer)
   return hasher.digest()
 }
 
-// input : json
-// output: entry ; which is: (buffer, hash, loc)
+/**
+ * Make a Mem.Entry out of some json data.
+ * Mem.Entry is: (buffer, hash, loc)
+ */
 const getEntry = exports.getEntry = function getEntry (data) {
   const buffer = Buffer.from(JSON.stringify(data), 'utf8')
   const hash = getHash(buffer)
@@ -30,28 +36,36 @@ const getEntry = exports.getEntry = function getEntry (data) {
   }
 }
 
-// Object for storing & retrieving data
+/**
+ * Object for storing & retrieving json data.
+ * Stored by hash and loc.
+ */
 class Mem {
-
-  // ctor
+  /**
+   * Ctor
+   */
   constructor () {
-    // main datastore
-    this._data = {}
-    // array of indexers: store with an indexing function
-    this._indexers = []
+    this._data = {} // main datastore
+    this._indexers = [] // array of indexers: store with an indexing function
   }
 
-  // add an indexer
-  // input: indexing function
-  // return the indexer's store
+  /**
+   * add an indexer
+   * @param {function} fn - indexing function
+   * @return {object} - the indexer's store
+   */
   registerIndexer (fn) {
     const store = {}
     this._indexers.push([store, fn])
     return store
   }
 
-  // store a json data
-  // return false if data was already inserted
+  /**
+   * Insert some json data in Mem.
+   * Inserted data will go through each registered indexer.
+   * @param {object} data - json data to store
+   * @return {bool} - false if data was already inserted
+   */
   insert (data) {
     // transform input into an entry
     const entry = getEntry(data)
@@ -72,7 +86,9 @@ class Mem {
     return true
   }
 
-  //
+  /**
+   *
+   */
   has (hash) {
     const loc = getLoc(Buffer.from(hash, 'base64'))
     if (!(loc in this._data)) {
@@ -84,7 +100,9 @@ class Mem {
     return false
   }
 
-  // return data from its hash
+  /**
+   * return data from its hash
+   */
   get (hash) {
     // get loc from hash
     const loc = getLoc(Buffer.from(hash, 'base64'))

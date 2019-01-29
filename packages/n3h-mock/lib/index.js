@@ -13,8 +13,11 @@ tweetlog.set('t')
 const log = tweetlog('@mock@')
 
 class N3hMock extends AsyncClass {
-  /// Network mock init.
-  /// Normally spawned by holochain_net where config is passed via environment variables
+
+  /**
+   * Network mock init.
+   * Normally spawned by holochain_net where config is passed via environment variables
+   */
   async init () {
     await super.init()
 
@@ -54,7 +57,7 @@ class N3hMock extends AsyncClass {
       await mkdirp(path.dirname(tmpUri.pathname))
     }
 
-    // Init "submodules" ?
+    // Init "submodules"
     await Promise.all([
       this._initIpc()
     ])
@@ -65,7 +68,10 @@ class N3hMock extends AsyncClass {
     console.log('#IPC-READY#')
   }
 
-  //
+
+  /**
+   *
+   */
   async run () {
     log.t('running')
   }
@@ -74,7 +80,9 @@ class N3hMock extends AsyncClass {
   // Private
   // ----------------------------------------------------------------------------------------------
 
-  // Set IPC function pointers on message received
+  /**
+   * Set IPC function pointers on message received
+   */
   async _initIpc () {
     this._ipc = await new IpcServer()
 
@@ -90,7 +98,10 @@ class N3hMock extends AsyncClass {
     log.t('bound to', this._ipc.boundEndpoint)
   }
 
-  // Received 'message' from IPC: process it
+
+  /**
+   * Received 'message' from IPC: process it
+   */
   _handleIpcMessage (opt) {
     if (opt.name === 'ping' || opt.name === 'pong') {
       return
@@ -279,7 +290,7 @@ class N3hMock extends AsyncClass {
           }
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
-          for (let entryAddress in opt.data.entryAddressList) {
+          for (const entryAddress of opt.data.entryAddressList) {
             if (entryAddress in knownPublishingList) {
               log.t('Entry is known ', entryAddress)
               continue
@@ -308,7 +319,7 @@ class N3hMock extends AsyncClass {
           }
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
-          for (let entryAddress in opt.data.entryAddressList) {
+          for (const entryAddress of opt.data.entryAddressList) {
             if (entryAddress in knownHoldingList) {
               continue
             }
@@ -378,6 +389,10 @@ class N3hMock extends AsyncClass {
     throw new Error('unexpected input ' + JSON.stringify(opt))
   }
 
+
+  /**
+   * get or create Mem field for the specific dna
+   */
   _getMemRef (dnaAddress) {
     if (!(dnaAddress in this._memory)) {
       const mem = new Mem()
@@ -426,6 +441,9 @@ class N3hMock extends AsyncClass {
     return this._memory[dnaAddress]
   }
 
+  /**
+   *
+   */
   _checkRequest (requestId) {
     if (!(requestId in this._requestBook)) {
       return ''
@@ -435,6 +453,9 @@ class N3hMock extends AsyncClass {
     return bucketId
   }
 
+  /**
+   *
+   */
   _track (dnaAddress, agentId, fromZmqId) {
     const ref = this._getMemRef(dnaAddress)
     // store agent (this will map agentId to transportId)
@@ -445,11 +466,11 @@ class N3hMock extends AsyncClass {
       transportId: fromZmqId
     })
     // also map agentId to transportId with in _senders
-    // const bucketId = this._CatDnaAgent(dnaAddress, agentId)
+    // const bucketId = this._catDnaAgent(dnaAddress, agentId)
     // log.t("tracking: '" + bucketId + "' for " + fromZmqId)
     this._senders[agentId] = fromZmqId
 
-    // send get lists
+    // send all 'get list' requests
     let requestId = this._createRequest(dnaAddress, agentId)
     this._ipc.send('json', {
       method: 'handleGetPublishingEntryList',
@@ -476,7 +497,7 @@ class N3hMock extends AsyncClass {
     })
   }
 
-  _CatDnaAgent (DnaHash, AgentId) {
+  _catDnaAgent (DnaHash, AgentId) {
     return '' + DnaHash + '::' + AgentId
   }
 
@@ -485,9 +506,8 @@ class N3hMock extends AsyncClass {
     return 'req_' + this._requestCount
   }
 
-  // create and return a new request_id
   _createRequest (dnaAddress, agentId) {
-    let bucketId = this._CatDnaAgent(dnaAddress, agentId)
+    let bucketId = this._catDnaAgent(dnaAddress, agentId)
     return this._createRequestWithBucket(bucketId)
   }
 
@@ -498,20 +518,15 @@ class N3hMock extends AsyncClass {
   }
 
   _bookkeepAddress (book, dnaAddress, agentId, address) {
-    const bucketId = this._CatDnaAgent(dnaAddress, agentId)
+    const bucketId = this._catDnaAgent(dnaAddress, agentId)
     this._bookkeepAddressWithBucket(book, bucketId, address)
   }
 
   _bookkeepAddressWithBucket (book, bucketId, address) {
     if (!(bucketId in book)) {
-      let array = []
-      array.push(address)
-      book[bucketId] = array
-      return
+      book[bucketId] = []
     }
-    let array = book[bucketId]
-    array.push(address)
-    book[bucketId] = array
+    book[bucketId].push(address)
   }
 }
 

@@ -17,8 +17,10 @@ const getHash = exports.getHash = function getHash (str) {
   return hasher.digest().toString('base64')
 }
 
-// _data is datastore of
-// Map(loc, Map(entryHash, (entryContent, meta:Map(metaHash, metaContent))))
+/**
+ * _data is datastore of
+ * Map(loc, Map(entryHash, (entryContent, meta:Map(metaHash, metaContent))))
+ */
 class Mem {
   constructor () {
     this._data = new Map()
@@ -83,7 +85,10 @@ class Mem {
     }
   }
 
-  // return true on success
+  /**
+   *  Insert a dhtEntry
+   * @returns {boolean} - return true on successful insertion
+   */
   insert (data) {
     if (!data || typeof data.address !== 'string' || !data.address.length) {
       throw new Error('cannot insert dhtEntry without string address')
@@ -101,6 +106,11 @@ class Mem {
     return false
   }
 
+  /**
+   * Insert a dhtMeta
+   * @param data
+   * @returns {boolean} - return true on successful insertion
+   */
   insertMeta (data) {
     if (!data || typeof data.entryAddress !== 'string' || !data.entryAddress.length) {
       throw new Error('cannot insert dhtMeta without string address')

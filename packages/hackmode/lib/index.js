@@ -34,7 +34,7 @@ class N3hHackMode extends AsyncClass {
     this._publishedMetaBook = {}
     this._storedMetaBook = {}
 
-    this._requestBook = {}
+    this._requestBook = new Map()
     this._requestCount = 0
 
     this._gossipState = {
@@ -259,8 +259,8 @@ class N3hHackMode extends AsyncClass {
         case 'handleFetchEntryResult':
           // Note: opt.data is a FetchEntryResultData
           // if this message is a response from our own request, do a publish
-          if (opt.data._id in this._requestBook) {
-            delete this._requestBook[opt.data._id]
+          if (this._requestBook.has(opt.data._id)) {
+            this._requestBook.delete(opt.data._id)
             this._getMemRef(opt.data.dnaAddress).mem.insert({
               type: 'dhtEntry',
               providerAgentId: opt.data.providerAgentId,
@@ -303,8 +303,8 @@ class N3hHackMode extends AsyncClass {
         case 'handleFetchMetaResult':
           // Note: opt.data is a FetchMetaResultData
           // if its from our own request do a publish
-          if (opt.data._id in this._requestBook) {
-            delete this._requestBook[opt.data._id]
+          if (this._requestBook.has(opt.data._id)) {
+            this._requestBook.delete(opt.data._id)
             this._getMemRef(opt.data.dnaAddress).mem.insertMeta({
               type: 'dhtMeta',
               providerAgentId: opt.data.providerAgentId,
@@ -354,8 +354,7 @@ class N3hHackMode extends AsyncClass {
 
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
-          for (let i = 0; i < opt.data.entryAddressList.length; i++) {
-            const entryAddress = opt.data.entryAddressList[i]
+          for (const entryAddress of opt.data.entryAddressList) {
             if (entryAddress in knownPublishingList) {
               log.t('Entry is known ', entryAddress)
               continue
@@ -385,8 +384,7 @@ class N3hHackMode extends AsyncClass {
           }
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
-          for (let i = 0; i < opt.data.entryAddressList.length; i++) {
-            const entryAddress = opt.data.entryAddressList[i]
+          for (const entryAddress of opt.data.entryAddressList) {
             if (entryAddress in knownHoldingList) {
               continue
             }
@@ -417,8 +415,8 @@ class N3hHackMode extends AsyncClass {
 
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
-          for (let i = 0; i < opt.data.metaList.length; i++) {
-            let metaId = opt.data.metaList[i]
+          for (const metaPair of opt.data.metaList) {
+            let metaId = this._catEntryAttribute(metaPair[0], metaPair[1])
             if (metaId in knownPublishingMetaList) {
               continue
             }
@@ -427,8 +425,8 @@ class N3hHackMode extends AsyncClass {
               dnaAddress: opt.data.dnaAddress,
               _id: this._createRequestWithBucket(bucketId),
               requesterAgentId: '',
-              entryAddress: metaId[0],
-              attribute: metaId[1]
+              entryAddress: metaPair[0],
+              attribute: metaPair[1]
             }
             this._ipc.send('json', fetchMeta)
           }
@@ -449,9 +447,8 @@ class N3hHackMode extends AsyncClass {
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
           // for (let entryAddress in opt.data.metaList) {
-          for (let i = 0; i < opt.data.metaList.length; i++) {
-            let metaPair = opt.data.metaList[i]
-            let metaId = this._CatEntryAttribute(metaPair[0], metaPair[1])
+          for (const metaPair of opt.data.metaList) {
+            let metaId = this._catEntryAttribute(metaPair[0], metaPair[1])
             if (metaId in knownHoldingMetaList) {
               continue
             }
@@ -472,7 +469,7 @@ class N3hHackMode extends AsyncClass {
     throw new Error('unexpected input ' + JSON.stringify(opt))
   }
 
-  /*
+  /**
    * Received a message from the network.
    * Might send some messages back and
    * transcribe received message into a local IPC message.
@@ -575,8 +572,10 @@ class N3hHackMode extends AsyncClass {
       opt.data))
   }
 
-  // Received a 'gossipHashHash'
-  // send back a 'gossipRequestLocHashes'
+  /**
+   *   Received a 'gossipHashHash'
+   *   Send back a 'gossipRequestLocHashes'
+   */
   _processGossipHashHash (fromId, gossipHashHash) {
     // we got a gossip response! push back next step 2 seconds
     this._pauseGossip(null, 2000)
@@ -652,7 +651,10 @@ class N3hHackMode extends AsyncClass {
     }
   }
 
-  /// send back a getDataResp
+
+  /**
+   * send back a getDataResp
+   */
   _processGetData (fromId, dnaAddress, hash) {
     // log.t('getData', fromId, dnaAddress, hash)
     if (dnaAddress in this._memory) {
@@ -668,7 +670,10 @@ class N3hHackMode extends AsyncClass {
     }
   }
 
-  /// Received GetDataResp back from our request: store the data received
+
+  /**
+   * Received GetDataResp back from our request: store the data received
+   */
   _processGetDataResp (dnaAddress, data) {
     if (dnaAddress in this._memory) {
       const ref = this._memory[dnaAddress].mem
@@ -685,7 +690,6 @@ class N3hHackMode extends AsyncClass {
     }
   }
 
-  /// get data store
   _getMemRef (dnaAddress) {
     if (!(dnaAddress in this._memory)) {
       const mem = new Mem()
@@ -707,7 +711,7 @@ class N3hHackMode extends AsyncClass {
       mem.registerIndexer((store, data) => {
         if (data && data.type === 'dhtMeta') {
           log.t('got dhtMeta', data)
-          const metaId = this._CatEntryAttribute(data.entryAddress, data.attribute)
+          const metaId = this._catEntryAttribute(data.entryAddress, data.attribute)
           this._bookkeepAddress(this._storedMetaBook, dnaAddress, metaId)
           this._ipc.send('json', {
             method: 'handleStoreMeta',
@@ -738,11 +742,11 @@ class N3hHackMode extends AsyncClass {
   }
 
   _checkRequest (requestId) {
-    if (!(requestId in this._requestBook)) {
+    if (!this._requestBook.has(requestId)) {
       return ''
     }
-    let bucketId = this._requestBook[requestId]
-    delete this._requestBook[requestId]
+    let bucketId = this._requestBook.get(requestId)
+    this._requestBook.delete(requestId)
     return bucketId
   }
 
@@ -784,12 +788,14 @@ class N3hHackMode extends AsyncClass {
     })
   }
 
-  _CatDnaAgent (DnaHash, AgentId) {
+  _catDnaAgent (DnaHash, AgentId) {
     return '' + DnaHash + '::' + AgentId
   }
 
-  // Make a metaId out of an entryAddress and an attribute
-  _CatEntryAttribute (entryAddress, attribute) {
+  /**
+   *   Make a metaId out of an entryAddress and an attribute
+   */
+  _catEntryAttribute (entryAddress, attribute) {
     return '' + entryAddress + '||' + attribute
   }
 
@@ -798,28 +804,25 @@ class N3hHackMode extends AsyncClass {
     return 'req_' + this._requestCount
   }
 
-  // create and return a new request_id
+  /**
+   *  create and return a new request_id
+   */
   _createRequest (dnaAddress, agentId) {
-    let bucketId = this._CatDnaAgent(dnaAddress, agentId)
+    let bucketId = this._catDnaAgent(dnaAddress, agentId)
     return this._createRequestWithBucket(bucketId)
   }
 
   _createRequestWithBucket (bucketId) {
     let reqId = this._generateRequestId()
-    this._requestBook[reqId] = bucketId
+    this._requestBook.set(reqId, bucketId)
     return reqId
   }
 
   _bookkeepAddress (book, dnaAddress, address) {
     if (!(dnaAddress in book)) {
-      let array = []
-      array.push(address)
-      book[dnaAddress] = array
-      return
+      book[dnaAddress] = []
     }
-    let array = book[dnaAddress]
-    array.push(address)
-    book[dnaAddress] = array
+    book[dnaAddress].push(address)
   }
 
   _pauseGossip (msg, ms) {
@@ -840,8 +843,9 @@ class N3hHackMode extends AsyncClass {
     })
   }
 
-  /// gossip tick: ask all hashes from next peer
-  /// p2p send gossipHashHash?
+  /**
+   * gossip tick: ask all hashes from next peer (send a p2p gossipHashHash)
+   */
   async _gossip () {
     // give the next step some space
     this._pauseGossip(null, 1000)
@@ -879,7 +883,9 @@ class N3hHackMode extends AsyncClass {
     })
   }
 
-  /// return an array of gossipHashHash (one per dna) to gossip
+  /**
+   *  return an array of gossipHashHash (one per dna) to gossip
+   */
   _fullGossipHashHash () {
     const out = []
     for (let dnaAddress in this._memory) {
