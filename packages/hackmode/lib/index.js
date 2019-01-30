@@ -58,9 +58,12 @@ class N3hHackMode extends AsyncClass {
 
     // make sure this is output despite our log settings
     console.log('#IPC-BINDING#:' + this._ipc.boundEndpoint)
+    /*
     for (let binding of this._p2p.getBindings()) {
       console.log('#P2P-BINDING#:' + binding)
     }
+    */
+    console.log('#P2P-BINDING#:' + this._p2p.getAdvertise())
     console.log('#IPC-READY#')
 
     this._gossipTimer = setInterval(() => this._checkGossip(), 200)
@@ -119,7 +122,6 @@ class N3hHackMode extends AsyncClass {
 
     const advertise = this._p2p.getAdvertise()
     log.i('p2p bound', advertise)
-    process.exit(1)
   }
 
   _peerBookInsert (id) {
