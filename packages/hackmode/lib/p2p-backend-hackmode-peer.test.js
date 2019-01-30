@@ -5,9 +5,9 @@ const msgpack = require('msgpack-lite')
 const { expect } = require('chai')
 
 const { P2p } = require('@holochain/n3h-mod-spec')
-const { P2pBackendGlue } = require('./glue')
+const { P2pBackendHackmodePeer } = require('./p2p-backend-hackmode-peer')
 
-describe('hackmode module glue Suite', () => {
+describe('hackmode module p2p peer backend Suite', () => {
   it('integration', async () => {
     const allNodes = []
 
@@ -34,14 +34,14 @@ describe('hackmode module glue Suite', () => {
         bind: ['wss://127.0.0.1:0/integration-test']
       })
 
-      const nodeBase = await new P2p(P2pBackendGlue, {
+      const nodeBase = await new P2p(P2pBackendHackmodePeer, {
         dht: JSON.parse(dht),
         connection: JSON.parse(connection),
         wssAdvertise: 'auto'
       })
       regNode(nodeBase)
 
-      const nodeFull = await new P2p(P2pBackendGlue, {
+      const nodeFull = await new P2p(P2pBackendHackmodePeer, {
         dht: JSON.parse(dht),
         connection: JSON.parse(connection),
         wssAdvertise: 'auto'
@@ -53,7 +53,7 @@ describe('hackmode module glue Suite', () => {
 
       await nodeFull.transportConnect(baseConnectUri)
 
-      const nodeNat = await new P2p(P2pBackendGlue, {
+      const nodeNat = await new P2p(P2pBackendHackmodePeer, {
         dht: JSON.parse(dht),
         connection: {
           passphrase: 'hello',

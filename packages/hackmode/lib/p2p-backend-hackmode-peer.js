@@ -22,7 +22,7 @@ const { DhtBackendFullsync } = require('@holochain/n3h-mod-dht-fullsync')
  * @param {string} [options.wssAdvertise] - if set, advertise this node as directly connectable on a wss port. if the special string "auto" is supplied, use the equivalent of `getBindings().next().value` as the address.
  * @param {string} [options.wssRelayPeer] - if set, advertise this node as relaying through a specific peer target at this peerTransport address. must be a direct address, not another relay.
  */
-class P2pBackendGlue extends AsyncClass {
+class P2pBackendHackmodePeer extends AsyncClass {
   /**
    */
   async init (spec, initOptions) {
@@ -394,4 +394,4 @@ class P2pBackendGlue extends AsyncClass {
   }
 }
 
-exports.P2pBackendGlue = P2pBackendGlue
+exports.P2pBackendHackmodePeer = P2pBackendHackmodePeer
