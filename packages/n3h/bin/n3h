@@ -47,7 +47,7 @@ async function main () {
         }
         return a.toString()
       }).join(' ')
-      console.log(`(${tag}) [${level}] ${args}`)
+      console.error(`(${tag}) [${level}] ${args}`)
     })
   }
 
