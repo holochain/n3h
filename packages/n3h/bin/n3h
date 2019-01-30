@@ -34,6 +34,21 @@ async function main () {
   tweetlog.set('t') // enable trace logging
   tweetlog.listen(logHandler)
 
+  const quietMode = 'N3H_QUIET' in process.env
+  if (!quietMode) {
+    tweetlog.listen((level, tag, ...args) => {
+      args = args.map(a => {
+        if (a instanceof Error) {
+          return a.stack || a.toString()
+        } else if (typeof a === 'object') {
+          return JSON.stringify(a)
+        }
+        return a.toString()
+      })
+      console.log(`(${tag}) [${level}] ${args}`)
+    })
+  }
+
   var n3hNode
   switch(mode) {
     case 'MOCK':

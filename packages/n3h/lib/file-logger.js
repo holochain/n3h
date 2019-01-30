@@ -7,8 +7,8 @@ const RE_PATH = /[\\/]/
  * Construct a tweetlog log listener that will write to rotating files
  * @param {object} [opts]
  * @param {string} [opts.dir] - defaults to '.'
- * @param {string} [opts.prefix] - defaults to 'n3h-log.'
- * @param {string} [opts.suffix] - defaults to '.log'
+ * @param {string} [opts.prefix] - defaults to ''
+ * @param {string} [opts.suffix] - defaults to '.n3h.log'
  * @param {number} [opts.rotateMs] - rotate log files at this frequency, defaults to 1 hour
  * @param {number} [opts.keepCount] - keep this count log files, defaults to 4
  * @param {number} [opts.flushMs] - flush to file system at this frequency, defaults to 0, if <= 0, flush on every log
@@ -16,8 +16,8 @@ const RE_PATH = /[\\/]/
 exports.buildLogHandler = opts => {
   opts || (opts = {})
   const dir = opts.dir || '.'
-  const prefix = opts.prefix || 'n3h-log.'
-  const suffix = opts.suffix || '.log'
+  const prefix = opts.prefix || ''
+  const suffix = opts.suffix || '.n3h.log'
   const rotateMs = opts.rotateMs || (1000 * 60 * 60)
   const keepCount = opts.keepCount || 4
   // const flushMs = opts.flushMs || 0
