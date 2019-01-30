@@ -4,12 +4,16 @@ const { URL } = require('url')
 
 const { AsyncClass, mkdirp, $p } = require('@holochain/n3h-common')
 const { IpcServer } = require('@holochain/n3h-ipc')
-const { LibP2pBundle } = require('@holochain/n3h-mod-message-libp2p')
+
+const { P2p } = require('@holochain/n3h-mod-spec')
+const { P2pBackendGlue } = require('./glue')
+
+// const { LibP2pBundle } = require('@holochain/n3h-mod-message-libp2p')
 
 const { Mem } = require('./mem')
 
-const PeerInfo = require('peer-info')
-const PeerId = require('peer-id')
+// const PeerInfo = require('peer-info')
+// const PeerId = require('peer-id')
 
 const tweetlog = require('@holochain/tweetlog')
 const log = tweetlog('@hackmode@')
@@ -84,6 +88,7 @@ class N3hHackMode extends AsyncClass {
   }
 
   async _initP2p () {
+    /*
     const peerInfo = this._peerInfo = new PeerInfo(await $p(PeerId.create.bind(
       PeerId, { bits: 512 })))
 
@@ -100,6 +105,21 @@ class N3hHackMode extends AsyncClass {
     this._p2p.on('handleSend', opt => this._handleP2pMessage(opt))
 
     log.i('p2p bound', JSON.stringify(this._p2p.getBindings(), null, 2))
+    */
+    this._p2p = await new P2p(P2pBackendGlue, {
+      dht: {},
+      connection: {
+        passphrase: 'hello',
+        bind: ['wss://0.0.0.0:8443/']
+      },
+      wssAdvertise: 'auto'
+      // TODO wssRelayPeer
+      // wssRelayPeers: [ bootstrap node ]
+    })
+
+    const advertise = this._p2p.getAdvertise()
+    log.i('p2p bound', advertise)
+    process.exit(1)
   }
 
   _peerBookInsert (id) {

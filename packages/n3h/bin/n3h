@@ -46,7 +46,7 @@ async function main () {
           return JSON.stringify(a)
         }
         return a.toString()
-      })
+      }).join(' ')
       console.log(`(${tag}) [${level}] ${args}`)
     })
   }
