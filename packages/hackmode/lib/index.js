@@ -12,17 +12,10 @@ const PeerInfo = require('peer-info')
 const PeerId = require('peer-id')
 
 const tweetlog = require('@holochain/tweetlog')
-tweetlog.set('t')
-
-/// in hackmode, we need to always output on stderr
-tweetlog.listen((l, t, ...a) => {
-  console.error(`(${t}) [${l}] ${a.map(a => a.stack || (Array.isArray(a) || typeof a === 'object') ? JSON.stringify(a) : a.toString()).join(' ')}`)
-})
-
 const log = tweetlog('@hackmode@')
 
 class N3hHackMode extends AsyncClass {
-  async init () {
+  async init (workDir) {
     await super.init()
 
     this._memory = {}
@@ -42,13 +35,7 @@ class N3hHackMode extends AsyncClass {
       pauseUntil: 0
     }
 
-    this._workDir = 'N3H_WORK_DIR' in process.env
-      ? process.env.N3H_WORK_DIR
-      : path.resolve(path.join(
-        os.homedir(), '.nh3'))
-
-    await mkdirp(this._workDir)
-    process.chdir(this._workDir)
+    this._workDir = workDir
 
     this._ipcUri = 'N3H_IPC_SOCKET' in process.env
       ? process.env.N3H_IPC_SOCKET
@@ -651,7 +638,6 @@ class N3hHackMode extends AsyncClass {
     }
   }
 
-
   /**
    * send back a getDataResp
    */
@@ -669,7 +655,6 @@ class N3hHackMode extends AsyncClass {
       }
     }
   }
-
 
   /**
    * Received GetDataResp back from our request: store the data received

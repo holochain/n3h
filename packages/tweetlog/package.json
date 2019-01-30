@@ -40,5 +40,8 @@
       "lcov",
       "text-summary"
     ]
+  },
+  "generate-docs": {
+    "tweetlog": "lib/tweetlog.js"
   }
 }

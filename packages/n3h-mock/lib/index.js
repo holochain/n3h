@@ -8,17 +8,14 @@ const { IpcServer } = require('@holochain/n3h-ipc')
 const { Mem } = require('./mem')
 
 const tweetlog = require('@holochain/tweetlog')
-tweetlog.set('t')
-
 const log = tweetlog('@mock@')
 
 class N3hMock extends AsyncClass {
-
   /**
    * Network mock init.
    * Normally spawned by holochain_net where config is passed via environment variables
    */
-  async init () {
+  async init (workDir) {
     await super.init()
 
     log.t('Initializing...')
@@ -37,14 +34,7 @@ class N3hMock extends AsyncClass {
     this._requestCount = 0
 
     // Set working directory from config (a temp folder) or default to $home/.n3h
-    this._workDir = 'N3H_WORK_DIR' in process.env
-      ? process.env.N3H_WORK_DIR
-      : path.resolve(path.join(
-        os.homedir(), '.nh3'))
-
-    // Move into working directory?
-    await mkdirp(this._workDir)
-    process.chdir(this._workDir)
+    this._workDir = workDir
 
     // Set ipcUri
     this._ipcUri = 'N3H_IPC_SOCKET' in process.env
@@ -67,7 +57,6 @@ class N3hMock extends AsyncClass {
     console.log('#IPC-BINDING#:' + this._ipc.boundEndpoint)
     console.log('#IPC-READY#')
   }
-
 
   /**
    *
@@ -97,7 +86,6 @@ class N3hMock extends AsyncClass {
 
     log.t('bound to', this._ipc.boundEndpoint)
   }
-
 
   /**
    * Received 'message' from IPC: process it
@@ -285,7 +273,7 @@ class N3hMock extends AsyncClass {
           }
           // get already known publishing list
           let knownPublishingList = {}
-          if(bucketId in this._publishedEntryBook) {
+          if (bucketId in this._publishedEntryBook) {
             knownPublishingList = this._publishedEntryBook[bucketId]
           }
           // Update my book-keeping on what this agent has.
@@ -388,7 +376,6 @@ class N3hMock extends AsyncClass {
 
     throw new Error('unexpected input ' + JSON.stringify(opt))
   }
-
 
   /**
    * get or create Mem field for the specific dna
