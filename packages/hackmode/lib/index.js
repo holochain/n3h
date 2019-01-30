@@ -3,11 +3,11 @@ const os = require('os')
 const { URL } = require('url')
 const msgpack = require('msgpack-lite')
 
-const { AsyncClass, mkdirp, $p } = require('@holochain/n3h-common')
+const { AsyncClass, mkdirp } = require('@holochain/n3h-common')
 const { IpcServer } = require('@holochain/n3h-ipc')
 
 const { P2p } = require('@holochain/n3h-mod-spec')
-const { P2pBackendGlue } = require('./glue')
+const { P2pBackendHackmodePeer } = require('./p2p-backend-hackmode-peer')
 
 // const { LibP2pBundle } = require('@holochain/n3h-mod-message-libp2p')
 
@@ -110,7 +110,7 @@ class N3hHackMode extends AsyncClass {
 
     log.i('p2p bound', JSON.stringify(this._p2p.getBindings(), null, 2))
     */
-    this._p2p = await new P2p(P2pBackendGlue, {
+    this._p2p = await new P2p(P2pBackendHackmodePeer, {
       dht: {},
       connection: {
         passphrase: 'hello',
