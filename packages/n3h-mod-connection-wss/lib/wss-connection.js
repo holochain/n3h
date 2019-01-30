@@ -5,6 +5,7 @@ const Wss = require('ws')
 
 const { AsyncClass } = require('@holochain/n3h-common')
 const { WssServer } = require('./wss-server')
+const { ConnectionEvent } = require('@holochain/n3h-mod-spec')
 
 const agent = new https.Agent({
   rejectUnauthorized: false
@@ -114,7 +115,7 @@ class ConnectionBackendWss extends AsyncClass {
 
       this._cons.set(id, ws)
       this._spec.$registerCon(id, 'remote-wss://' + req.connection.remoteAddress + ':' + req.connection.remotePort)
-      await this._spec.$emitConnection(id)
+      await this._spec.$emitEvent(ConnectionEvent.connection(id))
     })
 
     srv.on('error', e => {
@@ -127,7 +128,7 @@ class ConnectionBackendWss extends AsyncClass {
     console.log('listening at ' + srv.address())
 
     this._servers.push(srv)
-    await this._spec.$emitBind([srv.address()])
+    await this._spec.$emitEvent(ConnectionEvent.bind([srv.address()]))
   }
 
   /**
@@ -163,24 +164,34 @@ class ConnectionBackendWss extends AsyncClass {
     this._spec.$registerCon(id, conSpec)
     this._cons.set(id, ws)
 
-    await this._spec.$emitConnect(id)
+    await this._spec.$emitEvent(ConnectionEvent.connect(id))
   }
 
   /**
    * send a message to a remote peer
-   * @param {string} id - the remote peer identifier
+   * @param {array} idList - the remote peer identifiers
    * @param {Buffer} buf - the binary data to transmit
    */
-  async send (id, buf) {
+  async send (idList, buf) {
     if (this.$isDestroyed()) {
       return
     }
 
-    if (!this._cons.has(id)) {
-      throw new Error('unknown connection id: ' + id)
+    for (let id of idList) {
+      if (!this._cons.has(id)) {
+        throw new Error('unknown connection id: ' + id)
+      }
+      const ws = this._cons.get(id)
+      ws.send(buf)
     }
-    const ws = this._cons.get(id)
-    ws.send(buf)
+  }
+
+  /**
+   * wss does not have an unreliable send method
+   * just forward these to send
+   */
+  async sendUnreliable (idList, buf) {
+    return this.send(idList, buf)
   }
 
   /**
@@ -218,7 +229,7 @@ class ConnectionBackendWss extends AsyncClass {
         return
       }
 
-      await this._spec.$emitConError(id, e)
+      await this._spec.$emitEvent(ConnectionEvent.conError(id, e))
     })
 
     ws.on('close', async (code, reason) => {
@@ -236,7 +247,7 @@ class ConnectionBackendWss extends AsyncClass {
 
       lastMsg()
 
-      await this._spec.$emitMessage(id, msg)
+      await this._spec.$emitEvent(ConnectionEvent.message(id, msg))
     })
 
     ws.on('ping', buf => {
@@ -257,7 +268,8 @@ class ConnectionBackendWss extends AsyncClass {
     }
 
     if (this._spec.has(id)) {
-      await this._spec.$emitClose(id)
+      const data = this._spec.get(id)
+      await this._spec.$emitEvent(ConnectionEvent.close(id, data))
       this._spec.$removeCon(id)
     }
   }

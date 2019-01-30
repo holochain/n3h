@@ -1,7 +1,7 @@
 {
-  "name": "@holochain/n3h-common",
+  "name": "@holochain/n3h-mod-dht-fullsync",
   "version": "0.0.1",
-  "description": "some utilities to share among n3h subprojects",
+  "description": "n3h module implementing a backend for dht spec - full sync (non-sharded)",
   "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
@@ -19,19 +19,25 @@
     "sinon": "^7.1.1",
     "standard": "^12.0.1"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@holochain/n3h-common": "0.0.1",
+    "@holochain/n3h-mod-spec": "0.0.1",
+    "@holochain/hc-dpki": "0.0.1",
+    "msgpack-lite": "^0.1.26"
+  },
   "standard": {
     "env": {
       "mocha": true
     }
   },
   "nyc": {
-    "check-coverage": true,
+    "check-coverage": false,
     "per-file": false,
     "lines": 80,
     "statements": 80,
     "functions": 80,
     "branches": 80,
+    "all": true,
     "include": [
       "./lib/**/*.js"
     ],
@@ -39,8 +45,5 @@
       "lcov",
       "text-summary"
     ]
-  },
-  "generate-docs": {
-    "type": "lib/type.js"
   }
 }

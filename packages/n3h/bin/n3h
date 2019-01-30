@@ -8,6 +8,8 @@ const tweetlog = require('@holochain/tweetlog')
 
 const { buildLogHandler } = require('../lib/file-logger')
 const { N3hNode, N3hHackMode, N3hMock } = require('../lib/index')
+const { unhandledRejection } = require('@holochain/n3h-common')
+unhandledRejection.strict()
 
 async function main () {
   const workDir = 'N3H_WORK_DIR' in process.env

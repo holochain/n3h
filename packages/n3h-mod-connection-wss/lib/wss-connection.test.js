@@ -16,12 +16,7 @@ describe('Wss Connection Suite', () => {
       rsaBits: 1024
     })
 
-    c.on('error', e => b.push(['error', e]))
-    c.on('bind', s => b.push(['bind', s]))
-    c.on('connect', c => b.push(['connect', c]))
-    c.on('connection', c => b.push(['connection', c]))
-    c.on('message', (c, buf) => b.push(['message', c, buf]))
-    c.on('close', c => b.push(['close', c]))
+    c.on('event', e => b.push(e))
 
     console.log('binding, may generate cert')
     await c.bind('wss://0.0.0.0:0/hello-test')
@@ -41,32 +36,32 @@ describe('Wss Connection Suite', () => {
       console.log('[' + ts + ' ms]', ...args)
     }
 
-    const waitSend = async (id, buf) => {
+    const waitSend = async (idList, buf) => {
       let bidx = b.length
-      await c.send(id, buf)
+      await c.send(idList, buf)
       for (;;) {
         await $sleep(10)
         for (let i = bidx; i < b.length; ++i) {
-          if (b[i][0] === 'message') {
+          if (b[i].type === 'message') {
             return
           }
         }
       }
     }
 
-    const srvAddr = b[0][1][0]
+    const srvAddr = b[0].boundUriList[0]
 
     lstep('connect')
     await c.connect(srvAddr)
 
-    const con1 = b[1][1].id
-    const con2 = b[2][1].id
+    const con1 = b[1].id
+    const con2 = b[2].id
 
     lstep('send1')
-    await waitSend(con1, Buffer.from('test1'))
+    await waitSend([con1], Buffer.from('test1').toString('base64'))
 
     lstep('send2')
-    await waitSend(con2, Buffer.from('test2'))
+    await waitSend([con2], Buffer.from('test2').toString('base64'))
 
     lstep('close1')
     await c.close(con1)
@@ -76,7 +71,7 @@ describe('Wss Connection Suite', () => {
       for (;;) {
         await $sleep(10)
         for (let i of b) {
-          if (i[0] === 'close' && i[1].spec === srvAddr) {
+          if (i.type === 'close' && i.data.spec === srvAddr) {
             return
           }
         }
@@ -86,7 +81,7 @@ describe('Wss Connection Suite', () => {
     lstep('destroy')
     await c.destroy()
 
-    expect(b.map(b => b[0])).deep.equals([
+    expect(b.map(b => b.type)).deep.equals([
       'bind',
       'connection',
       'connect',
