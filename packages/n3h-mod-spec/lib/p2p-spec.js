@@ -8,11 +8,32 @@ const {
 const P2pEvent = createEventSpec({
   /**
    */
-  message: (fromPeerAddress, msgId, data) => {
+  handleRequest: (fromPeerAddress, msgId, data) => {
     type.assert.base64String(fromPeerAddress)
     type.assert.string(msgId)
     type.assert.base64String(data)
     return { fromPeerAddress, msgId, data }
+  },
+
+  /**
+   */
+  handlePublish: (fromPeerAddress, data) => {
+    type.assert.base64String(fromPeerAddress)
+    type.assert.base64String(data)
+    return { fromPeerAddress, data }
+  },
+
+  /**
+   */
+  peerConnect: (peerAddress) => {
+    type.assert.base64String(peerAddress)
+    return { peerAddress }
+  },
+
+  /**
+   */
+  peerDisconnect: (peerAddress) => {
+    throw new Error('unimplemented')
   }
 })
 
@@ -135,7 +156,7 @@ class P2p extends AsyncClass {
     }
 
     switch (evt.type) {
-      case 'message':
+      case 'handleRequest':
         const locMsgId = this.$createUid()
         this._respondTrack.track(locMsgId).then(async data => {
           return this._backend.respondReliable(
@@ -147,9 +168,13 @@ class P2p extends AsyncClass {
           }
         })
 
-        const newMessage = P2pEvent.message(
+        const newMessage = P2pEvent.handleRequest(
           evt.fromPeerAddress, locMsgId, evt.data)
         return this.emit('event', newMessage)
+      case 'handlePublish':
+      case 'peerConnect':
+      case 'peerDisconnect':
+        return this.emit('event', evt)
       default:
         throw new Error('invalid P2pEvent type: ' + evt.type)
     }
@@ -162,8 +187,8 @@ class P2p extends AsyncClass {
       return
     }
 
-    if (!P2pEvent.isEvent(evt) || evt.type !== 'message') {
-      throw new Error('can only check P2pEvent.message instances')
+    if (!P2pEvent.isEvent(evt) || evt.type !== 'handleRequest') {
+      throw new Error('can only check P2pEvent.handleRequest instances')
     }
 
     return this._requestTrack.resolve(evt.msgId, evt.data.toString('base64'))

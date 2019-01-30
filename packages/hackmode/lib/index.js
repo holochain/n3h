@@ -1,6 +1,7 @@
 const path = require('path')
 const os = require('os')
 const { URL } = require('url')
+const msgpack = require('msgpack-lite')
 
 const { AsyncClass, mkdirp, $p } = require('@holochain/n3h-common')
 const { IpcServer } = require('@holochain/n3h-ipc')
@@ -113,15 +114,25 @@ class N3hHackMode extends AsyncClass {
       dht: {},
       connection: {
         passphrase: 'hello',
-        bind: ['wss://0.0.0.0:8443/']
+        rsaBits: 1024, // TODO - use 4096 && config to 1024 for testing
+        bind: ['wss://0.0.0.0:0/']
       },
       wssAdvertise: 'auto'
       // TODO wssRelayPeer
       // wssRelayPeers: [ bootstrap node ]
     })
 
+    this._p2p.on('event', evt => this._handleP2pEvent(evt))
+
     const advertise = this._p2p.getAdvertise()
     log.i('p2p bound', advertise)
+  }
+
+  async _p2pSend (peerAddress, obj) {
+    return this._p2p.publishReliable(
+      [peerAddress],
+      msgpack.encode(obj).toString('base64')
+    )
   }
 
   _peerBookInsert (id) {
@@ -165,7 +176,7 @@ class N3hHackMode extends AsyncClass {
             return
           }
           tId = ref.agentToTransportId[opt.data.toAgentId]
-          this._p2p.send(tId, {
+          this._p2pSend(tId, {
             type: 'failureResult',
             dnaAddress: opt.data.dnaAddress,
             _id: opt.data._id,
@@ -178,11 +189,11 @@ class N3hHackMode extends AsyncClass {
             method: 'state',
             state: 'ready',
             id: this._p2p.getId(),
-            bindings: this._p2p.getBindings()
+            bindings: [this._p2p.getAdvertise()]
           })
           return
         case 'connect':
-          this._p2p.connect(opt.data.address).then(() => {
+          this._p2p.transportConnect(opt.data.address).then(() => {
             log.t('connected', opt.data.address)
           }, (err) => {
             log.e('connect (' + opt.data.address + ') failed', err.toString())
@@ -204,7 +215,7 @@ class N3hHackMode extends AsyncClass {
             return
           }
           tId = ref.agentToTransportId[opt.data.toAgentId]
-          this._p2p.send(tId, {
+          this._p2pSend(tId, {
             type: 'handleSendMessage',
             _id: opt.data._id,
             dnaAddress: opt.data.dnaAddress,
@@ -226,7 +237,7 @@ class N3hHackMode extends AsyncClass {
             return
           }
           tId = ref.agentToTransportId[opt.data.toAgentId]
-          this._p2p.send(tId, {
+          this._p2pSend(tId, {
             type: 'sendMessageResult',
             _id: opt.data._id,
             dnaAddress: opt.data.dnaAddress,
@@ -292,7 +303,7 @@ class N3hHackMode extends AsyncClass {
             return
           }
           tId = ref.agentToTransportId[opt.data.requesterAgentId]
-          this._p2p.send(tId, {
+          this._p2pSend(tId, {
             type: 'fetchEntryResult',
             _id: opt.data._id,
             dnaAddress: opt.data.dnaAddress,
@@ -336,7 +347,7 @@ class N3hHackMode extends AsyncClass {
             return
           }
           tId = ref.agentToTransportId[opt.data.requesterAgentId]
-          this._p2p.send(tId, {
+          this._p2pSend(tId, {
             type: 'fetchMetaResult',
             _id: opt.data._id,
             dnaAddress: opt.data.dnaAddress,
@@ -478,6 +489,22 @@ class N3hHackMode extends AsyncClass {
     throw new Error('unexpected input ' + JSON.stringify(opt))
   }
 
+  _handleP2pEvent (evt) {
+    switch (evt.type) {
+      case 'peerConnect':
+        this._peerBookInsert(evt.peerAddress)
+        break
+      case 'handlePublish':
+        this._handleP2pMessage({
+          from: evt.fromPeerAddress,
+          data: msgpack.decode(Buffer.from(evt.data, 'base64'))
+        })
+        break
+      default:
+        throw new Error('unexpected event type: ' + evt.type)
+    }
+  }
+
   /**
    * Received a message from the network.
    * Might send some messages back and
@@ -491,7 +518,7 @@ class N3hHackMode extends AsyncClass {
         this._processGossipHashHash(opt.from, opt.data.gossipHashHash)
         const gossipHashHash = this._fullGossipHashHash()
         // log.t('gossip (resp) with', opt.from, JSON.stringify(gossipHashHash))
-        this._p2p.send(opt.from, {
+        this._p2pSend(opt.from, {
           type: 'gossipHashHashResp',
           gossipHashHash
         })
@@ -607,7 +634,7 @@ class N3hHackMode extends AsyncClass {
       return
     }
 
-    this._p2p.send(fromId, {
+    this._p2pSend(fromId, {
       type: 'gossipRequestLocHashes',
       locList
     })
@@ -634,7 +661,7 @@ class N3hHackMode extends AsyncClass {
       }
     }
 
-    this._p2p.send(fromId, {
+    this._p2pSend(fromId, {
       type: 'gossipHashList',
       hashList
     })
@@ -650,7 +677,7 @@ class N3hHackMode extends AsyncClass {
     for (let hl of hashList) {
       if (hl.dnaAddress in this._memory) {
         for (let hash of hl.hashList) {
-          this._p2p.send(fromId, {
+          this._p2pSend(fromId, {
             type: 'getData',
             dnaAddress: hl.dnaAddress,
             hash
@@ -669,7 +696,7 @@ class N3hHackMode extends AsyncClass {
       const ref = this._memory[dnaAddress].mem
       if (ref.has(hash)) {
         const data = ref.get(hash)
-        this._p2p.send(fromId, {
+        this._p2pSend(fromId, {
           type: 'getDataResp',
           dnaAddress: dnaAddress,
           data
@@ -884,7 +911,7 @@ class N3hHackMode extends AsyncClass {
 
     // log.t('gossip with', thisGossipPeer, JSON.stringify(gossipHashHash))
 
-    this._p2p.send(thisGossipPeer, {
+    this._p2pSend(thisGossipPeer, {
       type: 'gossipHashHash',
       gossipHashHash
     })

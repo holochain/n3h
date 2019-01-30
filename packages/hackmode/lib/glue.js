@@ -373,18 +373,24 @@ class P2pBackendGlue extends AsyncClass {
           rem.peerData,
           rem.peerTs
         ))
+        await this._spec.$emitEvent(P2pEvent.peerConnect(rem.peerAddress))
         break
       case '$gossip$':
         await this._dht.post(DhtEvent.remoteGossipBundle(
           fromPeerAddress, message.toString('base64')))
         break
+      case '$publish$':
+        await this._spec.$emitEvent(P2pEvent.handlePublish(
+          fromPeerAddress, message.toString('base64')
+        ))
+        break
       case '$request$':
-        await this._spec.$emitEvent(P2pEvent.message(
+        await this._spec.$emitEvent(P2pEvent.handleRequest(
           fromPeerAddress, msgId, message.toString('base64')
         ))
         break
       case '$response$':
-        await this._spec.$checkResolveRequest(P2pEvent.message(
+        await this._spec.$checkResolveRequest(P2pEvent.handleRequest(
           fromPeerAddress, msgId, message.toString('base64')
         ))
         break

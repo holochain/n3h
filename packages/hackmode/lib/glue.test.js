@@ -14,14 +14,23 @@ describe('hackmode module glue Suite', () => {
     const regNode = (node) => {
       allNodes.push(node)
       node.on('event', e => {
-        const data = msgpack.decode(Buffer.from(e.data, 'base64'))
-        switch (data.type) {
-          case 'echo':
-            node.respondReliable(
-              e.msgId, Buffer.from('echo: ' + data.data).toString('base64'))
+        switch (e.type) {
+          case 'handleRequest':
+            const data = msgpack.decode(Buffer.from(e.data, 'base64'))
+            switch (data.type) {
+              case 'echo':
+                node.respondReliable(
+                  e.msgId, Buffer.from('echo: ' + data.data).toString('base64'))
+                break
+              default:
+                throw new Error('unexpected request type: ' + data.type)
+            }
+            break
+          case 'peerConnect':
+            console.log('GOT PEER:', e.peerAddress)
             break
           default:
-            throw new Error('unexpected request type: ' + data.type)
+            throw new Error('unexpected event type: ' + e.type)
         }
       })
     }
