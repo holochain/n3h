@@ -17,6 +17,10 @@ const getHash = exports.getHash = function getHash (str) {
   return hasher.digest().toString('base64')
 }
 
+/**
+ * _data is datastore of
+ * Map(loc, Map(entryHash, (entryContent, meta:Map(metaHash, metaContent))))
+ */
 class Mem {
   constructor () {
     this._data = new Map()
@@ -31,6 +35,7 @@ class Mem {
   }
 
   /**
+   * Called at every insert.
    * we need a way to generate consistent hashes
    * (that is, work around insertion order)
    */
@@ -59,9 +64,11 @@ class Mem {
 
   _getEntry (address) {
     const loc = getLoc(address)
+    // create new loc on first address in this loc
     if (!this._data.has(loc)) {
       this._data.set(loc, new Map())
     }
+    // if loc does not have address, create empty Entry for this address
     const ref = this._data.get(loc)
     if (!ref.has(address)) {
       ref.set(address, {
@@ -78,12 +85,18 @@ class Mem {
     }
   }
 
+  /**
+   *  Insert a dhtEntry
+   * @returns {boolean} - return true on successful insertion
+   */
   insert (data) {
     if (!data || typeof data.address !== 'string' || !data.address.length) {
-      throw new Error('cannot insert without string address')
+      throw new Error('cannot insert dhtEntry without string address')
     }
+    // get current entry at address or create empty entry
     const entry = this._getEntry(data.address)
     const strData = JSON.stringify(data)
+    // if entry is different from previously stored entry, update it
     if (entry.entry !== strData) {
       entry.entry = strData
       this._genLocHashes()
@@ -93,13 +106,21 @@ class Mem {
     return false
   }
 
+  /**
+   * Insert a dhtMeta
+   * @param data
+   * @returns {boolean} - return true on successful insertion
+   */
   insertMeta (data) {
-    if (!data || typeof data.address !== 'string' || !data.address.length) {
-      throw new Error('cannot insert without string address')
+    if (!data || typeof data.entryAddress !== 'string' || !data.entryAddress.length) {
+      throw new Error('cannot insert dhtMeta without string address')
     }
-    const entry = this._getEntry(data.address)
+    // get current entry at address or create empty entry
+    const entry = this._getEntry(data.entryAddress)
     const strData = JSON.stringify(data)
+    // create hash of metadata
     const hash = getHash(strData)
+    // add meta to entry's meta Map
     if (!entry.meta.has(hash)) {
       entry.meta.set(hash, strData)
       this._genLocHashes()
