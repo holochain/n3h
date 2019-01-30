@@ -1,25 +1,66 @@
 #!/usr/bin/env node
 
+const path = require('path')
+const os = require('os')
+
+const { mkdirp } = require('@holochain/n3h-common')
+const tweetlog = require('@holochain/tweetlog')
+
+const { buildLogHandler } = require('../lib/file-logger')
 const { N3hNode, N3hHackMode, N3hMock } = require('../lib/index')
 const { unhandledRejection } = require('@holochain/n3h-common')
 unhandledRejection.strict()
 
 async function main () {
+  const workDir = 'N3H_WORK_DIR' in process.env
+    ? process.env.N3H_WORK_DIR
+    : path.resolve(path.join(
+      os.homedir(), '.n3h'))
+
+  // Move into working directory?
+  await mkdirp(workDir)
+  process.chdir(workDir)
 
   const mode = 'N3H_MODE' in process.env
     ? process.env.N3H_MODE
     : null
 
+  const logDir = path.join(workDir, 'logs')
+  await mkdirp(logDir)
+
+  const logHandler = buildLogHandler({
+    dir: logDir
+  })
+
+  // setup logging
+  tweetlog.set('t') // enable trace logging
+  tweetlog.listen(logHandler)
+
+  const quietMode = 'N3H_QUIET' in process.env
+  if (!quietMode) {
+    tweetlog.listen((level, tag, ...args) => {
+      args = args.map(a => {
+        if (a instanceof Error) {
+          return a.stack || a.toString()
+        } else if (typeof a === 'object') {
+          return JSON.stringify(a)
+        }
+        return a.toString()
+      })
+      console.log(`(${tag}) [${level}] ${args}`)
+    })
+  }
+
   var n3hNode
   switch(mode) {
     case 'MOCK':
-      n3hNode = await new N3hMock()
+      n3hNode = await new N3hMock(workDir)
       break
     case 'HACK':
-      n3hNode = await new N3hHackMode()
+      n3hNode = await new N3hHackMode(workDir)
       break
     default:
-      n3hNode = await N3hNode.constructDefault()
+      n3hNode = await N3hNode.constructDefault(workDir)
   }
 
   let terminated = false
@@ -29,9 +70,13 @@ async function main () {
     }
     try {
       await n3hNode.destroy()
+      logHandler.cleanup()
       console.log('n3h exited cleanly')
       process.exit(0)
     } catch (e) {
+      try {
+        logHandler.cleanup()
+      } catch (e) { /* pass */ }
       console.error(e.stack || e.toString())
       process.exit(1)
     }
