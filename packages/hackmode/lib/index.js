@@ -9,12 +9,7 @@ const { IpcServer } = require('@holochain/n3h-ipc')
 const { P2p } = require('@holochain/n3h-mod-spec')
 const { P2pBackendHackmodePeer } = require('./p2p-backend-hackmode-peer')
 
-// const { LibP2pBundle } = require('@holochain/n3h-mod-message-libp2p')
-
 const { Mem } = require('./mem')
-
-// const PeerInfo = require('peer-info')
-// const PeerId = require('peer-id')
 
 const tweetlog = require('@holochain/tweetlog')
 const log = tweetlog('@hackmode@')
@@ -59,11 +54,6 @@ class N3hHackMode extends AsyncClass {
 
     // make sure this is output despite our log settings
     console.log('#IPC-BINDING#:' + this._ipc.boundEndpoint)
-    /*
-    for (let binding of this._p2p.getBindings()) {
-      console.log('#P2P-BINDING#:' + binding)
-    }
-    */
     console.log('#P2P-BINDING#:' + this._p2p.getAdvertise())
     console.log('#IPC-READY#')
 
@@ -92,24 +82,6 @@ class N3hHackMode extends AsyncClass {
   }
 
   async _initP2p () {
-    /*
-    const peerInfo = this._peerInfo = new PeerInfo(await $p(PeerId.create.bind(
-      PeerId, { bits: 512 })))
-
-    peerInfo.multiaddrs.add('/ip4/0.0.0.0/tcp/0')
-
-    this._p2p = await new LibP2pBundle({
-      peerInfo
-    })
-
-    this._p2p.on('peerConnected', id => {
-      this._peerBookInsert(id)
-    })
-
-    this._p2p.on('handleSend', opt => this._handleP2pMessage(opt))
-
-    log.i('p2p bound', JSON.stringify(this._p2p.getBindings(), null, 2))
-    */
     this._p2p = await new P2p(P2pBackendHackmodePeer, {
       dht: {},
       connection: {

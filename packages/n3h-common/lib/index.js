@@ -7,6 +7,7 @@ exports.createEventSpec = require('./event').createEventSpec
 exports.Executor = require('./exec').Executor
 exports.Track = require('./track').Track
 exports.type = require('./type')
+exports.config = require('./config')
 
 const rejectionHandler = {
   state: false,
