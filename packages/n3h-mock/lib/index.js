@@ -214,11 +214,12 @@ class N3hMock extends AsyncClass {
         case 'publishMeta':
           // Note: opt.data is a DhtMetaData
           // Bookkeep
+          let metaId = this._catEntryAttribute(opt.data.entryAddress, opt.data.attribute)
           this._bookkeepAddress(
             this._publishedMetaBook,
             opt.data.dnaAddress,
             opt.data.providerAgentId,
-            opt.data.entryAddress
+            metaId
           )
           this._getMemRef(opt.data.dnaAddress).mem.insert({
             type: 'dhtMeta',
@@ -284,14 +285,14 @@ class N3hMock extends AsyncClass {
             return
           }
           // get already known publishing list
-          let knownPublishingList = {}
+          let knownPublishingList = []
           if(bucketId in this._publishedEntryBook) {
             knownPublishingList = this._publishedEntryBook[bucketId]
           }
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
           for (const entryAddress of opt.data.entryAddressList) {
-            if (entryAddress in knownPublishingList) {
+            if (knownPublishingList.includes(entryAddress)) {
               log.t('Entry is known ', entryAddress)
               continue
             }
@@ -313,14 +314,14 @@ class N3hMock extends AsyncClass {
             return
           }
           // get already known publishing list
-          let knownHoldingList = {}
+          let knownHoldingList = []
           if (bucketId in this._storedEntryBook) {
             knownHoldingList = this._storedEntryBook[bucketId]
           }
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
           for (const entryAddress of opt.data.entryAddressList) {
-            if (entryAddress in knownHoldingList) {
+            if (knownHoldingList.includes(entryAddress)) {
               continue
             }
             this._bookkeepAddressWithBucket(this._storedEntryBook, bucketId, entryAddress)
@@ -336,7 +337,7 @@ class N3hMock extends AsyncClass {
           }
 
           // get already known publishing list
-          let knownPublishingMetaList = {}
+          let knownPublishingMetaList = []
           if (bucketId in this._publishedMetaBook) {
             knownPublishingMetaList = this._publishedMetaBook[bucketId]
           }
@@ -345,7 +346,7 @@ class N3hMock extends AsyncClass {
           // and do a getEntry for every new entry
           for (const metaPair of opt.data.metaList) {
             let metaId = this._catEntryAttribute(metaPair[0], metaPair[1])
-            if (metaId in knownPublishingMetaList) {
+            if (knownPublishingMetaList.includes(metaId)) {
               continue
             }
             let fetchMeta = {
@@ -368,7 +369,7 @@ class N3hMock extends AsyncClass {
             return
           }
           // get already known publishing list
-          let knownHoldingMetaList = {}
+          let knownHoldingMetaList = []
           if (bucketId in this._storedMetaBook) {
             knownHoldingMetaList = this._storedMetaBook[bucketId]
           }
@@ -377,7 +378,7 @@ class N3hMock extends AsyncClass {
           // for (let entryAddress in opt.data.metaList) {
           for (const metaPair of opt.data.metaList) {
             let metaId = this._catEntryAttribute(metaPair[0], metaPair[1])
-            if (metaId in knownHoldingMetaList) {
+            if (knownHoldingMetaList.includes(metaId)) {
               continue
             }
             this._bookkeepAddressWithBucket(this._storedMetaBook, bucketId, metaId)
@@ -389,7 +390,6 @@ class N3hMock extends AsyncClass {
     throw new Error('unexpected input ' + JSON.stringify(opt))
   }
 
-
   /**
    * get or create Mem field for the specific dna
    */
@@ -399,7 +399,7 @@ class N3hMock extends AsyncClass {
       // Add indexer which sends a storeEntry request to core
       mem.registerIndexer((store, hash, data) => {
         if (data && data.type === 'dhtEntry') {
-          log.i('got dhtEntry', data)
+          log.t('got dhtEntry', data)
           this._ipc.send('json', {
             method: 'handleStoreEntry',
             dnaAddress,
@@ -412,7 +412,7 @@ class N3hMock extends AsyncClass {
       // Add indexer which sends a storeMeta request to core
       mem.registerIndexer((store, hash, data) => {
         if (data && data.type === 'dhtMeta') {
-          log.i('got dhtMeta', data)
+          log.t('got dhtMeta', data)
           this._ipc.send('json', {
             method: 'handleStoreMeta',
             dnaAddress,
@@ -429,7 +429,7 @@ class N3hMock extends AsyncClass {
         mem,
         agentToTransportId: mem.registerIndexer((store, hash, data) => {
           if (data && data.type === 'agent') {
-            // log.i('got Peer/Agent', data)
+            // log.t('got Peer/Agent', data)
             store[data.agentId] = data.transportId
             this._ipc.send('json', {
               method: 'peerConnected',
