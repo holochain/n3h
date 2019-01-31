@@ -343,8 +343,8 @@ class N3hMock extends AsyncClass {
 
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
-          for (let i = 0; i < opt.data.metaList.length; i++) {
-            let metaId = opt.data.metaList[i]
+          for (const metaPair of opt.data.metaList) {
+            let metaId = this._catEntryAttribute(metaPair[0], metaPair[1])
             if (metaId in knownPublishingMetaList) {
               continue
             }
@@ -375,8 +375,8 @@ class N3hMock extends AsyncClass {
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
           // for (let entryAddress in opt.data.metaList) {
-          for (let i = 0; i < opt.data.metaList.length; i++) {
-            let metaId = opt.data.metaList[i]
+          for (const metaPair of opt.data.metaList) {
+            let metaId = this._catEntryAttribute(metaPair[0], metaPair[1])
             if (metaId in knownHoldingMetaList) {
               continue
             }
@@ -398,8 +398,8 @@ class N3hMock extends AsyncClass {
       const mem = new Mem()
       // Add indexer which sends a storeEntry request to core
       mem.registerIndexer((store, hash, data) => {
-        log.e('got dhtEntry', data)
         if (data && data.type === 'dhtEntry') {
+          log.i('got dhtEntry', data)
           this._ipc.send('json', {
             method: 'handleStoreEntry',
             dnaAddress,
@@ -412,7 +412,7 @@ class N3hMock extends AsyncClass {
       // Add indexer which sends a storeMeta request to core
       mem.registerIndexer((store, hash, data) => {
         if (data && data.type === 'dhtMeta') {
-          log.e('got dhtMeta', data)
+          log.i('got dhtMeta', data)
           this._ipc.send('json', {
             method: 'handleStoreMeta',
             dnaAddress,
@@ -429,6 +429,7 @@ class N3hMock extends AsyncClass {
         mem,
         agentToTransportId: mem.registerIndexer((store, hash, data) => {
           if (data && data.type === 'agent') {
+            // log.i('got Peer/Agent', data)
             store[data.agentId] = data.transportId
             this._ipc.send('json', {
               method: 'peerConnected',
@@ -499,6 +500,13 @@ class N3hMock extends AsyncClass {
 
   _catDnaAgent (DnaHash, AgentId) {
     return '' + DnaHash + '::' + AgentId
+  }
+
+  /**
+   *   Make a metaId out of an entryAddress and an attribute
+   */
+  _catEntryAttribute (entryAddress, attribute) {
+    return '' + entryAddress + '||' + attribute
   }
 
   _generateRequestId () {
