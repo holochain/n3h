@@ -8,7 +8,8 @@ const logger = require('./tweetlog')
 
 describe('tweetlog Suite', () => {
   beforeEach(() => {
-    logger.clear()
+    logger.unlistenAll()
+    logger.resetLevels()
   })
 
   afterEach(() => {
@@ -89,6 +90,15 @@ describe('tweetlog Suite', () => {
     logger.listen(s)
     logger('test').t('test')
     expect(s.calledWith('t', 'test', 'test')).equals(true)
+  })
+
+  it('should unlisten', () => {
+    logger.set('t')
+    const s = sinon.stub()
+    logger.listen(s)
+    logger.unlisten(s)
+    logger('test').t('test')
+    expect(s.callCount).equals(0)
   })
 
   it('should output to console.error', () => {
