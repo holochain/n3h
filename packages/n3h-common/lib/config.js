@@ -6,7 +6,7 @@ function _immut (i, extendFn) {
   if (Array.isArray(i)) {
     const out = []
     for (let v of i) {
-      out.push(_immut(v, extendFn))
+      out.push(_immut(v))
     }
     Object.freeze(out)
     return out
@@ -15,11 +15,12 @@ function _immut (i, extendFn) {
   } else if (i && typeof i === 'object') {
     const out = Object.create(null)
     for (let k in i) {
-      if (k === 'extend' && i[k] === extendFn) {
-        out[k] = extendFn
-      } else {
-        out[k] = _immut(i[k], extendFn)
-      }
+      out[k] = _immut(i[k])
+    }
+    if (extendFn) {
+      Object.defineProperty(out, 'extend', {
+        value: extendFn
+      })
     }
     Object.freeze(out)
     return out
@@ -85,7 +86,7 @@ function _expandDefault (def) {
 
 /**
  */
-function _extendOneEntry (def, base, name, ext) {
+function _extendOneProp (def, base, name, ext) {
   if (def instanceof Entry) {
     if (ext === null) {
       return null
@@ -119,7 +120,7 @@ function _extendOneObj (def, base, ext) {
       if (!(k in def)) {
         throw new Error('invalid key: ' + k)
       }
-      _extendOneEntry(def[k], base, k, ext[k])
+      _extendOneProp(def[k], base, k, ext[k])
     }
   } else {
     throw new Error('unhandled definition expansion type ' + typeof def + ' : ' + def.toString())
@@ -134,7 +135,6 @@ exports.createDefinition = def => {
     for (let i of list) {
       _extendOneObj(def, obj, i)
     }
-    obj.extend = extendFn
     return _immut(obj, extendFn)
   }
 

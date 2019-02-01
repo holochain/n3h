@@ -10,13 +10,17 @@ const { P2p } = require('@holochain/n3h-mod-spec')
 const { P2pBackendHackmodePeer } = require('./p2p-backend-hackmode-peer')
 
 const { Mem } = require('./mem')
+const config = require('./config')
 
 const tweetlog = require('@holochain/tweetlog')
 const log = tweetlog('@hackmode@')
 
 class N3hHackMode extends AsyncClass {
-  async init (workDir) {
+  async init (workDir, rawConfigData) {
     await super.init()
+
+    this._config = config(rawConfigData || {})
+    log.i('@@ CONFIG @@', JSON.stringify(this._config, null, 2))
 
     this._memory = {}
     this._peerBook = {}
@@ -82,17 +86,23 @@ class N3hHackMode extends AsyncClass {
   }
 
   async _initP2p () {
-    this._p2p = await new P2p(P2pBackendHackmodePeer, {
+    const p2pConf = {
       dht: {},
       connection: {
+        // TODO - allow some kind of environment var?? for setting passphrase
         passphrase: 'hello',
-        rsaBits: 1024, // TODO - use 4096 && config to 1024 for testing
-        bind: ['wss://0.0.0.0:0/']
-      },
-      wssAdvertise: 'auto'
-      // TODO wssRelayPeer
-      // wssRelayPeers: [ bootstrap node ]
-    })
+        rsaBits: this._config.webproxy.connection.rsaBits,
+        bind: this._config.webproxy.connection.bind
+      }
+    }
+
+    if (this._config.webproxy.wssRelayPeers) {
+      p2pConf.wssRelayPeers = this._config.webproxy.wssRelayPeers
+    } else {
+      p2pConf.wssAdvertise = this._config.webproxy.wssAdvertise
+    }
+
+    this._p2p = await new P2p(P2pBackendHackmodePeer, p2pConf)
 
     this._p2p.on('event', evt => this._handleP2pEvent(evt))
 

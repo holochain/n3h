@@ -32,13 +32,27 @@ exports.buildLogHandler = opts => {
     stream: null
   }
 
-  const cleanup = () => {
+  const cleanup = async () => {
+    let killStream = null
     if (runtime.stream) {
-      runtime.stream.end()
+      killStream = runtime.stream
     }
     runtime.lastFlush = 0
     runtime.timeTag = 0
     runtime.stream = null
+    return new Promise((resolve, reject) => {
+      try {
+        if (!killStream) {
+          return resolve()
+        }
+        killStream.on('finish', () => {
+          resolve()
+        })
+        killStream.end()
+      } catch (e) {
+        reject(e)
+      }
+    })
   }
 
   const listener = (level, tag, ...args) => {
@@ -66,7 +80,9 @@ exports.buildLogHandler = opts => {
       })
 
       // close any old handle
-      cleanup()
+      cleanup().catch(err => {
+        console.error('LOGGING ERROR', err)
+      })
 
       const filename = path.join(dir, prefix + timeTag + suffix)
 

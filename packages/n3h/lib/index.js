@@ -19,13 +19,13 @@ exports.N3hMock = require('@holochain/n3h-mock').N3hMock
 class N3hNode extends AsyncClass {
   /**
    */
-  static async constructDefault (workDir, modules) {
+  static async constructDefault (workDir, rawConfigData, modules) {
     return new N3hNode(workDir, (modules || []).concat(DEFAULT_MODULES))
   }
 
   /**
    */
-  async init (workDir, modules) {
+  async init (workDir, rawConfigData, modules) {
     await super.init()
 
     this._workDir = workDir

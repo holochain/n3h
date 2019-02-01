@@ -37,9 +37,7 @@ describe('config Suite', () => {
   })
 
   it('can load default', () => {
-    const tmp = c({})
-    expect(tmp).deep.equals({
-      extend: tmp.extend,
+    expect(c({})).deep.equals({
       testString: 'testValue',
       testStringArray: [],
       testNumber: 42,
@@ -51,7 +49,7 @@ describe('config Suite', () => {
   })
 
   it('can load values', () => {
-    const tmp = c({
+    expect(c({
       testString: 'newVal1',
       testStringArray: ['a1', 'a2'],
       testNumber: 101,
@@ -59,9 +57,7 @@ describe('config Suite', () => {
       groupName: {
         testString: 'newVal2'
       }
-    })
-    expect(tmp).deep.equals({
-      extend: tmp.extend,
+    })).deep.equals({
       testString: 'newVal1',
       testStringArray: ['a1', 'a2'],
       testNumber: 101,
