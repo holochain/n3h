@@ -243,7 +243,8 @@ class N3hHackMode extends AsyncClass {
         case 'publishMeta':
           // Note: opt.data is a DhtMetaData
           // Bookkeep
-          this._bookkeepAddress(this._publishedMetaBook, opt.data.dnaAddress, opt.data.entryAddress)
+          let metaId = this._catEntryAttribute(opt.data.entryAddress, opt.data.attribute)
+          this._bookkeepAddress(this._publishedMetaBook, opt.data.dnaAddress, metaId)
           // publish
           this._getMemRef(opt.data.dnaAddress).mem.insertMeta({
             type: 'dhtMeta',
@@ -349,7 +350,7 @@ class N3hHackMode extends AsyncClass {
             return
           }
           // get already known publishing list
-          let knownPublishingList = {}
+          let knownPublishingList = []
           if (bucketId in this._publishedEntryBook) {
             knownPublishingList = this._publishedEntryBook[bucketId]
           }
@@ -357,7 +358,7 @@ class N3hHackMode extends AsyncClass {
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
           for (const entryAddress of opt.data.entryAddressList) {
-            if (entryAddress in knownPublishingList) {
+            if (knownPublishingList.includes(entryAddress)) {
               log.t('Entry is known ', entryAddress)
               continue
             }
@@ -380,14 +381,14 @@ class N3hHackMode extends AsyncClass {
             return
           }
           // get already known publishing list
-          let knownHoldingList = {}
+          let knownHoldingList = []
           if (bucketId in this._storedEntryBook) {
             knownHoldingList = this._storedEntryBook[bucketId]
           }
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
           for (const entryAddress of opt.data.entryAddressList) {
-            if (entryAddress in knownHoldingList) {
+            if (knownHoldingList.includes(entryAddress)) {
               continue
             }
             let fetchEntry = {
@@ -410,7 +411,7 @@ class N3hHackMode extends AsyncClass {
           }
 
           // get already known publishing list
-          let knownPublishingMetaList = {}
+          let knownPublishingMetaList = []
           if (bucketId in this._publishedMetaBook) {
             knownPublishingMetaList = this._publishedMetaBook[bucketId]
           }
@@ -419,7 +420,7 @@ class N3hHackMode extends AsyncClass {
           // and do a getEntry for every new entry
           for (const metaPair of opt.data.metaList) {
             let metaId = this._catEntryAttribute(metaPair[0], metaPair[1])
-            if (metaId in knownPublishingMetaList) {
+            if (knownPublishingMetaList.includes(metaId)) {
               continue
             }
             let fetchMeta = {
@@ -442,7 +443,7 @@ class N3hHackMode extends AsyncClass {
             return
           }
           // get already known publishing list
-          let knownHoldingMetaList = {}
+          let knownHoldingMetaList = []
           if (bucketId in this._storedMetaBook) {
             knownHoldingMetaList = this._storedMetaBook[bucketId]
           }
@@ -451,7 +452,7 @@ class N3hHackMode extends AsyncClass {
           // for (let entryAddress in opt.data.metaList) {
           for (const metaPair of opt.data.metaList) {
             let metaId = this._catEntryAttribute(metaPair[0], metaPair[1])
-            if (metaId in knownHoldingMetaList) {
+            if (knownHoldingMetaList.includes(metaId)) {
               continue
             }
             let fetchMeta = {
@@ -804,9 +805,9 @@ class N3hHackMode extends AsyncClass {
     })
   }
 
-  _catDnaAgent (DnaHash, AgentId) {
-    return '' + DnaHash + '::' + AgentId
-  }
+  // _catDnaAgent (DnaHash, AgentId) {
+  //   return '' + DnaHash + '::' + AgentId
+  // }
 
   /**
    *   Make a metaId out of an entryAddress and an attribute
@@ -824,8 +825,8 @@ class N3hHackMode extends AsyncClass {
    *  create and return a new request_id
    */
   _createRequest (dnaAddress, agentId) {
-    let bucketId = this._catDnaAgent(dnaAddress, agentId)
-    return this._createRequestWithBucket(bucketId)
+    // let bucketId = this._catDnaAgent(dnaAddress, agentId)
+    return this._createRequestWithBucket(dnaAddress)
   }
 
   _createRequestWithBucket (bucketId) {
