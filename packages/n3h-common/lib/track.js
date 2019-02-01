@@ -1,4 +1,5 @@
 const { AsyncClass } = require('./async-class')
+const noop = () => {}
 
 /**
  * In network communication code, we often have the need to correlate
@@ -76,6 +77,8 @@ class Track extends AsyncClass {
         r.reject(timeoutStack)
       }, this._timeout)
       const cleanup = () => {
+        r.resolve = noop
+        r.reject = noop
         clearTimeout(timer)
         this._wait.delete(id)
       }
