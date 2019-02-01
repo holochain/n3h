@@ -33,7 +33,7 @@ describe('Track Suite', () => {
     expect(b).deep.equals(['test1', 'test3'])
   })
 
-  it('track and resolve', async () => {
+  it('track and resolve (reject)', async () => {
     const b = []
     t.track('bob').then(a => b.push(a), a => b.push(a.toString()))
     t.track('ned').then(a => b.push(a), a => b.push(a.toString()))
