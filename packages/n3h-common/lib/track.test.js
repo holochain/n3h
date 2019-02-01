@@ -5,9 +5,7 @@ describe('Track Suite', () => {
   let t = null
 
   beforeEach(async () => {
-    t = await new Track({
-      timeout: 100
-    })
+    t = await new Track()
   })
 
   afterEach(async () => {
@@ -18,7 +16,7 @@ describe('Track Suite', () => {
     await (await new Track()).destroy()
   })
 
-  it('track and resolve', async () => {
+  it('track and resolve - a', async () => {
     const b = []
     t.track('bob').then(a => b.push(a), a => b.push(a.toString()))
     t.track('ned').then(a => b.push(a), a => b.push(a.toString()))
@@ -33,7 +31,7 @@ describe('Track Suite', () => {
     expect(b).deep.equals(['test1', 'test3'])
   })
 
-  it('track and resolve (reject)', async () => {
+  it('track and resolve - b', async () => {
     const b = []
     t.track('bob').then(a => b.push(a), a => b.push(a.toString()))
     t.track('ned').then(a => b.push(a), a => b.push(a.toString()))
@@ -49,6 +47,10 @@ describe('Track Suite', () => {
   })
 
   it('timeout', async () => {
+    await t.destroy()
+    t = await new Track({
+      timeout: 100
+    })
     try {
       await t.track('nothin')
     } catch (e) {
