@@ -608,7 +608,6 @@ class DhtBackendFullsync extends AsyncClass {
       peer = JSON.parse(peer)
       const evt = DhtEvent.peerHoldRequest(
         peerAddress, peer.transport, peer.data, peer.ts)
-      console.log('WANT NEW PEER', evt)
       this._spec.$emitEvent(evt)
     }
   }

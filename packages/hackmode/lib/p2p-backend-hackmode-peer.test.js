@@ -2,6 +2,9 @@ const { $sleep, unhandledRejection } = require('@holochain/n3h-common')
 unhandledRejection.strict()
 const msgpack = require('msgpack-lite')
 
+const tweetlog = require('@holochain/tweetlog')
+tweetlog.listen(tweetlog.console)
+
 const { expect } = require('chai')
 
 const { P2p } = require('@holochain/n3h-mod-spec')
@@ -27,7 +30,7 @@ describe('hackmode module p2p peer backend Suite', () => {
             }
             break
           case 'peerConnect':
-            console.log('GOT PEER:', e.peerAddress)
+            //console.log('GOT PEER:', e.peerAddress)
             break
           default:
             throw new Error('unexpected event type: ' + e.type)
@@ -58,7 +61,7 @@ describe('hackmode module p2p peer backend Suite', () => {
       regNode(nodeFull)
 
       const baseConnectUri = nodeBase.getAdvertise()
-      console.log('BASE CONNECT URI', baseConnectUri)
+      // console.log('BASE CONNECT URI', baseConnectUri)
 
       await nodeFull.transportConnect(baseConnectUri)
 

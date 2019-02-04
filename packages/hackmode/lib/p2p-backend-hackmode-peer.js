@@ -1,6 +1,9 @@
 const { AsyncClass, Track } = require('@holochain/n3h-common')
 const { Keypair } = require('@holochain/hc-dpki')
 const mosodium = require('@holochain/mosodium')
+const tweetlog = require('@holochain/tweetlog')
+const log = tweetlog('p2p-hackmode')
+
 const { URL } = require('url')
 const msgpack = require('msgpack-lite')
 
@@ -34,9 +37,7 @@ class P2pBackendHackmodePeer extends AsyncClass {
     seed.randomize()
 
     this._keypair = await Keypair.newFromSeed(seed)
-    console.log('== node id ==')
-    console.log(this._keypair.getId())
-    console.log('== end node id ==')
+    log.i('node-id', this._keypair.getId())
 
     this._newConTrack = await new Track()
     this._bindings = new Set()

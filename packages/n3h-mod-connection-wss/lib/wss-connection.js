@@ -7,11 +7,15 @@ const { AsyncClass } = require('@holochain/n3h-common')
 const { WssServer } = require('./wss-server')
 const { ConnectionEvent } = require('@holochain/n3h-mod-spec')
 
+const tweetlog = require('@holochain/tweetlog')
+const log = tweetlog('wss-connection')
+
 const agent = new https.Agent({
   rejectUnauthorized: false
 })
 
 /**
+
  * A Tls Secure WebSocketServer Backend for the n3h mod "Connection" spec
  *
  * ```
@@ -122,10 +126,10 @@ class ConnectionBackendWss extends AsyncClass {
       if (this.$isDestroyed()) {
         return
       }
-      console.error(e)
+      log.e(e)
     })
 
-    console.log('listening at ' + srv.address())
+    log.i('listening at ' + srv.address())
 
     this._servers.push(srv)
     await this._spec.$emitEvent(ConnectionEvent.bind([srv.address()]))
