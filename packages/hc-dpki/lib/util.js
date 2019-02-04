@@ -1,6 +1,7 @@
 const mosodium = require('@holochain/mosodium')
 const msgpack = require('msgpack-lite')
 const { Encoder, Decoder } = require('@holochain/n-bch-rs')
+const bs58 = require('bs58')
 
 const rsEncoder = new Encoder(6)
 const rsDecoder = new Decoder(6)
@@ -14,10 +15,11 @@ const rsDecoder = new Decoder(6)
  */
 function encodeId (signPub, encPub) {
   const res = Buffer.concat([
-    Buffer.from([0x86, 0x46]),
+    Buffer.from([0x8b, 0xe6, 0x34]),
     rsEncoder.encode(Buffer.concat([signPub, encPub]))
   ])
-  return res.toString('base64').replace(/\+/g, '-').replace(/\//g, '_')
+  //return res.toString('base64').replace(/\+/g, '-').replace(/\//g, '_')
+  return bs58.encode(res)
 }
 
 exports.encodeId = encodeId
@@ -29,10 +31,11 @@ exports.encodeId = encodeId
  * @return {object} - { signPub: Buffer, encPub: Buffer }
  */
 function decodeId (id) {
-  let tmp = Buffer.from(id.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
+  //let tmp = Buffer.from(id.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
+  let tmp = bs58.decode(id)
 
-  if (tmp[0] === 0x86 && tmp[1] === 0x46) {
-    tmp = tmp.slice(2)
+  if (tmp[0] === 0x8b && tmp[1] === 0xe6 && tmp[2] === 0x34) {
+    tmp = tmp.slice(3)
   }
 
   if (tmp.byteLength !== 70) {
