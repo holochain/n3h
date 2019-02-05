@@ -3,8 +3,10 @@ const msgpack = require('msgpack-lite')
 const { Encoder, Decoder } = require('@holochain/n-bch-rs')
 const bs58 = require('bs58')
 
-const rsEncoder = new Encoder(6)
-const rsDecoder = new Decoder(6)
+const PREFIX = Buffer.from('0d330b47', 'hex')
+
+const rsEncoder = new Encoder(7)
+const rsDecoder = new Decoder(7)
 
 /**
  * using base64url encoding (https://tools.ietf.org/html/rfc4648#section-5)
@@ -14,11 +16,7 @@ const rsDecoder = new Decoder(6)
  * @return {string} - the base64url encoded identity (with parity bytes)
  */
 function encodeId (signPub, encPub) {
-  const res = Buffer.concat([
-    Buffer.from([0x8b, 0xe6, 0x34]),
-    rsEncoder.encode(Buffer.concat([signPub, encPub]))
-  ])
-  //return res.toString('base64').replace(/\+/g, '-').replace(/\//g, '_')
+  const res = rsEncoder.encode(Buffer.concat([PREFIX, signPub, encPub]))
   return bs58.encode(res)
 }
 
@@ -31,24 +29,21 @@ exports.encodeId = encodeId
  * @return {object} - { signPub: Buffer, encPub: Buffer }
  */
 function decodeId (id) {
-  //let tmp = Buffer.from(id.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
   let tmp = bs58.decode(id)
+  console.log(tmp.toString('hex'))
 
-  if (tmp[0] === 0x8b && tmp[1] === 0xe6 && tmp[2] === 0x34) {
-    tmp = tmp.slice(3)
-  }
-
-  if (tmp.byteLength !== 70) {
-    throw new Error('invalid agent id')
+  if (tmp.byteLength !== 75) {
+    throw new Error('invalid agent id (' + tmp.byteLength + ' bytes)')
   }
 
   if (rsDecoder.is_corrupted(tmp)) {
     tmp = rsDecoder.correct(tmp)
   }
 
+  const off = PREFIX.byteLength
   return {
-    signPub: tmp.slice(0, 32),
-    encPub: tmp.slice(32, 64)
+    signPub: tmp.slice(off, off + 32),
+    encPub: tmp.slice(off + 32, off + 64)
   }
 }
 
