@@ -135,6 +135,16 @@ class P2pBackendHackmodePeer extends AsyncClass {
   }
 
   /**
+   * a soft close request... lib may comply, but may immediately connect again
+   */
+  async close (peerAddress) {
+    if (this._conByPeerAddress.has(peerAddress)) {
+      const cId = this._conByPeerAddress.get(peerAddress)
+      await this._con.close(cId)
+    }
+  }
+
+  /**
    */
   async publishReliable (peerAddressList, data) {
     return this._publish(
@@ -329,7 +339,12 @@ class P2pBackendHackmodePeer extends AsyncClass {
   /**
    */
   async _removeConnection (cId) {
-    throw new Error('unimplemented')
+    for (let [peerAddress, cId] of this._conByPeerAddress) {
+      if (cId === cId) {
+        log.t('removing connection', peerAddress)
+        this._conByPeerAddress.delete(peerAddress)
+      }
+    }
   }
 
   /**

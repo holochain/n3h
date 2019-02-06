@@ -95,6 +95,19 @@ class P2p extends AsyncClass {
   }
 
   /**
+   * a soft close request... lib may comply, but may immediately connect again
+   */
+  async close (peerAddress) {
+    if (this.$isDestroyed()) {
+      return
+    }
+
+    type.assert.base64String(peerAddress)
+
+    return this._backend.close(peerAddress)
+  }
+
+  /**
    */
   async publishReliable (peerAddressList, data) {
     if (this.$isDestroyed()) {
