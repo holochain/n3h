@@ -231,7 +231,7 @@ class N3hHackMode extends AsyncClass {
           // Bookkeep each metaId
           for (const metaContent of opt.data.contentList) {
             let metaId = this._metaIdFromTuple(opt.data.entryAddress, opt.data.attribute, metaContent)
-          this._bookkeepAddress(this._publishedMetaBook, opt.data.dnaAddress, metaId)
+            this._bookkeepAddress(this._publishedMetaBook, opt.data.dnaAddress, metaId)
           }
           // publish
           log.t('publishMeta', opt.data.contentList)
@@ -320,12 +320,12 @@ class N3hHackMode extends AsyncClass {
               this._bookkeepAddress(isPublish ? this._publishedMetaBook : this._storedMetaBook, opt.data.dnaAddress, metaId)
               log.t('handleFetchMetaResult insert:', metaContent, opt.data.providerAgentId, metaId, isPublish)
               ref.mem.insertMeta({
-              type: 'dhtMeta',
-              providerAgentId: opt.data.providerAgentId,
-              entryAddress: opt.data.entryAddress,
-              attribute: opt.data.attribute,
+                type: 'dhtMeta',
+                providerAgentId: opt.data.providerAgentId,
+                entryAddress: opt.data.entryAddress,
+                attribute: opt.data.attribute,
                 contentList: [metaContent]
-            })
+              })
             }
             return
           }
@@ -752,7 +752,7 @@ class N3hHackMode extends AsyncClass {
               log.t('metaContent is known:', metaContent)
               continue
             }
-          this._bookkeepAddress(this._storedMetaBook, dnaAddress, metaId)
+            this._bookkeepAddress(this._storedMetaBook, dnaAddress, metaId)
             toStoreList.push(metaContent)
           }
           log.t('Sending IPC handleStoreMeta: ', toStoreList)
