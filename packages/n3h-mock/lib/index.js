@@ -33,6 +33,8 @@ class N3hMock extends AsyncClass {
     this._requestBook = {}
     this._requestCount = 0
 
+    this._transferedRequestList = []
+
     // Set working directory from config (a temp folder) or default to $home/.n3h
     this._workDir = workDir
 
@@ -95,7 +97,7 @@ class N3hMock extends AsyncClass {
       return
     }
 
-    log.t('Received IPC message: ', opt)
+    log.t('Received IPC: ', opt)
 
     let toZmqId
     let bucketId
@@ -201,20 +203,18 @@ class N3hMock extends AsyncClass {
           return
         case 'publishMeta':
           // Note: opt.data is a DhtMetaData
-          // Bookkeep
-          let metaId = this._catEntryAttribute(opt.data.entryAddress, opt.data.attribute)
-          this._bookkeepAddress(
-            this._publishedMetaBook,
-            opt.data.dnaAddress,
-            opt.data.providerAgentId,
-            metaId
-          )
+          // Bookkeep each metaId
+          for (const metaContent of opt.data.contentList) {
+            let metaId = this._intoMetaId(opt.data.entryAddress, opt.data.attribute, metaContent)
+            this._bookkeepAddress(this._publishedMetaBook, opt.data.dnaAddress, opt.data.providerAgentId, metaId)
+          }
+          // Store on all nodes
           this._getMemRef(opt.data.dnaAddress).mem.insert({
             type: 'dhtMeta',
             providerAgentId: opt.data.providerAgentId,
             entryAddress: opt.data.entryAddress,
             attribute: opt.data.attribute,
-            content: opt.data.content
+            contentList: opt.data.contentList
           })
           return
         case 'fetchEntry':
@@ -237,6 +237,11 @@ class N3hMock extends AsyncClass {
             return
           }
           // otherwise since we're fully connected, just redirect this back to itself for now...
+          // Transfer this id only once
+          if (this._transferedRequestList.includes(opt.data._id)) {
+            return
+          }
+          this._transferedRequestList.push(opt.data._id)
           opt.data.method = 'fetchEntryResult'
           this._ipc.send('json', opt.data)
           return
@@ -248,19 +253,40 @@ class N3hMock extends AsyncClass {
           return
         case 'handleFetchMetaResult':
           // Note: opt.data is a FetchMetaResultData
-          // if its from our own request do a publish
+          // if its from our own request, do a publish for each new/unknown meta content
           if (opt.data._id in this._requestBook) {
-            delete this._requestBook[opt.data._id]
-            this._getMemRef(opt.data.dnaAddress).mem.insert({
-              type: 'dhtMeta',
-              providerAgentId: opt.data.providerAgentId,
-              entryAddress: opt.data.entryAddress,
-              attribute: opt.data.attribute,
-              content: opt.data.content
-            })
+            bucketId = this._checkRequest(opt.data._id)
+            if (bucketId === '') {
+              return
+            }
+            log.t('Handle our handleFetchMetaResult:', opt.data._id, bucketId)
+            // get already known publishing list
+            let knownPublishingMetaList = []
+            if (bucketId in this._publishedMetaBook) {
+              knownPublishingMetaList = this._publishedMetaBook[bucketId]
+            }
+            for (const metaContent of opt.data.contentList) {
+              let metaId = this._intoMetaId(opt.data.entryAddress, opt.data.attribute, metaContent)
+              if (knownPublishingMetaList.includes(metaId)) {
+                continue
+              }
+              this._getMemRef(opt.data.dnaAddress).mem.insert({
+                type: 'dhtMeta',
+                providerAgentId: opt.data.providerAgentId,
+                entryAddress: opt.data.entryAddress,
+                attribute: opt.data.attribute,
+                contentList: [metaContent]
+              })
+            }
             return
           }
-          // otherwise since we're fully connected, just redirect this back to itself for now...
+          // otherwise since we're fully connected, just redirect this back to itself for now..
+          // Transfer this id only once
+          if (this._transferedRequestList.includes(opt.data._id)) {
+            return
+          }
+          this._transferedRequestList.push(opt.data._id)
+          log.t('Transfer handleFetchMetaResult as fetchMetaResult:', opt.data._id)
           opt.data.method = 'fetchMetaResult'
           this._ipc.send('json', opt.data)
           return
@@ -332,18 +358,26 @@ class N3hMock extends AsyncClass {
 
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
-          for (const metaPair of opt.data.metaList) {
-            let metaId = this._catEntryAttribute(metaPair[0], metaPair[1])
+          let requestedMetaKey = []
+          for (const metaTuple of opt.data.metaList) {
+            let metaId = this._intoMetaId(metaTuple[0], metaTuple[1], metaTuple[2])
             if (knownPublishingMetaList.includes(metaId)) {
               continue
             }
+            // dont send same request twice
+            const metaKey = '' + metaTuple[0] + '+' + metaTuple[1]
+            if (requestedMetaKey.includes(metaKey)) {
+              continue
+            }
+            requestedMetaKey.push(metaKey)
+
             let fetchMeta = {
               method: 'handleFetchMeta',
               dnaAddress: opt.data.dnaAddress,
               _id: this._createRequestWithBucket(bucketId),
               requesterAgentId: '',
-              entryAddress: metaId[0],
-              attribute: metaId[1]
+              entryAddress: metaTuple[0],
+              attribute: metaTuple[1]
             }
             this._ipc.send('json', fetchMeta)
           }
@@ -364,8 +398,8 @@ class N3hMock extends AsyncClass {
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
           // for (let entryAddress in opt.data.metaList) {
-          for (const metaPair of opt.data.metaList) {
-            let metaId = this._catEntryAttribute(metaPair[0], metaPair[1])
+          for (const metaTuple of opt.data.metaList) {
+            let metaId = this._intoMetaId(metaTuple[0], metaTuple[1], metaTuple[2])
             if (knownHoldingMetaList.includes(metaId)) {
               continue
             }
@@ -407,7 +441,7 @@ class N3hMock extends AsyncClass {
             providerAgentId: data.providerAgentId,
             entryAddress: data.entryAddress,
             attribute: data.attribute,
-            content: data.content
+            contentList: data.contentList
           })
         }
       })
@@ -438,7 +472,6 @@ class N3hMock extends AsyncClass {
       return ''
     }
     let bucketId = this._requestBook[requestId]
-    delete this._requestBook[requestId]
     return bucketId
   }
 
@@ -491,10 +524,10 @@ class N3hMock extends AsyncClass {
   }
 
   /**
-   *   Make a metaId out of an entryAddress and an attribute
+   *   Make a metaId out of a meta
    */
-  _catEntryAttribute (entryAddress, attribute) {
-    return '' + entryAddress + '||' + attribute
+  _intoMetaId (entryAddress, attribute, metaContent) {
+    return '' + entryAddress + '||' + attribute + '||' + metaContent
   }
 
   _generateRequestId () {
