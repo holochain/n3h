@@ -297,11 +297,8 @@ class N3hHackMode extends AsyncClass {
           // Note: opt.data is a FetchMetaResultData
           ref = this._getMemRef(opt.data.dnaAddress)
           // if its from our own request, do a publish for each new/unknown meta content
-          if (this._requestBook.has(opt.data._id)) {
-            bucketId = this._checkRequest(opt.data._id)
-            if (bucketId === '') {
-              return
-            }
+          bucketId = this._checkRequest(opt.data._id)
+          if (bucketId !== '') {
             const isPublish = opt.data.providerAgentId === '__publish'
             // get already known list
             let knownMetaList = []
