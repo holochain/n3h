@@ -172,6 +172,7 @@ class N3hHackMode extends AsyncClass {
         case 'sendMessage':
           ref = this._getMemRef(opt.data.dnaAddress)
           if (!(opt.data.toAgentId in ref.agentToTransportId)) {
+            log.w('NO ROUTE FOR sendMessage', opt.data)
             this._ipc.send('json', {
               method: 'failureResult',
               dnaAddress: opt.data.dnaAddress,
@@ -230,7 +231,7 @@ class N3hHackMode extends AsyncClass {
           // Bookkeep each metaId
           for (const metaContent of opt.data.contentList) {
             let metaId = this._metaIdFromTuple(opt.data.entryAddress, opt.data.attribute, metaContent)
-            this._bookkeepAddress(this._publishedMetaBook, opt.data.dnaAddress, metaId)
+          this._bookkeepAddress(this._publishedMetaBook, opt.data.dnaAddress, metaId)
           }
           // publish
           log.t('publishMeta', opt.data.contentList)
@@ -319,12 +320,12 @@ class N3hHackMode extends AsyncClass {
               this._bookkeepAddress(isPublish ? this._publishedMetaBook : this._storedMetaBook, opt.data.dnaAddress, metaId)
               log.t('handleFetchMetaResult insert:', metaContent, opt.data.providerAgentId, metaId, isPublish)
               ref.mem.insertMeta({
-                type: 'dhtMeta',
-                providerAgentId: opt.data.providerAgentId,
-                entryAddress: opt.data.entryAddress,
-                attribute: opt.data.attribute,
+              type: 'dhtMeta',
+              providerAgentId: opt.data.providerAgentId,
+              entryAddress: opt.data.entryAddress,
+              attribute: opt.data.attribute,
                 contentList: [metaContent]
-              })
+            })
             }
             return
           }
@@ -533,6 +534,8 @@ class N3hHackMode extends AsyncClass {
         this._processGetDataResp(opt.data.dnaAddress, opt.data.data)
         return
       case 'handleSendMessage':
+        log.t('P2P handleSendMessage', opt.data)
+
         // transcribe to IPC
         this._ipc.send('json', {
           method: 'handleSendMessage',
@@ -544,6 +547,8 @@ class N3hHackMode extends AsyncClass {
         })
         return
       case 'sendMessageResult':
+        log.t('P2P sendMessageResult', opt.data)
+
         // transcribe to IPC
         this._ipc.send('json', {
           method: 'sendMessageResult',
@@ -685,6 +690,7 @@ class N3hHackMode extends AsyncClass {
       const ref = this._memory[dnaAddress].mem
       if (ref.has(hash)) {
         const data = ref.get(hash)
+        log.w('sending gossip data', data)
         this._p2p.send(fromId, {
           type: 'getDataResp',
           dnaAddress: dnaAddress,
@@ -746,7 +752,7 @@ class N3hHackMode extends AsyncClass {
               log.t('metaContent is known:', metaContent)
               continue
             }
-            this._bookkeepAddress(this._storedMetaBook, dnaAddress, metaId)
+          this._bookkeepAddress(this._storedMetaBook, dnaAddress, metaId)
             toStoreList.push(metaContent)
           }
           log.t('Sending IPC handleStoreMeta: ', toStoreList)
@@ -765,7 +771,7 @@ class N3hHackMode extends AsyncClass {
         mem,
         agentToTransportId: mem.registerIndexer((store, data) => {
           if (data && data.type === 'agent') {
-            log.t('got peer', data)
+            log.t('PEER INDEXED', data)
             store[data.agentId] = data.transportId
             this._ipc.send('json', {
               method: 'peerConnected',
@@ -788,13 +794,15 @@ class N3hHackMode extends AsyncClass {
   }
 
   _track (dnaAddress, agentId) {
+    log.t('REGISTER AGENT', dnaAddress, agentId)
+
     const ref = this._getMemRef(dnaAddress)
     // store agent (this will map agentId to transportId)
     ref.mem.insert({
       type: 'agent',
       dnaAddress: dnaAddress,
       agentId: agentId,
-      address: agentId,
+      address: 'hackmode:peer:discovery:' + agentId,
       transportId: this._p2p.getId()
     })
 
