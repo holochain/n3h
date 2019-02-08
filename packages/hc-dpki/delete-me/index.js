@@ -13,7 +13,7 @@ const testHex = [
 //perry.main()
 
 const pres = perry.hexToBase32(testHex[0], v0hex, v0pre)
-const hres = hid.encodeBase32(Buffer.from(testHex[0], 'hex'))
+const hres = hid.hck0.encode(Buffer.from(testHex[0], 'hex'))
 
 console.log(pres)
 console.log(hres)
