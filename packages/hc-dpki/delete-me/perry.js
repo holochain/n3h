@@ -703,6 +703,7 @@ exports.hexToBase32 = hc_encode_hex_into_b32
 	    throw( "Unrecognized prefix: " + prefix_b32 + " == 0x" + prefix )
 	}
     }
+exports.base32ToHex = h => hc_decode_from_b32(h).data
 
 
     // XOR the given char w/ the 'xor' bits, and return the char
