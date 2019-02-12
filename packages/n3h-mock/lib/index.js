@@ -98,7 +98,8 @@ class N3hMock extends AsyncClass {
     // get memory slice
     let ref = this._getMemRef(dnaAddress)
     // Make sure receiver is known
-    if (ref.agentToTransportId.contains(receiverAgentId)) {
+    if (ref.agentToTransportId[receiverAgentId] !== undefined) {
+      log.t('oooo CHECK OK for "' + receiverAgentId + '" for DNA "' + dnaAddress + '" = ' + ref.agentToTransportId[receiverAgentId])
       return ref.agentToTransportId[receiverAgentId]
     }
     log.e('#### Check failed for "' + receiverAgentId + '" for DNA "' + dnaAddress + '"')
@@ -108,7 +109,7 @@ class N3hMock extends AsyncClass {
       log.e('#### No sender info provided')
       return null
     }
-    if (!ref.agentToTransportId.contains(senderAgentId)) {
+    if (ref.agentToTransportId[senderAgentId] === undefined) {
       log.e('Unknown sender "' + senderAgentId + '" for DNA "' + dnaAddress + '"')
       return null
     }
@@ -181,6 +182,10 @@ class N3hMock extends AsyncClass {
           this._untrack(opt.data.dnaAddress, opt.data.agentId, opt.fromZmqId)
           return
         case 'sendMessage':
+          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id)
+          if (toZmqId === null) {
+            return
+          }
           toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
           if (toZmqId === null) {
             return
@@ -196,6 +201,10 @@ class N3hMock extends AsyncClass {
           return
         case 'handleSendMessageResult':
           // Note: opt.data is a MessageData
+          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id)
+          if (toZmqId === null) {
+            return
+          }
           toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
           if (toZmqId === null) {
             return
@@ -542,8 +551,9 @@ class N3hMock extends AsyncClass {
       type: 'agent',
       dnaAddress: dnaAddress,
       agentId: agentId,
-      transportId: null
+      transportId: undefined
     }
+    log.t('_untrack() for "' + agentId + '" for DNA "' + dnaAddress + '"')
 
     // store agent (this will map agentId to transportId)
     ref.mem.insert(agent)
@@ -564,7 +574,8 @@ class N3hMock extends AsyncClass {
     }
 
     // store agent (this will map agentId to transportId)
-    ref.mem.insert(agent)
+    const succeeded = ref.mem.insert(agent)
+    // log.t('_track() succeeded? for "' + agentId + '" and DNA "' + dnaAddress + '" = ' + succeeded)
 
     // send all 'get list' requests
     let requestId = this._createRequest(dnaAddress, agentId)

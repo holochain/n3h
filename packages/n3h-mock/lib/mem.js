@@ -73,10 +73,10 @@ class Mem {
     if (!(entry.loc in this._data)) {
       this._data[entry.loc] = {}
     }
-    // check hash & loc integrity
-    if (entry.hash in this._data[entry.loc]) {
-      return false
-    }
+    // check if already have data in store
+    // if (entry.hash in this._data[entry.loc]) {
+    //   return false
+    // }
     // store entry
     this._data[entry.loc][entry.hash] = entry
     // index with each indexer by using its indexing function
