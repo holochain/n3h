@@ -74,6 +74,7 @@ class Mem {
       this._data[entry.loc] = {}
     }
     // check if already have data in store
+    // HACK: Removed for re-tracking a DNA
     // if (entry.hash in this._data[entry.loc]) {
     //   return false
     // }
