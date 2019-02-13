@@ -90,15 +90,6 @@ class Mem {
   /**
    *
    */
-  hasValue (data) {
-    const entry = getEntry(data)
-    return this.has(entry.hash)
-  }
-
-
-  /**
-   *
-   */
   has (hash) {
     const loc = getLoc(Buffer.from(hash, 'base64'))
     if (!(loc in this._data)) {

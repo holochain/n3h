@@ -22,8 +22,6 @@ class N3hMock extends AsyncClass {
 
     // Initialize members
     this._memory = {}
-    // this._senders = {}
-    // this.senders_by_dna = {}
 
     this._publishedEntryBook = {}
     this._storedEntryBook = {}
@@ -92,7 +90,7 @@ class N3hMock extends AsyncClass {
   /**
    *  Check if agent is tracking dna.
    *  If not, will try to send a FailureResult back to sender, if sender info is provided.
-   *  Returns true if agent is tracking dna.
+   *  Returns transportId of receiverAgentId if agent is tracking dna.
    */
   _getTransportIdOrFail (dnaAddress, receiverAgentId, senderAgentId, requestId) {
     // get memory slice
@@ -539,11 +537,6 @@ class N3hMock extends AsyncClass {
    *
    */
   _untrack (dnaAddress, agentId) {
-    // get mem slice
-    // const ref = this._getMemRef(dnaAddress)
-    // remove agent?
-    // delete ref.agentToTransportId.agentId
-
     // get mem slice
     const ref = this._getMemRef(dnaAddress)
     // create data entry
