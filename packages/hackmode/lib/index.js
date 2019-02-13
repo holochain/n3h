@@ -813,8 +813,8 @@ class N3hHackMode extends AsyncClass {
     // get memory slice
     let ref = this._getMemRef(dnaAddress)
     // Check if receiver is known
-     if (ref.agentToTransportId[receiverAgentId] !== undefined &&
-       ref.agentToTransportId[receiverAgentId] !== null) {
+    if (ref.agentToTransportId[receiverAgentId] !== undefined &&
+      ref.agentToTransportId[receiverAgentId] !== null) {
       log.t('oooo CHECK OK for "' + receiverAgentId + '" for DNA "' + dnaAddress + '" = ' + ref.agentToTransportId[receiverAgentId])
       return ref.agentToTransportId[receiverAgentId]
     }
