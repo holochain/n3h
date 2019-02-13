@@ -567,8 +567,7 @@ class N3hMock extends AsyncClass {
     }
 
     // store agent (this will map agentId to transportId)
-    const succeeded = ref.mem.insert(agent)
-    // log.t('_track() succeeded? for "' + agentId + '" and DNA "' + dnaAddress + '" = ' + succeeded)
+    ref.mem.insert(agent)
 
     // send all 'get list' requests
     let requestId = this._createRequest(dnaAddress, agentId)
