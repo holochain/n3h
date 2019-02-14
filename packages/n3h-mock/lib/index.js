@@ -96,14 +96,14 @@ class N3hMock extends AsyncClass {
     // get memory slice
     let ref = this._getMemRef(dnaAddress)
     // Make sure receiver is known
-    if (ref.agentToTransportId[receiverAgentId] !== undefined) {
+    if (ref.agentToTransportId[receiverAgentId]) {
       log.t('oooo CHECK OK for "' + receiverAgentId + '" for DNA "' + dnaAddress + '" = ' + ref.agentToTransportId[receiverAgentId])
       return ref.agentToTransportId[receiverAgentId]
     }
     log.e('#### Check failed for "' + receiverAgentId + '" for DNA "' + dnaAddress + '"')
     // No receiver, try to return a failureResult back to sender
     // Make sure sender is known
-    if (senderAgentId === undefined) {
+    if (!senderAgentId) {
       log.e('#### No sender info provided')
       return null
     }

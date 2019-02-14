@@ -171,9 +171,11 @@ class N3hHackMode extends AsyncClass {
           return
         case 'sendMessage':
           // Note: opt.data is a MessageData
+          // Sender must TrackDna
           if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id) === null) {
             return
           }
+          // Receiver must TrackDna
           tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
           if (tId === null) {
             return
@@ -189,9 +191,11 @@ class N3hHackMode extends AsyncClass {
           return
         case 'handleSendMessageResult':
           // Note: opt.data is a MessageData
+          // Sender must TrackDna
           if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id) === null) {
             return
           }
+          // Receiver must TrackDna
           tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
           if (tId === null) {
             return
@@ -813,8 +817,7 @@ class N3hHackMode extends AsyncClass {
     // get memory slice
     let ref = this._getMemRef(dnaAddress)
     // Check if receiver is known
-    if (ref.agentToTransportId[receiverAgentId] !== undefined &&
-      ref.agentToTransportId[receiverAgentId] !== null) {
+    if (ref.agentToTransportId[receiverAgentId]) {
       log.t('oooo CHECK OK for "' + receiverAgentId + '" for DNA "' + dnaAddress + '" = ' + ref.agentToTransportId[receiverAgentId])
       return ref.agentToTransportId[receiverAgentId]
     }
