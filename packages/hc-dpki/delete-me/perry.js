@@ -130,12 +130,12 @@ function maybelog (...args) {
     let HcS_v0_hex = bin_to_hex( HcS_v0_bin )
     let HcS_v1_hex = bin_to_hex( HcS_v1_bin )
 
-    maybelog( "HcK v0 hex:     0x" + HcK_v0_hex )
-    maybelog( "HcK v1 hex:     0x" + HcK_v1_hex )
-    maybelog( "HcA v0 hex:     0x" + HcA_v0_hex )
-    maybelog( "HcA v1 hex:     0x" + HcA_v1_hex )
-    maybelog( "HcS v0 hex:     0x" + HcS_v0_hex )
-    maybelog( "HcS v1 hex:     0x" + HcS_v1_hex )
+    console.log( "HcK v0 hex:     0x" + HcK_v0_hex )
+    console.log( "HcK v1 hex:     0x" + HcK_v1_hex )
+    console.log( "HcA v0 hex:     0x" + HcA_v0_hex )
+    console.log( "HcA v1 hex:     0x" + HcA_v1_hex )
+    console.log( "HcS v0 hex:     0x" + HcS_v0_hex )
+    console.log( "HcS v1 hex:     0x" + HcS_v1_hex )
 
     // Find the 'varint' encoding of each prefix + size
     function varint_bin_into_hex( bin ) {

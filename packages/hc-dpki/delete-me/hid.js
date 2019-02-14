@@ -81,6 +81,7 @@ class HoloBase32 {
     ])
 
     const allCaps = _rawEncodeBase32(toEnc)
+    console.log('&caps&', allCaps)
 
     return this._capEncode(allCaps, capBytes)
   }
