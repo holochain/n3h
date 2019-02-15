@@ -21,10 +21,10 @@
   },
   "dependencies": {
     "bip39": "^2.5.0",
+    "@holochain/hcid-js": "=0.0.3-alpha",
     "@holochain/mosodium": "^0.0.1",
     "msgpack-lite": "^0.1.26",
     "@holochain/n3h-common": "^0.0.1",
-    "@holochain/n-bch-rs": "^0.0.4",
     "prompt": "^1.0.0"
   },
   "standard": {

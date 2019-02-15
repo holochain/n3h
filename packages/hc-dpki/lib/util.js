@@ -1,6 +1,6 @@
 const mosodium = require('@holochain/mosodium')
 const msgpack = require('msgpack-lite')
-const { Encoder, Decoder } = require('@holochain/n-bch-rs')
+const { Encoding } = require('@holochain/hcid')
 
 const rsEncoder = new Encoder(6)
 const rsDecoder = new Decoder(6)
