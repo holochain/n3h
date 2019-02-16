@@ -129,20 +129,11 @@ class N3hHackMode extends AsyncClass {
           if (bucketId !== '') {
             return
           }
-          // if not relay to sender
-          ref = this._getMemRef(opt.data.dnaAddress)
-          if (!(opt.data.toAgentId in ref.agentToTransportId)) {
-            // Sending failureResult failed...
-            this._ipc.send('json', {
-              method: 'failureResult',
-              dnaAddress: opt.data.dnaAddress,
-              _id: opt.data._id,
-              toAgentId: opt.data.agentId,
-              errorInfo: 'No routing for agent id "' + opt.data.requesterAgentId + '" aborting failureResult'
-            })
+          // if not relay to receipient if possible
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId)
+          if (tId === null) {
             return
           }
-          tId = ref.agentToTransportId[opt.data.toAgentId]
           this._p2p.send(tId, {
             type: 'failureResult',
             dnaAddress: opt.data.dnaAddress,
@@ -167,22 +158,28 @@ class N3hHackMode extends AsyncClass {
           })
           return
         case 'trackDna':
+          // Note: opt.data is a TrackDnaData
           this._track(opt.data.dnaAddress, opt.data.agentId)
           return
-        case 'sendMessage':
-          ref = this._getMemRef(opt.data.dnaAddress)
-          if (!(opt.data.toAgentId in ref.agentToTransportId)) {
-            log.w('NO ROUTE FOR sendMessage', opt.data)
-            this._ipc.send('json', {
-              method: 'failureResult',
-              dnaAddress: opt.data.dnaAddress,
-              _id: opt.data._id,
-              toAgentId: opt.data.fromAgentId,
-              errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting sendMessage'
-            })
+        case 'untrackDna':
+          // Note: opt.data is a TrackDnaData
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.agentId)
+          if (tId === null) {
             return
           }
-          tId = ref.agentToTransportId[opt.data.toAgentId]
+          this._untrack(opt.data.dnaAddress, opt.data.agentId)
+          return
+        case 'sendMessage':
+          // Note: opt.data is a MessageData
+          // Sender must TrackDna
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id) === null) {
+            return
+          }
+          // Receiver must TrackDna
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
+          if (tId === null) {
+            return
+          }
           this._p2p.send(tId, {
             type: 'handleSendMessage',
             _id: opt.data._id,
@@ -193,18 +190,16 @@ class N3hHackMode extends AsyncClass {
           })
           return
         case 'handleSendMessageResult':
-          ref = this._getMemRef(opt.data.dnaAddress)
-          if (!(opt.data.toAgentId in ref.agentToTransportId)) {
-            this._ipc.send('json', {
-              method: 'failureResult',
-              dnaAddress: opt.data.dnaAddress,
-              _id: opt.data._id,
-              toAgentId: opt.data.fromAgentId,
-              errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting handleSendMessageResult'
-            })
+          // Note: opt.data is a MessageData
+          // Sender must TrackDna
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id) === null) {
             return
           }
-          tId = ref.agentToTransportId[opt.data.toAgentId]
+          // Receiver must TrackDna
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
+          if (tId === null) {
+            return
+          }
           this._p2p.send(tId, {
             type: 'sendMessageResult',
             _id: opt.data._id,
@@ -216,6 +211,9 @@ class N3hHackMode extends AsyncClass {
           return
         case 'publishEntry':
           // Note: opt.data is a EntryData
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId) === null) {
+            return
+          }
           // Bookkeep
           this._bookkeepAddress(this._publishedEntryBook, opt.data.dnaAddress, opt.data.address)
           // publish
@@ -228,6 +226,9 @@ class N3hHackMode extends AsyncClass {
           return
         case 'publishMeta':
           // Note: opt.data is a DhtMetaData
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId) === null) {
+            return
+          }
           // Bookkeep each metaId
           for (const metaContent of opt.data.contentList) {
             let metaId = this._metaIdFromTuple(opt.data.entryAddress, opt.data.attribute, metaContent)
@@ -244,12 +245,19 @@ class N3hHackMode extends AsyncClass {
           })
           return
         case 'fetchEntry':
+          // Note: opt.data is a FetchEntryData
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.requesterAgentId) === null) {
+            return
+          }
           //  since we're fully connected, just redirect this back to itself for now...
           opt.data.method = 'handleFetchEntry'
           this._ipc.send('json', opt.data)
           return
         case 'handleFetchEntryResult':
           // Note: opt.data is a FetchEntryResultData
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId, opt.data.requesterAgentId, opt.data._id) === null) {
+            return
+          }
           // if this message is a response from our own request, do a publish
           bucketId = this._checkRequest(opt.data._id)
           if (bucketId !== '') {
@@ -289,6 +297,10 @@ class N3hHackMode extends AsyncClass {
           })
           return
         case 'fetchMeta':
+          // Note: opt.data is a FetchMetaData
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.requesterAgentId) === null) {
+            return
+          }
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
           opt.data.method = 'handleFetchMeta'
@@ -296,6 +308,9 @@ class N3hHackMode extends AsyncClass {
           return
         case 'handleFetchMetaResult':
           // Note: opt.data is a FetchMetaResultData
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId, opt.data.requesterAgentId, opt.data._id) === null) {
+            return
+          }
           ref = this._getMemRef(opt.data.dnaAddress)
           // if its from our own request, do a publish for each new/unknown meta content
           bucketId = this._checkRequest(opt.data._id)
@@ -791,6 +806,53 @@ class N3hHackMode extends AsyncClass {
     let bucketId = this._requestBook.get(requestId)
     this._requestBook.delete(requestId)
     return bucketId
+  }
+
+  /**
+   *  Check if agent is tracking dna.
+   *  If not, will try to send a FailureResult back to sender (if sender info is provided).
+   *  Returns transportId of receiverAgentId if agent is tracking dna.
+   */
+  _getTransportIdOrFail (dnaAddress, receiverAgentId, senderAgentId, requestId) {
+    // get memory slice
+    let ref = this._getMemRef(dnaAddress)
+    // Check if receiver is known
+    if (ref.agentToTransportId[receiverAgentId]) {
+      log.t('oooo CHECK OK for "' + receiverAgentId + '" for DNA "' + dnaAddress + '" = ' + ref.agentToTransportId[receiverAgentId])
+      return ref.agentToTransportId[receiverAgentId]
+    }
+    // Send FailureResult back to IPC, should be senderAgentId
+    log.e('#### Check failed for "' + receiverAgentId + '" for DNA "' + dnaAddress + '"')
+    this._ipc.send('json', {
+      method: 'failureResult',
+      dnaAddress: dnaAddress,
+      _id: requestId,
+      toAgentId: senderAgentId,
+      errorInfo: 'No routing for agent id "' + receiverAgentId + '"'
+    })
+    // Done
+    return null
+  }
+
+  /**
+   * We can't remove a mem entry but we can update it, so we update the transportId to undefined
+   * to signify that this agent is no longer part of this DNA
+   */
+  _untrack (dnaAddress, agentId) {
+    // get mem slice
+    const ref = this._getMemRef(dnaAddress)
+    // create data entry
+    const agent = {
+      type: 'agent',
+      dnaAddress: dnaAddress,
+      agentId: agentId,
+      address: 'hackmode:peer:discovery:' + agentId,
+      transportId: null
+    }
+    log.t('_untrack() for "' + agentId + '" for DNA "' + dnaAddress + '"')
+
+    // store agent (this will map agentId to transportId)
+    ref.mem.insert(agent)
   }
 
   _track (dnaAddress, agentId) {
