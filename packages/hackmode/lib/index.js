@@ -898,7 +898,9 @@ class N3hHackMode extends AsyncClass {
   /**
    *   Make a metaId out of an DhtMetaData
    */
-  _metaIdFromTuple (entryAddress, attribute, metaContent) {
+  _metaIdFromTuple (entryAddress, attribute, metaContentJson) {
+    var metaContent = Buffer.from(JSON.stringify(metaContentJson))
+    JSON.stringify(metaContent)
     const hashedContent = getHash(metaContent)
     return '' + entryAddress + '||' + attribute + '||' + hashedContent
   }
