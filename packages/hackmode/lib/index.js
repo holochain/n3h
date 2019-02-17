@@ -900,7 +900,6 @@ class N3hHackMode extends AsyncClass {
    */
   _metaIdFromTuple (entryAddress, attribute, metaContentJson) {
     var metaContent = Buffer.from(JSON.stringify(metaContentJson))
-    JSON.stringify(metaContent)
     const hashedContent = getHash(metaContent)
     return '' + entryAddress + '||' + attribute + '||' + hashedContent
   }
