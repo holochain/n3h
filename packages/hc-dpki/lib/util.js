@@ -1,55 +1,8 @@
 const mosodium = require('@holochain/mosodium')
 const msgpack = require('msgpack-lite')
-const { Encoding } = require('@holochain/hcid')
+const { Encoding } = require('@holochain/hcid-js')
 
-const rsEncoder = new Encoder(6)
-const rsDecoder = new Decoder(6)
-
-/**
- * using base64url encoding (https://tools.ietf.org/html/rfc4648#section-5)
- * Generate an identity string with a pair of public keys
- * @param {Buffer} signPub - singing public key
- * @param {Buffer} encPub - encryption public key
- * @return {string} - the base64url encoded identity (with parity bytes)
- */
-function encodeId (signPub, encPub) {
-  const res = Buffer.concat([
-    Buffer.from([0x86, 0x46]),
-    rsEncoder.encode(Buffer.concat([signPub, encPub]))
-  ])
-  return res.toString('base64').replace(/\+/g, '-').replace(/\//g, '_')
-}
-
-exports.encodeId = encodeId
-
-/**
- * using base64url encoding (https://tools.ietf.org/html/rfc4648#section-5)
- * break an identity string up into a pair of public keys
- * @param {string} id - the base64url encoded identity string
- * @return {object} - { signPub: Buffer, encPub: Buffer }
- */
-function decodeId (id) {
-  let tmp = Buffer.from(id.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
-
-  if (tmp[0] === 0x86 && tmp[1] === 0x46) {
-    tmp = tmp.slice(2)
-  }
-
-  if (tmp.byteLength !== 70) {
-    throw new Error('invalid agent id')
-  }
-
-  if (rsDecoder.is_corrupted(tmp)) {
-    tmp = rsDecoder.correct(tmp)
-  }
-
-  return {
-    signPub: tmp.slice(0, 32),
-    encPub: tmp.slice(32, 64)
-  }
-}
-
-exports.decodeId = decodeId
+const hcs0 = new Encoding('hcs0')
 
 /**
  * verify a signature given the original data, and the signer's identity string
@@ -58,7 +11,7 @@ exports.decodeId = decodeId
  * @param {string} signerId - the signer's public identity string
  */
 function verify (signature, data, signerId) {
-  const { signPub } = decodeId(signerId)
+  const signPub = Buffer.from(hcs0.decode(signerId))
   return mosodium.sign.verify(signature, data, signPub)
 }
 
