@@ -603,7 +603,8 @@ class N3hMock extends AsyncClass {
   /**
    *   Make a metaId out of a meta
    */
-  _intoMetaId (entryAddress, attribute, metaContent) {
+  _intoMetaId (entryAddress, attribute, metaContentJson) {
+    const metaContent = JSON.stringify(metaContentJson)
     return '' + entryAddress + '||' + attribute + '||' + metaContent
   }
 
