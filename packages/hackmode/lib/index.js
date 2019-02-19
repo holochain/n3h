@@ -934,20 +934,14 @@ class N3hHackMode extends AsyncClass {
     const isStored = dnaAddress in this._storedEntryBook
       ? this._storedEntryBook[dnaAddress].includes(entryAddress)
       : false
-    const isPublished = dnaAddress in this._publishedEntryBook
-      ? this._publishedEntryBook[dnaAddress].includes(entryAddress)
-      : false
-    return isStored || isPublished
+    return isStored
   }
 
   _hasMeta (dnaAddress, metaId) {
     const isStored = dnaAddress in this._storedMetaBook
       ? this._storedMetaBook[dnaAddress].includes(metaId)
       : false
-    const isPublished = dnaAddress in this._publishedMetaBook
-      ? this._publishedMetaBook[dnaAddress].includes(metaId)
-      : false
-    return isStored || isPublished
+    return isStored
   }
 
   _pauseGossip (msg, ms) {
