@@ -9,12 +9,9 @@ const { IpcServer } = require('@holochain/n3h-ipc')
 const { P2p } = require('@holochain/n3h-mod-spec')
 const { P2pBackendHackmodePeer } = require('./p2p-backend-hackmode-peer')
 
-const { Mem } = require('./mem')
-
 const config = require('./config')
 
-const PeerInfo = require('peer-info')
-const PeerId = require('peer-id')
+const { Mem, getHash } = require('./mem')
 
 const tweetlog = require('@holochain/tweetlog')
 const log = tweetlog('@hackmode@')
@@ -153,7 +150,7 @@ class N3hHackMode extends AsyncClass {
           if (tId === null) {
             return
           }
-          tId = ref.agentToTransportId[opt.data.toAgentId]
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId)
           this._p2pSend(tId, {
             type: 'failureResult',
             dnaAddress: opt.data.dnaAddress,
@@ -200,7 +197,7 @@ class N3hHackMode extends AsyncClass {
           if (tId === null) {
             return
           }
-          tId = ref.agentToTransportId[opt.data.toAgentId]
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId)
           this._p2pSend(tId, {
             type: 'handleSendMessage',
             _id: opt.data._id,
@@ -221,7 +218,6 @@ class N3hHackMode extends AsyncClass {
           if (tId === null) {
             return
           }
-          tId = ref.agentToTransportId[opt.data.toAgentId]
           this._p2pSend(tId, {
             type: 'sendMessageResult',
             _id: opt.data._id,
@@ -254,7 +250,7 @@ class N3hHackMode extends AsyncClass {
           // Bookkeep each metaId
           for (const metaContent of opt.data.contentList) {
             let metaId = this._metaIdFromTuple(opt.data.entryAddress, opt.data.attribute, metaContent)
-          this._bookkeepAddress(this._publishedMetaBook, opt.data.dnaAddress, metaId)
+            this._bookkeepAddress(this._publishedMetaBook, opt.data.dnaAddress, metaId)
           }
           // publish
           log.t('publishMeta', opt.data.contentList)
@@ -357,12 +353,12 @@ class N3hHackMode extends AsyncClass {
               this._bookkeepAddress(isPublish ? this._publishedMetaBook : this._storedMetaBook, opt.data.dnaAddress, metaId)
               log.t('handleFetchMetaResult insert:', metaContent, opt.data.providerAgentId, metaId, isPublish)
               ref.mem.insertMeta({
-              type: 'dhtMeta',
-              providerAgentId: opt.data.providerAgentId,
-              entryAddress: opt.data.entryAddress,
-              attribute: opt.data.attribute,
+                type: 'dhtMeta',
+                providerAgentId: opt.data.providerAgentId,
+                entryAddress: opt.data.entryAddress,
+                attribute: opt.data.attribute,
                 contentList: [metaContent]
-            })
+              })
             }
             return
           }
