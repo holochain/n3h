@@ -391,7 +391,6 @@ class N3hMock extends AsyncClass {
             knownHoldingList = this._storedEntryBook[bucketId]
           }
           // Update my book-keeping on what this agent has.
-          // and do a getEntry for every new entry
           for (const entryAddress of opt.data.entryAddressList) {
             if (knownHoldingList.includes(entryAddress)) {
               continue
@@ -454,8 +453,6 @@ class N3hMock extends AsyncClass {
             knownHoldingMetaList = this._storedMetaBook[bucketId]
           }
           // Update my book-keeping on what this agent has.
-          // and do a getEntry for every new entry
-          // for (let entryAddress in opt.data.metaList) {
           for (const metaTuple of opt.data.metaList) {
             let metaId = this._intoMetaId(metaTuple[0], metaTuple[1], metaTuple[2])
             if (knownHoldingMetaList.includes(metaId)) {
@@ -603,7 +600,8 @@ class N3hMock extends AsyncClass {
   /**
    *   Make a metaId out of a meta
    */
-  _intoMetaId (entryAddress, attribute, metaContent) {
+  _intoMetaId (entryAddress, attribute, metaContentJson) {
+    const metaContent = JSON.stringify(metaContentJson)
     return '' + entryAddress + '||' + attribute + '||' + metaContent
   }
 
