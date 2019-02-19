@@ -338,9 +338,9 @@ class P2pBackendHackmodePeer extends AsyncClass {
 
   /**
    */
-  async _removeConnection (cId) {
+  async _removeConnection (connectionId) {
     for (let [peerAddress, cId] of this._conByPeerAddress) {
-      if (cId === cId) {
+      if (connectionId === cId) {
         log.t('removing connection', peerAddress)
         this._conByPeerAddress.delete(peerAddress)
       }
