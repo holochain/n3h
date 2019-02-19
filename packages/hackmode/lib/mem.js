@@ -203,3 +203,4 @@ class Mem {
 }
 
 exports.Mem = Mem
+exports.getHash = getHash

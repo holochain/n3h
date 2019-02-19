@@ -10,7 +10,11 @@ const { P2p } = require('@holochain/n3h-mod-spec')
 const { P2pBackendHackmodePeer } = require('./p2p-backend-hackmode-peer')
 
 const { Mem } = require('./mem')
+
 const config = require('./config')
+
+const PeerInfo = require('peer-info')
+const PeerId = require('peer-id')
 
 const tweetlog = require('@holochain/tweetlog')
 const log = tweetlog('@hackmode@')
@@ -130,7 +134,7 @@ class N3hHackMode extends AsyncClass {
       return
     }
 
-    log.t('Received IPC message: ', opt)
+    log.t('Received IPC: ', opt)
 
     let ref
     let tId
@@ -144,17 +148,9 @@ class N3hHackMode extends AsyncClass {
           if (bucketId !== '') {
             return
           }
-          // if not relay to sender
-          ref = this._getMemRef(opt.data.dnaAddress)
-          if (!(opt.data.toAgentId in ref.agentToTransportId)) {
-            // Sending failureResult failed...
-            this._ipc.send('json', {
-              method: 'failureResult',
-              dnaAddress: opt.data.dnaAddress,
-              _id: opt.data._id,
-              toAgentId: opt.data.agentId,
-              errorInfo: 'No routing for agent id "' + opt.data.requesterAgentId + '" aborting failureResult'
-            })
+          // if not relay to receipient if possible
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId)
+          if (tId === null) {
             return
           }
           tId = ref.agentToTransportId[opt.data.toAgentId]
@@ -182,19 +178,26 @@ class N3hHackMode extends AsyncClass {
           })
           return
         case 'trackDna':
+          // Note: opt.data is a TrackDnaData
           this._track(opt.data.dnaAddress, opt.data.agentId)
           return
+        case 'untrackDna':
+          // Note: opt.data is a TrackDnaData
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.agentId)
+          if (tId === null) {
+            return
+          }
+          this._untrack(opt.data.dnaAddress, opt.data.agentId)
+          return
         case 'sendMessage':
-          ref = this._getMemRef(opt.data.dnaAddress)
-          if (!(opt.data.toAgentId in ref.agentToTransportId)) {
-            log.w('NO ROUTE FOR sendMessage', opt.data)
-            this._ipc.send('json', {
-              method: 'failureResult',
-              dnaAddress: opt.data.dnaAddress,
-              _id: opt.data._id,
-              toAgentId: opt.data.fromAgentId,
-              errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting sendMessage'
-            })
+          // Note: opt.data is a MessageData
+          // Sender must TrackDna
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id) === null) {
+            return
+          }
+          // Receiver must TrackDna
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
+          if (tId === null) {
             return
           }
           tId = ref.agentToTransportId[opt.data.toAgentId]
@@ -208,15 +211,14 @@ class N3hHackMode extends AsyncClass {
           })
           return
         case 'handleSendMessageResult':
-          ref = this._getMemRef(opt.data.dnaAddress)
-          if (!(opt.data.toAgentId in ref.agentToTransportId)) {
-            this._ipc.send('json', {
-              method: 'failureResult',
-              dnaAddress: opt.data.dnaAddress,
-              _id: opt.data._id,
-              toAgentId: opt.data.fromAgentId,
-              errorInfo: 'No routing for agent id "' + opt.data.toAgentId + '" aborting handleSendMessageResult'
-            })
+          // Note: opt.data is a MessageData
+          // Sender must TrackDna
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id) === null) {
+            return
+          }
+          // Receiver must TrackDna
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
+          if (tId === null) {
             return
           }
           tId = ref.agentToTransportId[opt.data.toAgentId]
@@ -231,6 +233,9 @@ class N3hHackMode extends AsyncClass {
           return
         case 'publishEntry':
           // Note: opt.data is a EntryData
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId) === null) {
+            return
+          }
           // Bookkeep
           this._bookkeepAddress(this._publishedEntryBook, opt.data.dnaAddress, opt.data.address)
           // publish
@@ -243,28 +248,43 @@ class N3hHackMode extends AsyncClass {
           return
         case 'publishMeta':
           // Note: opt.data is a DhtMetaData
-          // Bookkeep
-          let metaId = this._catEntryAttribute(opt.data.entryAddress, opt.data.attribute)
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId) === null) {
+            return
+          }
+          // Bookkeep each metaId
+          for (const metaContent of opt.data.contentList) {
+            let metaId = this._metaIdFromTuple(opt.data.entryAddress, opt.data.attribute, metaContent)
           this._bookkeepAddress(this._publishedMetaBook, opt.data.dnaAddress, metaId)
+          }
           // publish
+          log.t('publishMeta', opt.data.contentList)
           this._getMemRef(opt.data.dnaAddress).mem.insertMeta({
             type: 'dhtMeta',
             providerAgentId: opt.data.providerAgentId,
             entryAddress: opt.data.entryAddress,
             attribute: opt.data.attribute,
-            content: opt.data.content
+            contentList: opt.data.contentList
           })
           return
         case 'fetchEntry':
+          // Note: opt.data is a FetchEntryData
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.requesterAgentId) === null) {
+            return
+          }
           //  since we're fully connected, just redirect this back to itself for now...
           opt.data.method = 'handleFetchEntry'
           this._ipc.send('json', opt.data)
           return
         case 'handleFetchEntryResult':
           // Note: opt.data is a FetchEntryResultData
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId, opt.data.requesterAgentId, opt.data._id) === null) {
+            return
+          }
           // if this message is a response from our own request, do a publish
-          if (this._requestBook.has(opt.data._id)) {
-            this._requestBook.delete(opt.data._id)
+          bucketId = this._checkRequest(opt.data._id)
+          if (bucketId !== '') {
+            const isPublish = opt.data.providerAgentId === '__publish'
+            this._bookkeepAddress(isPublish ? this._publishedEntryBook : this._storedEntryBook, opt.data.dnaAddress, opt.data.address)
             this._getMemRef(opt.data.dnaAddress).mem.insert({
               type: 'dhtEntry',
               providerAgentId: opt.data.providerAgentId,
@@ -299,6 +319,10 @@ class N3hHackMode extends AsyncClass {
           })
           return
         case 'fetchMeta':
+          // Note: opt.data is a FetchMetaData
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.requesterAgentId) === null) {
+            return
+          }
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
           opt.data.method = 'handleFetchMeta'
@@ -306,20 +330,43 @@ class N3hHackMode extends AsyncClass {
           return
         case 'handleFetchMetaResult':
           // Note: opt.data is a FetchMetaResultData
-          // if its from our own request do a publish
-          if (this._requestBook.has(opt.data._id)) {
-            this._requestBook.delete(opt.data._id)
-            this._getMemRef(opt.data.dnaAddress).mem.insertMeta({
+          if (this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId, opt.data.requesterAgentId, opt.data._id) === null) {
+            return
+          }
+          ref = this._getMemRef(opt.data.dnaAddress)
+          // if its from our own request, do a publish for each new/unknown meta content
+          bucketId = this._checkRequest(opt.data._id)
+          if (bucketId !== '') {
+            const isPublish = opt.data.providerAgentId === '__publish'
+            // get already known list
+            let knownMetaList = []
+            if (isPublish) {
+              if (bucketId in this._publishedMetaBook) {
+                knownMetaList = this._publishedMetaBook[bucketId]
+              }
+            } else {
+              if (bucketId in this._storedMetaBook) {
+                knownMetaList = this._storedMetaBook[bucketId]
+              }
+            }
+            for (const metaContent of opt.data.contentList) {
+              let metaId = this._metaIdFromTuple(opt.data.entryAddress, opt.data.attribute, metaContent)
+              if (knownMetaList.includes(metaId)) {
+                continue
+              }
+              this._bookkeepAddress(isPublish ? this._publishedMetaBook : this._storedMetaBook, opt.data.dnaAddress, metaId)
+              log.t('handleFetchMetaResult insert:', metaContent, opt.data.providerAgentId, metaId, isPublish)
+              ref.mem.insertMeta({
               type: 'dhtMeta',
               providerAgentId: opt.data.providerAgentId,
               entryAddress: opt.data.entryAddress,
               attribute: opt.data.attribute,
-              content: opt.data.content
+                contentList: [metaContent]
             })
+            }
             return
           }
           // Send back to requester
-          ref = this._getMemRef(opt.data.dnaAddress)
           if (!(opt.data.requesterAgentId in ref.agentToTransportId)) {
             this._ipc.send('json', {
               method: 'failureResult',
@@ -340,7 +387,7 @@ class N3hHackMode extends AsyncClass {
             agentId: opt.data.agentId,
             entryAddress: opt.data.entryAddress,
             attribute: opt.data.attribute,
-            content: opt.data.content
+            contentList: opt.data.contentList
           })
           return
         case 'handleGetPublishingEntryListResult':
@@ -367,9 +414,10 @@ class N3hHackMode extends AsyncClass {
               method: 'handleFetchEntry',
               dnaAddress: opt.data.dnaAddress,
               _id: this._createRequestWithBucket(bucketId),
-              requesterAgentId: '',
+              requesterAgentId: '__publish',
               address: entryAddress
             }
+            log.t('Sending IPC:', fetchEntry)
             this._ipc.send('json', fetchEntry)
           }
           return
@@ -396,9 +444,10 @@ class N3hHackMode extends AsyncClass {
               method: 'handleFetchEntry',
               dnaAddress: opt.data.dnaAddress,
               _id: this._createRequestWithBucket(bucketId),
-              requesterAgentId: '',
+              requesterAgentId: '__hold',
               address: entryAddress
             }
+            log.t('Sending IPC:', fetchEntry)
             this._ipc.send('json', fetchEntry)
           }
           return
@@ -419,19 +468,28 @@ class N3hHackMode extends AsyncClass {
 
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
-          for (const metaPair of opt.data.metaList) {
-            let metaId = this._catEntryAttribute(metaPair[0], metaPair[1])
+          let requestedMetaKey = []
+          for (const metaTuple of opt.data.metaList) {
+            let metaId = this._metaIdFromTuple(metaTuple[0], metaTuple[1], metaTuple[2])
             if (knownPublishingMetaList.includes(metaId)) {
               continue
             }
+            log.t('handleGetPublishingMetaListResult, unknown metaId = ', metaId)
+            // dont send same request twice
+            const metaKey = '' + metaTuple[0] + '+' + metaTuple[1]
+            if (requestedMetaKey.includes(metaKey)) {
+              continue
+            }
+            requestedMetaKey.push(metaKey)
             let fetchMeta = {
               method: 'handleFetchMeta',
               dnaAddress: opt.data.dnaAddress,
               _id: this._createRequestWithBucket(bucketId),
-              requesterAgentId: '',
-              entryAddress: metaPair[0],
-              attribute: metaPair[1]
+              requesterAgentId: '__publish',
+              entryAddress: metaTuple[0],
+              attribute: metaTuple[1]
             }
+            log.t('Sending IPC:', fetchMeta)
             this._ipc.send('json', fetchMeta)
           }
           return
@@ -451,8 +509,8 @@ class N3hHackMode extends AsyncClass {
           // Update my book-keeping on what this agent has.
           // and do a getEntry for every new entry
           // for (let entryAddress in opt.data.metaList) {
-          for (const metaPair of opt.data.metaList) {
-            let metaId = this._catEntryAttribute(metaPair[0], metaPair[1])
+          for (const metaTuple of opt.data.metaList) {
+            let metaId = this._metaIdFromTuple(metaTuple[0], metaTuple[1], metaTuple[2])
             if (knownHoldingMetaList.includes(metaId)) {
               continue
             }
@@ -460,10 +518,11 @@ class N3hHackMode extends AsyncClass {
               method: 'handleFetchMeta',
               dnaAddress: opt.data.dnaAddress,
               _id: this._createRequestWithBucket(bucketId),
-              requesterAgentId: '',
-              entryAddress: metaPair[0],
-              attribute: metaPair[1]
+              requesterAgentId: '__hold',
+              entryAddress: metaTuple[0],
+              attribute: metaTuple[1]
             }
+            log.t('Sending IPC:', fetchMeta)
             this._ipc.send('json', fetchMeta)
           }
           return
@@ -577,7 +636,7 @@ class N3hHackMode extends AsyncClass {
           agentId: opt.data.agentId,
           entryAddress: opt.data.entryAddress,
           attribute: opt.data.attribute,
-          content: opt.data.content
+          contentList: opt.data.contentList
         })
         return
       case 'failureResult':
@@ -719,8 +778,13 @@ class N3hHackMode extends AsyncClass {
       // send IPC handleStoreEntry on inserting a dhtEntry
       mem.registerIndexer((store, data) => {
         if (data && data.type === 'dhtEntry') {
+          if (this._hasEntry(dnaAddress, data.address)) {
+            log.t('dhtEntry is known:', data.address)
+            return
+          }
           log.t('got dhtEntry', data)
           this._bookkeepAddress(this._storedEntryBook, dnaAddress, data.address)
+          log.t('Sending IPC handleStoreEntry: ', data.address)
           this._ipc.send('json', {
             method: 'handleStoreEntry',
             dnaAddress,
@@ -734,15 +798,24 @@ class N3hHackMode extends AsyncClass {
       mem.registerIndexer((store, data) => {
         if (data && data.type === 'dhtMeta') {
           log.t('got dhtMeta', data)
-          const metaId = this._catEntryAttribute(data.entryAddress, data.attribute)
+          let toStoreList = []
+          for (const metaContent of data.contentList) {
+            const metaId = this._metaIdFromTuple(data.entryAddress, data.attribute, metaContent)
+            if (this._hasMeta(dnaAddress, metaId)) {
+              log.t('metaContent is known:', metaContent)
+              continue
+            }
           this._bookkeepAddress(this._storedMetaBook, dnaAddress, metaId)
+            toStoreList.push(metaContent)
+          }
+          log.t('Sending IPC handleStoreMeta: ', toStoreList)
           this._ipc.send('json', {
             method: 'handleStoreMeta',
             dnaAddress,
             providerAgentId: data.providerAgentId,
             entryAddress: data.entryAddress,
             attribute: data.attribute,
-            content: data.content
+            contentList: toStoreList
           })
         }
       })
@@ -771,6 +844,53 @@ class N3hHackMode extends AsyncClass {
     let bucketId = this._requestBook.get(requestId)
     this._requestBook.delete(requestId)
     return bucketId
+  }
+
+  /**
+   *  Check if agent is tracking dna.
+   *  If not, will try to send a FailureResult back to sender (if sender info is provided).
+   *  Returns transportId of receiverAgentId if agent is tracking dna.
+   */
+  _getTransportIdOrFail (dnaAddress, receiverAgentId, senderAgentId, requestId) {
+    // get memory slice
+    let ref = this._getMemRef(dnaAddress)
+    // Check if receiver is known
+    if (ref.agentToTransportId[receiverAgentId]) {
+      log.t('oooo CHECK OK for "' + receiverAgentId + '" for DNA "' + dnaAddress + '" = ' + ref.agentToTransportId[receiverAgentId])
+      return ref.agentToTransportId[receiverAgentId]
+    }
+    // Send FailureResult back to IPC, should be senderAgentId
+    log.e('#### Check failed for "' + receiverAgentId + '" for DNA "' + dnaAddress + '"')
+    this._ipc.send('json', {
+      method: 'failureResult',
+      dnaAddress: dnaAddress,
+      _id: requestId,
+      toAgentId: senderAgentId,
+      errorInfo: 'No routing for agent id "' + receiverAgentId + '"'
+    })
+    // Done
+    return null
+  }
+
+  /**
+   * We can't remove a mem entry but we can update it, so we update the transportId to undefined
+   * to signify that this agent is no longer part of this DNA
+   */
+  _untrack (dnaAddress, agentId) {
+    // get mem slice
+    const ref = this._getMemRef(dnaAddress)
+    // create data entry
+    const agent = {
+      type: 'agent',
+      dnaAddress: dnaAddress,
+      agentId: agentId,
+      address: 'hackmode:peer:discovery:' + agentId,
+      transportId: null
+    }
+    log.t('_untrack() for "' + agentId + '" for DNA "' + dnaAddress + '"')
+
+    // store agent (this will map agentId to transportId)
+    ref.mem.insert(agent)
   }
 
   _track (dnaAddress, agentId) {
@@ -813,15 +933,13 @@ class N3hHackMode extends AsyncClass {
     })
   }
 
-  // _catDnaAgent (DnaHash, AgentId) {
-  //   return '' + DnaHash + '::' + AgentId
-  // }
-
   /**
-   *   Make a metaId out of an entryAddress and an attribute
+   *   Make a metaId out of an DhtMetaData
    */
-  _catEntryAttribute (entryAddress, attribute) {
-    return '' + entryAddress + '||' + attribute
+  _metaIdFromTuple (entryAddress, attribute, metaContentJson) {
+    var metaContent = Buffer.from(JSON.stringify(metaContentJson))
+    const hashedContent = getHash(metaContent)
+    return '' + entryAddress + '||' + attribute + '||' + hashedContent
   }
 
   _generateRequestId () {
@@ -848,6 +966,20 @@ class N3hHackMode extends AsyncClass {
       book[dnaAddress] = []
     }
     book[dnaAddress].push(address)
+  }
+
+  _hasEntry (dnaAddress, entryAddress) {
+    const isStored = dnaAddress in this._storedEntryBook
+      ? this._storedEntryBook[dnaAddress].includes(entryAddress)
+      : false
+    return isStored
+  }
+
+  _hasMeta (dnaAddress, metaId) {
+    const isStored = dnaAddress in this._storedMetaBook
+      ? this._storedMetaBook[dnaAddress].includes(metaId)
+      : false
+    return isStored
   }
 
   _pauseGossip (msg, ms) {

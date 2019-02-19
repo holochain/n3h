@@ -14,11 +14,16 @@ Currently it consists of an IPC API that connects holochain to a wrapper around 
 
 ## Versions
 
-Version 0.0.3 of Holochain was the first to use n3h as its networking component. If you are using v0.0.3 of Holochain tools, it will require v0.0.3 of n3h. Please see the tagged release to download a version of n3h that is guaranteed to work with the equivalent version.
+Version 0.0.3 of Holochain was the first to use n3h as its networking component. For each version of the Holochain you must use the a compatible version of n3h.  Make sure to download the tagged release to download a version of n3h that is guaranteed to work with the equivalent Holochain version:
 
-[https://github.com/holochain/n3h/releases/tag/v0.0.3](https://github.com/holochain/n3h/releases/tag/v0.0.3)
+### 0.0.4-alpha1
+- [https://github.com/holochain/n3h/releases/tag/v0.0.4-alpha1](https://github.com/holochain/n3h/releases/tag/v0.0.4-alpha1)
+- [https://github.com/holochain/holochain-rust/releases/tag/v0.0.4-alpha](https://github.com/holochain/holochain-rust/releases/tag/v0.0.4-alpha)
 
-[https://github.com/holochain/holochain-rust/releases/tag/v0.0.3](https://github.com/holochain/holochain-rust/releases/tag/v0.0.3)
+### 0.0.3
+- [https://github.com/holochain/n3h/releases/tag/v0.0.3](https://github.com/holochain/n3h/releases/tag/v0.0.3)
+- [https://github.com/holochain/holochain-rust/releases/tag/v0.0.3](https://github.com/holochain/holochain-rust/releases/tag/v0.0.3)
+
 
 ## Usage
 
