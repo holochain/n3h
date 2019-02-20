@@ -23,6 +23,7 @@ const log = tweetlog('@hackmode@')
  * working directory.
  * If neither is supplied, will load up the following default:
  *
+ * ```
  * "webproxy": {
  *   "connection": {
  *     "rsaBits": 1024,
@@ -33,6 +34,7 @@ const log = tweetlog('@hackmode@')
  *   "wssAdvertise": "auto",
  *   "wssRelayPeers": null
  * }
+ * ```
  *
  * Config Definitions:
  *

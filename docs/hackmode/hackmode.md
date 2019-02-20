@@ -7,6 +7,7 @@ Expects a config either over stdin or as a file `n3h-config.json` in the
 working directory.
 If neither is supplied, will load up the following default:
 
+```
 "webproxy": {
   "connection": {
     "rsaBits": 1024,
@@ -17,6 +18,7 @@ If neither is supplied, will load up the following default:
   "wssAdvertise": "auto",
   "wssRelayPeers": null
 }
+```
 
 Config Definitions:
 
