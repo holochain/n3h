@@ -2,6 +2,10 @@
 
 ## projects
 
+### hackmode
+
+- [hackmode](hackmode/hackmode.md)
+
 ### hc-dpki
 
 - [keypair](hc-dpki/keypair.md)
