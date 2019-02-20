@@ -16,6 +16,33 @@ const { Mem, getHash } = require('./mem')
 const tweetlog = require('@holochain/tweetlog')
 const log = tweetlog('@hackmode@')
 
+/**
+ * N3h "hackmode" prototyping code
+ *
+ * Expects a config either over stdin or as a file `n3h-config.json` in the
+ * working directory.
+ * If neither is supplied, will load up the following default:
+ *
+ * ```
+ * "webproxy": {
+ *   "connection": {
+ *     "rsaBits": 1024,
+ *     "bind": [
+ *       "wss://0.0.0.0:0/"
+ *     ]
+ *   },
+ *   "wssAdvertise": "auto",
+ *   "wssRelayPeers": null
+ * }
+ * ```
+ *
+ * Config Definitions:
+ *
+ * - `webproxy.connection.rsaBits` {number} - rsa bits to use for tls on websocket server
+ * - `webproxy.connection.bind` {array<uri>} - uri array of NICs to bind the websocket server. use host `0.0.0.0` for "all" NICs, use port `0` for random (os-assigned) port. You can specify a path, e.g. `"wss://127.0.0.1:8443/test/path/"`
+ * - `webproxy.wssAdvertise` {uri|"auto"} - Cannot be paired with `wssRelayPeers`. Sets up this node to be directly connectable at this address. Special case if set to `"auto"` will pick the first public NIC binding... allowing for os-assigned ports.
+ * - `webproxy.wssRelayPeers` {array<uri>} - Cannot be paired with `wssAdvertise`. Uri array of relay peers to connect through. (currently you can only specify 1). Use this if behind a NAT, all messages will be routed through the peer specified here.
+ */
 class N3hHackMode extends AsyncClass {
   async init (workDir, rawConfigData) {
     await super.init()
@@ -71,6 +98,9 @@ class N3hHackMode extends AsyncClass {
 
   // -- private -- //
 
+  /**
+   * @private
+   */
   async _initIpc () {
     this._ipc = await new IpcServer()
 
@@ -86,6 +116,9 @@ class N3hHackMode extends AsyncClass {
     log.t('bound to', this._ipc.boundEndpoint)
   }
 
+  /**
+   * @private
+   */
   async _initP2p () {
     const p2pConf = {
       dht: {},
@@ -111,6 +144,9 @@ class N3hHackMode extends AsyncClass {
     log.i('p2p bound', advertise)
   }
 
+  /**
+   * @private
+   */
   async _p2pSend (peerAddress, obj) {
     return this._p2p.publishReliable(
       [peerAddress],
@@ -118,6 +154,9 @@ class N3hHackMode extends AsyncClass {
     )
   }
 
+  /**
+   * @private
+   */
   _peerBookInsert (id) {
     if (!(id in this._peerBook)) {
       this._peerBook[id] = {
@@ -126,6 +165,9 @@ class N3hHackMode extends AsyncClass {
     }
   }
 
+  /**
+   * @private
+   */
   _handleIpcMessage (opt) {
     if (opt.name === 'ping' || opt.name === 'pong') {
       return
@@ -528,6 +570,9 @@ class N3hHackMode extends AsyncClass {
     throw new Error('unexpected input ' + JSON.stringify(opt))
   }
 
+  /**
+   * @private
+   */
   _handleP2pEvent (evt) {
     switch (evt.type) {
       case 'peerConnect':
@@ -548,6 +593,7 @@ class N3hHackMode extends AsyncClass {
    * Received a message from the network.
    * Might send some messages back and
    * transcribe received message into a local IPC message.
+   * @private
    */
   _handleP2pMessage (opt) {
     // log.w('@@@@', opt.data.type, JSON.stringify(opt.data))
@@ -654,6 +700,7 @@ class N3hHackMode extends AsyncClass {
   /**
    *   Received a 'gossipHashHash'
    *   Send back a 'gossipRequestLocHashes'
+   * @private
    */
   _processGossipHashHash (fromId, gossipHashHash) {
     // we got a gossip response! push back next step 2 seconds
@@ -683,7 +730,10 @@ class N3hHackMode extends AsyncClass {
     })
   }
 
-  /// send back a gossipHashList: all the hashes that we 'stored' in every loc given in locList
+  /**
+   * send back a gossipHashList: all the hashes that we 'stored' in every loc given in locList
+   * @private
+   */
   _processRequestLocHashes (fromId, locList) {
     // log.t('requestLocHashes', fromId, JSON.stringify(locList))
 
@@ -710,7 +760,10 @@ class N3hHackMode extends AsyncClass {
     })
   }
 
-  /// send back a getData per hash in list
+  /**
+   * send back a getData per hash in list
+   * @private
+   */
   _processGossipHashList (fromId, hashList) {
     // log.t('hashList', fromId, JSON.stringify(hashList))
 
@@ -732,6 +785,7 @@ class N3hHackMode extends AsyncClass {
 
   /**
    * send back a getDataResp
+   * @private
    */
   _processGetData (fromId, dnaAddress, hash) {
     // log.t('getData', fromId, dnaAddress, hash)
@@ -751,6 +805,7 @@ class N3hHackMode extends AsyncClass {
 
   /**
    * Received GetDataResp back from our request: store the data received
+   * @private
    */
   _processGetDataResp (dnaAddress, data) {
     if (dnaAddress in this._memory) {
@@ -768,6 +823,9 @@ class N3hHackMode extends AsyncClass {
     }
   }
 
+  /**
+   * @private
+   */
   _getMemRef (dnaAddress) {
     if (!(dnaAddress in this._memory)) {
       const mem = new Mem()
@@ -801,7 +859,7 @@ class N3hHackMode extends AsyncClass {
               log.t('metaContent is known:', metaContent)
               continue
             }
-          this._bookkeepAddress(this._storedMetaBook, dnaAddress, metaId)
+            this._bookkeepAddress(this._storedMetaBook, dnaAddress, metaId)
             toStoreList.push(metaContent)
           }
           log.t('Sending IPC handleStoreMeta: ', toStoreList)
@@ -833,6 +891,9 @@ class N3hHackMode extends AsyncClass {
     return this._memory[dnaAddress]
   }
 
+  /**
+   * @private
+   */
   _checkRequest (requestId) {
     if (!this._requestBook.has(requestId)) {
       return ''
@@ -846,6 +907,7 @@ class N3hHackMode extends AsyncClass {
    *  Check if agent is tracking dna.
    *  If not, will try to send a FailureResult back to sender (if sender info is provided).
    *  Returns transportId of receiverAgentId if agent is tracking dna.
+   *  @private
    */
   _getTransportIdOrFail (dnaAddress, receiverAgentId, senderAgentId, requestId) {
     // get memory slice
@@ -871,6 +933,7 @@ class N3hHackMode extends AsyncClass {
   /**
    * We can't remove a mem entry but we can update it, so we update the transportId to undefined
    * to signify that this agent is no longer part of this DNA
+   * @private
    */
   _untrack (dnaAddress, agentId) {
     // get mem slice
@@ -889,6 +952,9 @@ class N3hHackMode extends AsyncClass {
     ref.mem.insert(agent)
   }
 
+  /**
+   * @private
+   */
   _track (dnaAddress, agentId) {
     log.t('REGISTER AGENT', dnaAddress, agentId)
 
@@ -930,7 +996,8 @@ class N3hHackMode extends AsyncClass {
   }
 
   /**
-   *   Make a metaId out of an DhtMetaData
+   * Make a metaId out of an DhtMetaData
+   * @private
    */
   _metaIdFromTuple (entryAddress, attribute, metaContentJson) {
     var metaContent = Buffer.from(JSON.stringify(metaContentJson))
@@ -944,19 +1011,26 @@ class N3hHackMode extends AsyncClass {
   }
 
   /**
-   *  create and return a new request_id
+   * create and return a new request_id
+   * @private
    */
   _createRequest (dnaAddress, agentId) {
     // let bucketId = this._catDnaAgent(dnaAddress, agentId)
     return this._createRequestWithBucket(dnaAddress)
   }
 
+  /**
+   * @private
+   */
   _createRequestWithBucket (bucketId) {
     let reqId = this._generateRequestId()
     this._requestBook.set(reqId, bucketId)
     return reqId
   }
 
+  /**
+   * @private
+   */
   _bookkeepAddress (book, dnaAddress, address) {
     if (!(dnaAddress in book)) {
       book[dnaAddress] = []
@@ -964,6 +1038,9 @@ class N3hHackMode extends AsyncClass {
     book[dnaAddress].push(address)
   }
 
+  /**
+   * @private
+   */
   _hasEntry (dnaAddress, entryAddress) {
     const isStored = dnaAddress in this._storedEntryBook
       ? this._storedEntryBook[dnaAddress].includes(entryAddress)
@@ -971,6 +1048,9 @@ class N3hHackMode extends AsyncClass {
     return isStored
   }
 
+  /**
+   * @private
+   */
   _hasMeta (dnaAddress, metaId) {
     const isStored = dnaAddress in this._storedMetaBook
       ? this._storedMetaBook[dnaAddress].includes(metaId)
@@ -978,6 +1058,9 @@ class N3hHackMode extends AsyncClass {
     return isStored
   }
 
+  /**
+   * @private
+   */
   _pauseGossip (msg, ms) {
     if (msg) {
       // log.i(msg)
@@ -988,6 +1071,9 @@ class N3hHackMode extends AsyncClass {
     }
   }
 
+  /**
+   * @private
+   */
   _checkGossip () {
     setImmediate(() => {
       if (this._gossipState.pauseUntil < Date.now()) {
@@ -998,6 +1084,7 @@ class N3hHackMode extends AsyncClass {
 
   /**
    * gossip tick: ask all hashes from next peer (send a p2p gossipHashHash)
+   * @private
    */
   async _gossip () {
     // give the next step some space
@@ -1037,7 +1124,8 @@ class N3hHackMode extends AsyncClass {
   }
 
   /**
-   *  return an array of gossipHashHash (one per dna) to gossip
+   * return an array of gossipHashHash (one per dna) to gossip
+   * @private
    */
   _fullGossipHashHash () {
     const out = []
