@@ -1,6 +1,9 @@
 const { AsyncClass, Track } = require('@holochain/n3h-common')
 const { Keypair } = require('@holochain/hc-dpki')
 const mosodium = require('@holochain/mosodium')
+const tweetlog = require('@holochain/tweetlog')
+const log = tweetlog('p2p-hackmode')
+
 const { URL } = require('url')
 const msgpack = require('msgpack-lite')
 
@@ -34,9 +37,7 @@ class P2pBackendHackmodePeer extends AsyncClass {
     seed.randomize()
 
     this._keypair = await Keypair.newFromSeed(seed)
-    console.log('== node id ==')
-    console.log(this._keypair.getId())
-    console.log('== end node id ==')
+    log.i('node-id', this._keypair.getId())
 
     this._newConTrack = await new Track()
     this._bindings = new Set()
@@ -131,6 +132,16 @@ class P2pBackendHackmodePeer extends AsyncClass {
    */
   async transportConnect (peerTransport) {
     await this._ensureConnection(peerTransport)
+  }
+
+  /**
+   * a soft close request... lib may comply, but may immediately connect again
+   */
+  async close (peerAddress) {
+    if (this._conByPeerAddress.has(peerAddress)) {
+      const cId = this._conByPeerAddress.get(peerAddress)
+      await this._con.close(cId)
+    }
   }
 
   /**
@@ -327,8 +338,13 @@ class P2pBackendHackmodePeer extends AsyncClass {
 
   /**
    */
-  async _removeConnection (cId) {
-    throw new Error('unimplemented')
+  async _removeConnection (connectionId) {
+    for (let [peerAddress, cId] of this._conByPeerAddress) {
+      if (connectionId === cId) {
+        log.t('removing connection', peerAddress)
+        this._conByPeerAddress.delete(peerAddress)
+      }
+    }
   }
 
   /**
@@ -373,18 +389,24 @@ class P2pBackendHackmodePeer extends AsyncClass {
           rem.peerData,
           rem.peerTs
         ))
+        await this._spec.$emitEvent(P2pEvent.peerConnect(rem.peerAddress))
         break
       case '$gossip$':
         await this._dht.post(DhtEvent.remoteGossipBundle(
           fromPeerAddress, message.toString('base64')))
         break
+      case '$publish$':
+        await this._spec.$emitEvent(P2pEvent.handlePublish(
+          fromPeerAddress, message.toString('base64')
+        ))
+        break
       case '$request$':
-        await this._spec.$emitEvent(P2pEvent.message(
+        await this._spec.$emitEvent(P2pEvent.handleRequest(
           fromPeerAddress, msgId, message.toString('base64')
         ))
         break
       case '$response$':
-        await this._spec.$checkResolveRequest(P2pEvent.message(
+        await this._spec.$checkResolveRequest(P2pEvent.handleRequest(
           fromPeerAddress, msgId, message.toString('base64')
         ))
         break

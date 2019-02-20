@@ -8,6 +8,8 @@ const os = require('os')
 const https = require('https')
 
 const { AsyncClass } = require('@holochain/n3h-common')
+const tweetlog = require('@holochain/tweetlog')
+const log = tweetlog('wss-server-utils')
 
 /**
  * Generate a new self-signed tls certificate, and encrypted
@@ -70,14 +72,14 @@ async function getCert (passphrase, rsaBits, tlsFile) {
   if (fs.existsSync(tlsFile)) {
     ;({ crt, key } = JSON.parse(fs.readFileSync(tlsFile)))
   } else {
-    console.log('warning: no tls data found, generating new keys and cert')
+    log.w('no tls data found, generating new keys and cert')
     ;({ crt, key } = await genCert(
       passphrase, rsaBits, tlsFile))
   }
 
   const { privateKey, finger } = await decryptKey(key, passphrase)
 
-  console.log('loaded rsa fingerprint', finger)
+  log.i('loaded rsa fingerprint', finger)
 
   return {
     crt,

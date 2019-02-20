@@ -22,6 +22,7 @@
   "dependencies": {
     "@holochain/n3h-common": "0.0.1",
     "@holochain/n3h-mod-spec": "0.0.1",
+    "@holochain/tweetlog": "0.0.1",
     "express": "^4.16.4",
     "express-ws": "^4.0.0",
     "helmet": "^3.15.0",

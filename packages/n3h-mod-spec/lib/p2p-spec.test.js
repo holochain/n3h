@@ -29,10 +29,10 @@ class P2pBackendMock extends AsyncClass {
     })
   }
   requestReliable (msgId, list, data) {
-    return this._spec.$emitEvent(P2pEvent.message('abcd', msgId, 'efgh'))
+    return this._spec.$emitEvent(P2pEvent.handleRequest('abcd', msgId, 'efgh'))
   }
   respondReliable (msgId, fromPeerAddress, data) {
-    this._spec.$checkResolveRequest(P2pEvent.message(
+    this._spec.$checkResolveRequest(P2pEvent.handleRequest(
       fromPeerAddress, msgId, data))
   }
 }
@@ -78,9 +78,9 @@ describe('P2p Spec Suite', () => {
     throw new Error('expected exception, got success')
   })
 
-  it('should emit message', async () => {
+  it('should emit handleRequest', async () => {
     const b64 = Buffer.from('tst').toString('base64')
-    await p.$emitEvent(P2pEvent.message(b64, b64, b64))
+    await p.$emitEvent(P2pEvent.handleRequest(b64, b64, b64))
     expect(e[0].data).equals('dHN0')
   })
 

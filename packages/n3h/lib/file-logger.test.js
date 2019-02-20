@@ -41,7 +41,7 @@ describe('file-logger Suite', () => {
 
     d = null
 
-    l.cleanup()
+    await l.cleanup()
     l = null
   })
 
