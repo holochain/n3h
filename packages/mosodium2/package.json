@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@holochain/n3h-common": "^0.0.1",
-    "sodium-native": "^2.2.3"
+    "sodium-native": "^2.3.0"
   },
   "standard": {
     "env": {

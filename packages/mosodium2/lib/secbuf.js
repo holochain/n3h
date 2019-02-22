@@ -39,10 +39,10 @@ class SBSecure extends SBRoot {
 
   /**
    */
-  readable (fn) {
+  async readable (fn) {
     try {
       sodium.sodium_mprotect_readonly(this._b)
-      fn(this._b.slice(0, this._size))
+      return await fn(this._b.slice(0, this._size))
     } finally {
       sodium.sodium_mprotect_noaccess(this._b)
     }
@@ -50,10 +50,10 @@ class SBSecure extends SBRoot {
 
   /**
    */
-  writable (fn) {
+  async writable (fn) {
     try {
       sodium.sodium_mprotect_readwrite(this._b)
-      fn(this._b.slice(0, this._size))
+      return await fn(this._b.slice(0, this._size))
     } finally {
       sodium.sodium_mprotect_noaccess(this._b)
     }
@@ -67,50 +67,104 @@ class SBInsecure extends SBRoot {
     await super.init(size)
 
     this._b = Buffer.alloc(size)
+
+    this.$pushDestructor(() => {
+      this._b.fill(0)
+      this._b = null
+    })
   }
 
   /**
    */
-  readable (fn) {
-    fn(this._b)
+  async readable (fn) {
+    return fn(this._b)
   }
 
   /**
    */
-  writable (fn) {
-    fn(this._b)
+  async writable (fn) {
+    return fn(this._b)
   }
 }
 
-function _copy(sbDest, bufSrc, srcOffset, srcLen) {
-  sbDest.writable(w => {
-    bufSrc.copy(w, 0, srcOffset, srcLen + srcOffset)
-  })
+class SBRef extends SBRoot {
+  /**
+   */
+  async init (ref) {
+    if (!(ref instanceof Buffer)) {
+      throw new Error('ref must be a Buffer')
+    }
+    await super.init(ref.byteLength)
+    this._b = ref
+  }
+
+  /**
+   */
+  async readable (fn) {
+    return fn(this._b)
+  }
+
+  /**
+   */
+  async writable (fn) {
+    return fn(this._b)
+  }
 }
 
-async function _from(oth, offset, len, Class) {
+async function _from (oth, offset, len, Class) {
   if (typeof offset !== 'number') {
     offset = 0
   }
   if (typeof len !== 'number') {
     len = oth.size()
   }
+  oth = await SecBuf.ref(oth)
   const out = await new SecBuf(await new Class(len))
-  if (oth instanceof Buffer) {
-    _copy(out, oth, offset, len)
-  } else if (oth instanceof SecBuf) {
-    oth.readable(r => {
-      _copy(out, r, offset, len)
-    })
-  } else {
-    throw new Error('oth must be a Buffer or a SecBuf')
-  }
+  await oth.readable(async r => {
+    await out.write(0, r.slice(offset, offset + len))
+  })
   return out
 }
 
 /**
  */
 class SecBuf extends AsyncClass {
+  /**
+   */
+  static async unlockMulti (spec, fn) {
+    const a = new Array(spec.length)
+
+    let res = null
+    let rej = null
+    const promise = new Promise((resolve, reject) => {
+      res = resolve
+      rej = reject
+    })
+
+    const wait = []
+    for (let i = 0; i < spec.length; ++i) {
+      const buf = spec[i][0]
+      const api = spec[i][1]
+      wait.push(buf[api](async buffer => {
+        try {
+          a[i] = buffer
+          for (let j of a) {
+            if (!j) {
+              await promise
+              return
+            }
+          }
+          await fn(...a)
+          res()
+        } catch (e) {
+          rej(e)
+          throw e
+        }
+      }))
+    }
+    await Promise.all(wait)
+  }
+
   /**
    */
   static async secure (size) {
@@ -121,6 +175,20 @@ class SecBuf extends AsyncClass {
    */
   static async insecure (size) {
     return new SecBuf(await new SBInsecure(size))
+  }
+
+  /**
+   */
+  static async ref (oth) {
+    if (oth instanceof SecBuf) {
+      return oth
+    } else if (oth instanceof Buffer) {
+      return new SecBuf(await new SBRef(oth))
+    } else if (oth instanceof Uint8Array) {
+      return new SecBuf(await new SBRef(Buffer.from(oth)))
+    } else {
+      throw new Error('oth must be a SecBuf, Buffer, or Uint8Array')
+    }
   }
 
   /**
@@ -138,7 +206,7 @@ class SecBuf extends AsyncClass {
   /**
    */
   async init (backend) {
-    await super.init();
+    await super.init()
     if (!(backend instanceof SBRoot)) {
       throw new Error('can only create SecBuf with SBSecure or SBInsecure')
     }
@@ -158,33 +226,52 @@ class SecBuf extends AsyncClass {
 
   /**
    */
-  readable (fn) {
+  async readable (fn) {
     return this._b.readable(fn)
   }
 
   /**
    */
-  writable (fn) {
+  async writable (fn) {
     return this._b.writable(fn)
   }
 
   /**
    */
-  write (offset, oth) {
+  async write (offset, oth) {
     if (typeof offset !== 'number') {
       throw new Error('offset must be a number')
     }
-    if (!(oth instanceof SecBuf)) {
-      throw new Error('oth must be a SecBuf')
-    }
+    oth = await SecBuf.ref(oth)
     if (offset + oth.size() > this.size()) {
       throw new Error('would write out of bounds')
     }
-    this.writable(w => {
-      oth.readable(r => {
+    await this.writable(async w => {
+      await oth.readable(r => {
         r.copy(w, offset)
       })
     })
+  }
+
+  /**
+   */
+  async increment () {
+    await this.writable(async w => {
+      sodium.sodium_increment(w)
+    })
+  }
+
+  /**
+   */
+  async compare (oth) {
+    oth = await SecBuf.ref(oth)
+    let out = null
+    await this.readable(async rA => {
+      await oth.readable(async rB => {
+        out = sodium.sodium_compare(rA, rB)
+      })
+    })
+    return out
   }
 }
 

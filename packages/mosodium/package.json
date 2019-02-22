@@ -20,7 +20,7 @@
     "standard": "^12.0.1"
   },
   "dependencies": {
-    "sodium-native": "^2.2.3"
+    "sodium-native": "^2.3.0"
   },
   "standard": {
     "env": {
