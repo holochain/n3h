@@ -186,7 +186,7 @@ class ConnectionBackendWss extends AsyncClass {
         throw new Error('unknown connection id: ' + id)
       }
       const ws = this._cons.get(id)
-      ws.send(buf)
+      ws.send(Buffer.from(buf, 'base64'))
     }
   }
 
@@ -251,6 +251,13 @@ class ConnectionBackendWss extends AsyncClass {
 
       lastMsg()
 
+      if (msg instanceof Buffer) {
+        msg = msg.toString('base64')
+      } else if (typeof msg === 'string') {
+        msg = Buffer.from(msg, 'utf8').toString('base64')
+      } else {
+        throw new Error('bad message type: ' + typeof msg)
+      }
       await this._spec.$emitEvent(ConnectionEvent.message(id, msg))
     })
 
