@@ -102,7 +102,7 @@ describe('Connection Spec Suite', () => {
     const b = []
     c.on('connect', c => b.push(['connect', c]))
 
-    await c.connect('testConSpec')
+    await c.connect('test://testConSpec')
     const testId = c.keys().next().value
 
     expect(() => {
@@ -128,17 +128,17 @@ describe('Connection Spec Suite', () => {
 
     c.on('event', e => b.push(e))
 
-    await c.bind('testBindSpec://')
-    await c.connect('testConSpec')
+    await c.bind('test://testBindSpec')
+    await c.connect('test://testConSpec')
     const testId = c.keys().next().value
     b.push({ type: 'has', data: c.has(testId) })
     b.push({ type: 'has', data: c.has('fake-bad-id') })
-    await c.send([testId], Buffer.from('test message'))
-    await c.sendUnreliable([testId], Buffer.from('test message'))
+    await c.send([testId], Buffer.from('test message').toString('base64'))
+    await c.sendUnreliable([testId], Buffer.from('test message').toString('base64'))
     b.push({ type: 'get', data: c.get(testId) })
     await c.setMeta(testId, { test: 'hello' })
     b.push({ type: 'get', data: c.get(testId) })
-    await c.send([testId], Buffer.from('test message 2'))
+    await c.send([testId], Buffer.from('test message 2').toString('base64'))
     await c.close(testId)
     await c.destroy()
 
@@ -182,7 +182,7 @@ describe('Connection Spec Suite', () => {
       [
         'bind',
         [
-          'testBindSpec://'
+          'test://testBindSpec'
         ]
       ],
       [

@@ -227,7 +227,7 @@ class P2pBackendHackmodePeer extends AsyncClass {
 
     const promise = this._newConTrack.track(remId)
 
-    await this._con.connect(uri)
+    await this._con.connect(uri.href)
 
     return promise
   }
