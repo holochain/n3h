@@ -51,10 +51,10 @@ class ConnectionBackendWss extends AsyncClass {
 
     this._pingTimer = setInterval(async () => {
       for (let [id, ws] of this._cons) {
-        if (Date.now() - ws._$_lastMsg > 500) {
+        if (Date.now() - ws._$_lastMsg > 5000) {
           ws.close(1001, 'stale connection')
           await this._handleClose(id)
-        } else if (Date.now() - ws._$_lastMsg >= 200) {
+        } else if (Date.now() - ws._$_lastMsg >= 2000) {
           ws.ping()
         }
       }
