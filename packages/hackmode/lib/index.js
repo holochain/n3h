@@ -102,20 +102,22 @@ class N3hHackMode extends AsyncClass {
     await Promise.all(this._config.ipc.connection.bind.map(
       b => this._ipc.bind(b)))
     log.t('bound to', this._ipcBoundUri)
-    /*
-    this._ipc = await new IpcServer()
+  }
 
-    this._ipc.on('clientAdd', id => {
-      log.t('clientAdd', id)
-    })
-    this._ipc.on('clientRemove', id => {
-      log.t('clientAdd', id)
-    })
-    this._ipc.on('message', opt => this._handleIpcMessage(opt))
-    this._ipc.boundEndpoint = (await this._ipc.bind(this._ipcUri))[0]
-
-    log.t('bound to', this._ipc.boundEndpoint)
-    */
+  /**
+   * @private
+   */
+  _ipcSend (type, data) {
+    switch (type) {
+      case 'json':
+        let msg = Buffer.from(JSON.stringify(data), 'utf8')
+        msg = msgpack.encode({ name: 'json', data: msg }).toString('base64')
+        // for now just sending to everything
+        this._ipc.send(Array.from(this._ipc.keys()), msg)
+        break
+      default:
+        throw new Error('unexpected ipc send type: ' + type)
+    }
   }
 
   /**
@@ -177,20 +179,47 @@ class N3hHackMode extends AsyncClass {
           this._ipcBoundUri = ev.boundUriList[0]
         }
         break
+      case 'close':
+      case 'connection':
+        // we don't need to do anything here
+        break
+      case 'message':
+        const dataPre = msgpack.decode(Buffer.from(ev.buffer, 'base64'))
+        const name = dataPre.name.toString()
+        switch (name) {
+          case 'json':
+            const data = JSON.parse(dataPre.data.toString('utf8'))
+            if (typeof data.method !== 'string') {
+              throw new Error('bad json msg: ' + JSON.stringify(data))
+            }
+            this._handleIpcJson(data)
+            break
+          default:
+            throw new Error('unexpected msg type: ' + name)
+        }
+        break
       default:
         throw new Error('unexpected ipc event type: ' + JSON.stringify(ev))
     }
+  }
+
+  /**
+   * @private
+   */
+  _handleIpcJson (data) {
+    const opt = { data }
     /*
     if (opt.name === 'ping' || opt.name === 'pong') {
       return
     }
+    */
 
-    log.t('Received IPC: ', opt)
+    log.t('Received IPC: ', data)
 
     let ref
     let tId
     let bucketId
-    if (opt.name === 'json' && typeof opt.data.method === 'string') {
+    if (true) {
       switch (opt.data.method) {
         case 'failureResult':
           // Note: opt.data is a FailureResultData
@@ -214,7 +243,7 @@ class N3hHackMode extends AsyncClass {
           })
           return
         case 'requestState':
-          this._ipc.send('json', {
+          this._ipcSend('json', {
             method: 'state',
             state: 'ready',
             id: this._p2p.getId(),
@@ -323,7 +352,7 @@ class N3hHackMode extends AsyncClass {
           }
           //  since we're fully connected, just redirect this back to itself for now...
           opt.data.method = 'handleFetchEntry'
-          this._ipc.send('json', opt.data)
+          this._ipcSend('json', opt.data)
           return
         case 'handleFetchEntryResult':
           // Note: opt.data is a FetchEntryResultData
@@ -347,7 +376,7 @@ class N3hHackMode extends AsyncClass {
           ref = this._getMemRef(opt.data.dnaAddress)
           // Respond failureResult if requester not found
           if (!(opt.data.requesterAgentId in ref.agentToTransportId)) {
-            this._ipc.send('json', {
+            this._ipcSend('json', {
               method: 'failureResult',
               dnaAddress: opt.data.dnaAddress,
               _id: opt.data._id,
@@ -376,7 +405,7 @@ class N3hHackMode extends AsyncClass {
           // erm... since we're fully connected,
           // just redirect this back to itself for now...
           opt.data.method = 'handleFetchMeta'
-          this._ipc.send('json', opt.data)
+          this._ipcSend('json', opt.data)
           return
         case 'handleFetchMetaResult':
           // Note: opt.data is a FetchMetaResultData
@@ -418,7 +447,7 @@ class N3hHackMode extends AsyncClass {
           }
           // Send back to requester
           if (!(opt.data.requesterAgentId in ref.agentToTransportId)) {
-            this._ipc.send('json', {
+            this._ipcSend('json', {
               method: 'failureResult',
               _id: opt.data._id,
               dnaAddress: opt.data.dnaAddress,
@@ -468,7 +497,7 @@ class N3hHackMode extends AsyncClass {
               address: entryAddress
             }
             log.t('Sending IPC:', fetchEntry)
-            this._ipc.send('json', fetchEntry)
+            this._ipcSend('json', fetchEntry)
           }
           return
 
@@ -498,7 +527,7 @@ class N3hHackMode extends AsyncClass {
               address: entryAddress
             }
             log.t('Sending IPC:', fetchEntry)
-            this._ipc.send('json', fetchEntry)
+            this._ipcSend('json', fetchEntry)
           }
           return
 
@@ -540,7 +569,7 @@ class N3hHackMode extends AsyncClass {
               attribute: metaTuple[1]
             }
             log.t('Sending IPC:', fetchMeta)
-            this._ipc.send('json', fetchMeta)
+            this._ipcSend('json', fetchMeta)
           }
           return
 
@@ -573,14 +602,13 @@ class N3hHackMode extends AsyncClass {
               attribute: metaTuple[1]
             }
             log.t('Sending IPC:', fetchMeta)
-            this._ipc.send('json', fetchMeta)
+            this._ipcSend('json', fetchMeta)
           }
           return
       }
     }
 
     throw new Error('unexpected input ' + JSON.stringify(opt))
-    */
   }
 
   /**
@@ -645,7 +673,7 @@ class N3hHackMode extends AsyncClass {
         log.t('P2P handleSendMessage', opt.data)
 
         // transcribe to IPC
-        this._ipc.send('json', {
+        this._ipcSend('json', {
           method: 'handleSendMessage',
           _id: opt.data._id,
           dnaAddress: opt.data.dnaAddress,
@@ -658,7 +686,7 @@ class N3hHackMode extends AsyncClass {
         log.t('P2P sendMessageResult', opt.data)
 
         // transcribe to IPC
-        this._ipc.send('json', {
+        this._ipcSend('json', {
           method: 'sendMessageResult',
           _id: opt.data._id,
           dnaAddress: opt.data.dnaAddress,
@@ -669,7 +697,7 @@ class N3hHackMode extends AsyncClass {
         return
       case 'fetchEntryResult':
         // transcribe to IPC
-        this._ipc.send('json', {
+        this._ipcSend('json', {
           method: 'fetchEntryResult',
           _id: opt.data._id,
           dnaAddress: opt.data.dnaAddress,
@@ -682,7 +710,7 @@ class N3hHackMode extends AsyncClass {
         return
       case 'fetchMetaResult':
         // transcribe to IPC
-        this._ipc.send('json', {
+        this._ipcSend('json', {
           method: 'fetchMetaResult',
           _id: opt.data._id,
           dnaAddress: opt.data.dnaAddress,
@@ -696,7 +724,7 @@ class N3hHackMode extends AsyncClass {
         return
       case 'failureResult':
         // transcribe to IPC
-        this._ipc.send('json', {
+        this._ipcSend('json', {
           method: 'failureResult',
           _id: opt.data._id,
           dnaAddress: opt.data.dnaAddress,
@@ -852,7 +880,7 @@ class N3hHackMode extends AsyncClass {
           log.t('got dhtEntry', data)
           this._bookkeepAddress(this._storedEntryBook, dnaAddress, data.address)
           log.t('Sending IPC handleStoreEntry: ', data.address)
-          this._ipc.send('json', {
+          this._ipcSend('json', {
             method: 'handleStoreEntry',
             dnaAddress,
             providerAgentId: data.providerAgentId,
@@ -876,7 +904,7 @@ class N3hHackMode extends AsyncClass {
             toStoreList.push(metaContent)
           }
           log.t('Sending IPC handleStoreMeta: ', toStoreList)
-          this._ipc.send('json', {
+          this._ipcSend('json', {
             method: 'handleStoreMeta',
             dnaAddress,
             providerAgentId: data.providerAgentId,
@@ -893,7 +921,7 @@ class N3hHackMode extends AsyncClass {
           if (data && data.type === 'agent') {
             log.t('PEER INDEXED', data)
             store[data.agentId] = data.transportId
-            this._ipc.send('json', {
+            this._ipcSend('json', {
               method: 'peerConnected',
               agentId: data.agentId
             })
@@ -932,7 +960,7 @@ class N3hHackMode extends AsyncClass {
     }
     // Send FailureResult back to IPC, should be senderAgentId
     log.e('#### Check failed for "' + receiverAgentId + '" for DNA "' + dnaAddress + '"')
-    this._ipc.send('json', {
+    this._ipcSend('json', {
       method: 'failureResult',
       dnaAddress: dnaAddress,
       _id: requestId,
@@ -983,25 +1011,25 @@ class N3hHackMode extends AsyncClass {
 
     // send get lists
     let requestId = this._createRequest(dnaAddress, agentId)
-    this._ipc.send('json', {
+    this._ipcSend('json', {
       method: 'handleGetPublishingEntryList',
       dnaAddress,
       _id: requestId
     })
     requestId = this._createRequest(dnaAddress, agentId)
-    this._ipc.send('json', {
+    this._ipcSend('json', {
       method: 'handleGetHoldingEntryList',
       dnaAddress,
       _id: requestId
     })
     requestId = this._createRequest(dnaAddress, agentId)
-    this._ipc.send('json', {
+    this._ipcSend('json', {
       method: 'handleGetPublishingMetaList',
       dnaAddress,
       _id: requestId
     })
     requestId = this._createRequest(dnaAddress, agentId)
-    this._ipc.send('json', {
+    this._ipcSend('json', {
       method: 'handleGetHoldingMetaList',
       dnaAddress,
       _id: requestId
