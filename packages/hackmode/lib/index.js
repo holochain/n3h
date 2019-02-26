@@ -4,10 +4,10 @@ const { URL } = require('url')
 const msgpack = require('msgpack-lite')
 
 const { AsyncClass, mkdirp } = require('@holochain/n3h-common')
-const { IpcServer } = require('@holochain/n3h-ipc')
 
-const { P2p } = require('@holochain/n3h-mod-spec')
+const { P2p, Connection } = require('@holochain/n3h-mod-spec')
 const { P2pBackendHackmodePeer } = require('./p2p-backend-hackmode-peer')
+const { ConnectionBackendWss } = require('@holochain/n3h-mod-connection-wss')
 
 const config = require('./config')
 
@@ -69,23 +69,13 @@ class N3hHackMode extends AsyncClass {
 
     this._workDir = workDir
 
-    this._ipcUri = 'N3H_IPC_SOCKET' in process.env
-      ? process.env.N3H_IPC_SOCKET
-      : 'ipc://' + path.resolve(path.join(
-        os.homedir(), '.n3h', 'n3h-ipc.socket'))
-
-    const tmpUri = new URL(this._ipcUri.replace('*', '0'))
-    if (tmpUri.protocol === 'ipc:') {
-      await mkdirp(path.dirname(tmpUri.pathname))
-    }
-
     await Promise.all([
       this._initIpc(),
       this._initP2p()
     ])
 
     // make sure this is output despite our log settings
-    console.log('#IPC-BINDING#:' + this._ipc.boundEndpoint)
+    console.log('#IPC-BINDING#:' + this._ipcBoundUri)
     console.log('#P2P-BINDING#:' + this._p2p.getAdvertise())
     console.log('#IPC-READY#')
 
@@ -102,6 +92,17 @@ class N3hHackMode extends AsyncClass {
    * @private
    */
   async _initIpc () {
+    this._ipc = await new Connection(ConnectionBackendWss, {
+      // TODO - allow some kind of environment var?? for setting passphrase
+      passphrase: 'hello',
+      rsaBits: this._config.ipc.connection.rsaBits,
+      bind: this._config.ipc.connection.bind
+    })
+    this._ipc.on('event', ev => this._handleIpcEvent(ev))
+    await Promise.all(this._config.ipc.connection.bind.map(
+      b => this._ipc.bind(b)))
+    log.t('bound to', this._ipcBoundUri)
+    /*
     this._ipc = await new IpcServer()
 
     this._ipc.on('clientAdd', id => {
@@ -114,6 +115,7 @@ class N3hHackMode extends AsyncClass {
     this._ipc.boundEndpoint = (await this._ipc.bind(this._ipcUri))[0]
 
     log.t('bound to', this._ipc.boundEndpoint)
+    */
   }
 
   /**
@@ -168,7 +170,17 @@ class N3hHackMode extends AsyncClass {
   /**
    * @private
    */
-  _handleIpcMessage (opt) {
+  _handleIpcEvent (ev) {
+    switch (ev.type) {
+      case 'bind':
+        if (!this._icpBoundUri) {
+          this._ipcBoundUri = ev.boundUriList[0]
+        }
+        break
+      default:
+        throw new Error('unexpected ipc event type: ' + JSON.stringify(ev))
+    }
+    /*
     if (opt.name === 'ping' || opt.name === 'pong') {
       return
     }
@@ -568,6 +580,7 @@ class N3hHackMode extends AsyncClass {
     }
 
     throw new Error('unexpected input ' + JSON.stringify(opt))
+    */
   }
 
   /**
