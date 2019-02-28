@@ -105,6 +105,7 @@ class Connection extends AsyncClass {
    */
   async bind (bindSpec) {
     this.$checkDestroyed()
+    type.assert.url(bindSpec)
     return this._backend.bind(bindSpec)
   }
 
@@ -114,6 +115,7 @@ class Connection extends AsyncClass {
    */
   async connect (conSpec) {
     this.$checkDestroyed()
+    type.assert.url(conSpec)
     return this._backend.connect(conSpec)
   }
 
@@ -127,6 +129,8 @@ class Connection extends AsyncClass {
    */
   async send (idList, buf) {
     this.$checkDestroyed()
+    type.assert.arrayOf.string(idList)
+    type.assert.base64String(buf)
     return this._backend.send(idList, buf)
   }
 
@@ -141,6 +145,8 @@ class Connection extends AsyncClass {
    */
   async sendUnreliable (idList, buf) {
     this.$checkDestroyed()
+    type.assert.arrayOf.string(idList)
+    type.assert.base64String(buf)
     return this._backend.sendUnreliable(idList, buf)
   }
 
@@ -151,6 +157,7 @@ class Connection extends AsyncClass {
    */
   async close (id) {
     this.$checkDestroyed()
+    type.assert.string(id)
     return this._backend.close(id)
   }
 
@@ -173,6 +180,7 @@ class Connection extends AsyncClass {
     if (this.$isDestroyed()) {
       return false
     }
+    type.assert.string(id)
     return this._cons.has(id)
   }
 
@@ -185,6 +193,7 @@ class Connection extends AsyncClass {
    */
   get (id) {
     this.$checkDestroyed()
+    type.assert.string(id)
     return this.$getCon(id)
   }
 
@@ -199,6 +208,7 @@ class Connection extends AsyncClass {
     if (this.$isDestroyed()) {
       return
     }
+    type.assert.string(id)
 
     const con = this.$getCon(id)
 
@@ -235,6 +245,8 @@ class Connection extends AsyncClass {
   $getCon (id) {
     this.$checkDestroyed()
 
+    type.assert.string(id)
+
     if (!this._cons.has(id)) {
       throw new Error('invalid id: ' + id)
     }
@@ -248,6 +260,8 @@ class Connection extends AsyncClass {
     if (this.$isDestroyed()) {
       return
     }
+
+    type.assert.string(id)
 
     this._cons.set(id, JSON.stringify({
       id,
@@ -263,6 +277,8 @@ class Connection extends AsyncClass {
     if (this.$isDestroyed()) {
       return
     }
+
+    type.assert.string(id)
 
     this._cons.delete(id)
   }

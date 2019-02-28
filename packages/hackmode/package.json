@@ -23,14 +23,12 @@
     "@holochain/hc-dpki": "^0.0.1",
     "@holochain/mosodium": "^0.0.1",
     "@holochain/n3h-common": "^0.0.1",
-    "@holochain/n3h-ipc": "^0.0.1",
     "@holochain/n3h-mod-connection-wss": "0.0.1",
     "@holochain/n3h-mod-dht-fullsync": "0.0.1",
     "@holochain/n3h-mod-spec": "0.0.1",
     "@holochain/tweetlog": "^0.0.1",
     "bs58": "^4.0.1",
-    "msgpack-lite": "^0.1.26",
-    "zeromq": "^5.1.0"
+    "msgpack-lite": "^0.1.26"
   },
   "standard": {
     "env": {

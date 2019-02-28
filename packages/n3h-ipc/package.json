@@ -22,6 +22,8 @@
   "dependencies": {
     "msgpack-lite": "^0.1.26",
     "@holochain/n3h-common": "^0.0.1",
+    "@holochain/n3h-mod-spec": "0.0.1",
+    "@holochain/n3h-mod-connection-wss": "0.0.1",
     "zeromq": "^5.1.0"
   },
   "standard": {

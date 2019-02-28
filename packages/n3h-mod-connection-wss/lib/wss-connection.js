@@ -51,10 +51,10 @@ class ConnectionBackendWss extends AsyncClass {
 
     this._pingTimer = setInterval(async () => {
       for (let [id, ws] of this._cons) {
-        if (Date.now() - ws._$_lastMsg > 500) {
+        if (Date.now() - ws._$_lastMsg > 5000) {
           ws.close(1001, 'stale connection')
           await this._handleClose(id)
-        } else if (Date.now() - ws._$_lastMsg >= 200) {
+        } else if (Date.now() - ws._$_lastMsg >= 2000) {
           ws.ping()
         }
       }
@@ -186,7 +186,7 @@ class ConnectionBackendWss extends AsyncClass {
         throw new Error('unknown connection id: ' + id)
       }
       const ws = this._cons.get(id)
-      ws.send(buf)
+      ws.send(Buffer.from(buf, 'base64'))
     }
   }
 
@@ -251,6 +251,13 @@ class ConnectionBackendWss extends AsyncClass {
 
       lastMsg()
 
+      if (msg instanceof Buffer) {
+        msg = msg.toString('base64')
+      } else if (typeof msg === 'string') {
+        msg = Buffer.from(msg, 'utf8').toString('base64')
+      } else {
+        throw new Error('bad message type: ' + typeof msg)
+      }
       await this._spec.$emitEvent(ConnectionEvent.message(id, msg))
     })
 
