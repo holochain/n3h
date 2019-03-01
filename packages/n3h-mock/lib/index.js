@@ -28,7 +28,7 @@ class N3hMock extends N3hMode {
   /**
    * Received 'message' from IPC: process it
    */
-  _handleIpcJson (data, uri) {
+  _handleIpcJson (data) {
     log.t('Received IPC: ', data)
 
     let tId
@@ -65,7 +65,7 @@ class N3hMock extends N3hMode {
 
         return
       case 'trackDna':
-        this._track(data.dnaAddress, data.agentId, uri)
+        this._track(data.dnaAddress, data.agentId)
         return
       case 'untrackDna':
         // if not relay to receipient if possible
@@ -447,7 +447,7 @@ class N3hMock extends N3hMode {
   /**
    *
    */
-  _track (dnaAddress, agentId, fromTransportId) {
+  _track (dnaAddress, agentId) {
     // get mem slice
     const ref = this._getMemRef(dnaAddress)
     // create data entry
@@ -455,7 +455,7 @@ class N3hMock extends N3hMode {
       type: 'agent',
       dnaAddress: dnaAddress,
       agentId: agentId,
-      transportId: fromTransportId
+      transportId: this._ipcBoundUriList.values().next().value
     }
 
     // store agent (this will map agentId to transportId)

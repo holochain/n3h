@@ -130,7 +130,7 @@ class N3hMode extends AsyncClass {
             if (typeof data.method !== 'string') {
               throw new Error('bad json msg: ' + JSON.stringify(data))
             }
-            this._handleIpcJson(data, ev.boundUriList[0])
+            this._handleIpcJson(data)
             break
           default:
             throw new Error('unexpected msg type: ' + name)
