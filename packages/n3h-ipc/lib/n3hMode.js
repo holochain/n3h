@@ -7,13 +7,11 @@ const { ConnectionBackendWss } = require('../../n3h-mod-connection-wss/lib/index
 
 const config = require('../../hackmode/lib/config')
 
-// const { Mem, getHash } = require('./mem')
-
 const tweetlog = require('../../tweetlog/lib/tweetlog')
 const log = tweetlog('@n3hMode@')
 
 /**
- * N3h "hackmode" prototyping code
+ * Common N3h Mode code
  *
  * Expects a config either over stdin or as a file `n3h-config.json` in the
  * working directory.
@@ -54,8 +52,9 @@ class N3hMode extends AsyncClass {
     this._publishedMetaBook = {}
     this._storedMetaBook = {}
 
-    this._requestBook = new Map()
     this._requestCount = 0
+
+    this._ipcBoundUriList = new Set()
 
     // Map of AgentId -> DNAs
     // Can also serve as a list of known local agents
@@ -66,7 +65,7 @@ class N3hMode extends AsyncClass {
     await Promise.all([this._initIpc()])
 
     // make sure this is output despite our log settings
-    console.log('#IPC-BINDING#:' + this._ipcBoundUri)
+    console.log('#IPC-BINDING#:' + this._ipcBoundUriList.values().next().value)
     console.log('#IPC-READY#')
   }
 
@@ -89,7 +88,7 @@ class N3hMode extends AsyncClass {
     })
     this._ipc.on('event', ev => this._handleIpcEvent(ev))
     await Promise.all(this._config.ipc.connection.bind.map(b => this._ipc.bind(b)))
-    log.t('bound to', this._ipcBoundUri)
+    log.t('bound to', this._ipcBoundUriList.values().next().value)
   }
 
   /**
@@ -99,7 +98,7 @@ class N3hMode extends AsyncClass {
     switch (type) {
       case 'json':
         let msg = Buffer.from(JSON.stringify(data), 'utf8')
-        msg = msgpack.encode({name: 'json', data: msg}).toString('base64')
+        msg = msgpack.encode({ name: 'json', data: msg }).toString('base64')
         // for now just sending to everything
         this._ipc.send(Array.from(this._ipc.keys()), msg)
         break
@@ -115,7 +114,7 @@ class N3hMode extends AsyncClass {
     switch (ev.type) {
       case 'bind':
         if (!this._icpBoundUri) {
-          this._ipcBoundUri = ev.boundUriList[0]
+          this._ipcBoundUriList.add(ev.boundUriList[0])
         }
         break
       case 'close':
@@ -131,7 +130,7 @@ class N3hMode extends AsyncClass {
             if (typeof data.method !== 'string') {
               throw new Error('bad json msg: ' + JSON.stringify(data))
             }
-            this._handleIpcJson(data)
+            this._handleIpcJson(data, ev.boundUriList[0])
             break
           default:
             throw new Error('unexpected msg type: ' + name)
@@ -142,17 +141,6 @@ class N3hMode extends AsyncClass {
     }
   }
 
-  /**
-   * @private
-   */
-  _checkRequest (requestId) {
-    if (!this._requestBook.has(requestId)) {
-      return ''
-    }
-    let bucketId = this._requestBook.get(requestId)
-    this._requestBook.delete(requestId)
-    return bucketId
-  }
 
   /**
    * @private

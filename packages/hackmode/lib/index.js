@@ -1,14 +1,9 @@
 const msgpack = require('msgpack-lite')
 
-// const { AsyncClass } = require('@holochain/n3h-common')
-
 const { P2p } = require('@holochain/n3h-mod-spec')
 const { P2pBackendHackmodePeer } = require('./p2p-backend-hackmode-peer')
-// const { ConnectionBackendWss } = require('@holochain/n3h-mod-connection-wss')
 
 const { N3hMode } = require('../../n3h-ipc/lib/n3hMode')
-
-// const config = require('./config')
 
 const { Mem, getHash } = require('./mem')
 
@@ -47,6 +42,7 @@ class N3hHackMode extends N3hMode {
     await super.init()
 
     this._peerBook = {}
+    this._requestBook = new Map()
 
     this._gossipState = {
       lastPeerIndex: 0,
@@ -118,7 +114,7 @@ class N3hHackMode extends N3hMode {
   /**
    * @private
    */
-  _handleIpcJson (data) {
+  _handleIpcJson (data, uri) {
     log.t('Received IPC: ', data)
 
     let ref
@@ -492,6 +488,18 @@ class N3hHackMode extends N3hMode {
     }
 
     throw new Error('unexpected input ' + JSON.stringify(data))
+  }
+
+  /**
+   * @private
+   */
+  _checkRequest (requestId) {
+    if (!this._requestBook.has(requestId)) {
+      return ''
+    }
+    let bucketId = this._requestBook.get(requestId)
+    this._requestBook.delete(requestId)
+    return bucketId
   }
 
   /**
