@@ -64,6 +64,10 @@ class N3hHackMode extends AsyncClass {
       pauseUntil: 0
     }
 
+    // Map of AgentId -> DNAs
+    // Can also serve as a list of known local agents
+    this._ipcDnaByAgent = new Map()
+
     this._workDir = workDir
 
     await Promise.all([
@@ -222,7 +226,6 @@ class N3hHackMode extends AsyncClass {
         if (tId === null) {
           return
         }
-        tId = this._getTransportIdOrFail(data.dnaAddress, data.toAgentId)
         this._p2pSend(tId, {
           type: 'failureResult',
           dnaAddress: data.dnaAddress,
@@ -252,16 +255,12 @@ class N3hHackMode extends AsyncClass {
         return
       case 'untrackDna':
         // Note: data is a TrackDnaData
-        tId = this._getTransportIdOrFail(data.dnaAddress, data.agentId)
-        if (tId === null) {
-          return
-        }
         this._untrack(data.dnaAddress, data.agentId)
         return
       case 'sendMessage':
         // Note: data is a MessageData
         // Sender must TrackDna
-        if (this._getTransportIdOrFail(data.dnaAddress, data.fromAgentId, data.fromAgentId, data._id) === null) {
+        if (!this._hasTrackOrFail(data.fromAgentId, data.dnaAddress, data._id)) {
           return
         }
         // Receiver must TrackDna
@@ -269,7 +268,6 @@ class N3hHackMode extends AsyncClass {
         if (tId === null) {
           return
         }
-        tId = this._getTransportIdOrFail(data.dnaAddress, data.toAgentId)
         this._p2pSend(tId, {
           type: 'handleSendMessage',
           _id: data._id,
@@ -282,7 +280,7 @@ class N3hHackMode extends AsyncClass {
       case 'handleSendMessageResult':
         // Note: data is a MessageData
         // Sender must TrackDna
-        if (this._getTransportIdOrFail(data.dnaAddress, data.fromAgentId, data.fromAgentId, data._id) === null) {
+        if (!this._hasTrackOrFail(data.fromAgentId, data.dnaAddress, data._id)) {
           return
         }
         // Receiver must TrackDna
@@ -301,7 +299,7 @@ class N3hHackMode extends AsyncClass {
         return
       case 'publishEntry':
         // Note: data is a EntryData
-        if (this._getTransportIdOrFail(data.dnaAddress, data.providerAgentId) === null) {
+        if (!this._hasTrackOrFail(data.providerAgentId, data.dnaAddress, data._id)) {
           return
         }
         // Bookkeep
@@ -316,7 +314,7 @@ class N3hHackMode extends AsyncClass {
         return
       case 'publishMeta':
         // Note: data is a DhtMetaData
-        if (this._getTransportIdOrFail(data.dnaAddress, data.providerAgentId) === null) {
+        if (!this._hasTrackOrFail(data.providerAgentId, data.dnaAddress, data._id)) {
           return
         }
         // Bookkeep each metaId
@@ -336,7 +334,7 @@ class N3hHackMode extends AsyncClass {
         return
       case 'fetchEntry':
         // Note: data is a FetchEntryData
-        if (this._getTransportIdOrFail(data.dnaAddress, data.requesterAgentId) === null) {
+        if (!this._hasTrackOrFail(data.requesterAgentId, data.dnaAddress, data._id)) {
           return
         }
         //  since we're fully connected, just redirect this back to itself for now...
@@ -345,7 +343,8 @@ class N3hHackMode extends AsyncClass {
         return
       case 'handleFetchEntryResult':
         // Note: data is a FetchEntryResultData
-        if (this._getTransportIdOrFail(data.dnaAddress, data.providerAgentId, data.requesterAgentId, data._id) === null) {
+        // Local node should be tracking DNA
+        if (!this._hasTrackOrFail(data.providerAgentId, data.dnaAddress, data._id)) {
           return
         }
         // if this message is a response from our own request, do a publish
@@ -361,20 +360,11 @@ class N3hHackMode extends AsyncClass {
           })
           return
         }
-        // Try sending back to requester
-        ref = this._getMemRef(data.dnaAddress)
-        // Respond failureResult if requester not found
-        if (!(data.requesterAgentId in ref.agentToTransportId)) {
-          this._ipcSend('json', {
-            method: 'failureResult',
-            dnaAddress: data.dnaAddress,
-            _id: data._id,
-            toAgentId: data.requesterAgentId,
-            errorInfo: 'No routing for agent id "' + data.requesterAgentId + '" aborting handleFetchEntryResult'
-          })
+        // Requester must TrackDna
+        tId = this._getTransportIdOrFail(data.dnaAddress, data.requesterAgentId, data.providerAgentId, data._id)
+        if (tId === null) {
           return
         }
-        tId = ref.agentToTransportId[data.requesterAgentId]
         this._p2pSend(tId, {
           type: 'fetchEntryResult',
           _id: data._id,
@@ -388,7 +378,7 @@ class N3hHackMode extends AsyncClass {
         return
       case 'fetchMeta':
         // Note: data is a FetchMetaData
-        if (this._getTransportIdOrFail(data.dnaAddress, data.requesterAgentId) === null) {
+        if (!this._hasTrackOrFail(data.requesterAgentId, data.dnaAddress, data._id)) {
           return
         }
         // erm... since we're fully connected,
@@ -398,7 +388,8 @@ class N3hHackMode extends AsyncClass {
         return
       case 'handleFetchMetaResult':
         // Note: data is a FetchMetaResultData
-        if (this._getTransportIdOrFail(data.dnaAddress, data.providerAgentId, data.requesterAgentId, data._id) === null) {
+        // Local node should be tracking DNA
+        if (!this._hasTrackOrFail(data.providerAgentId, data.dnaAddress, data._id)) {
           return
         }
         ref = this._getMemRef(data.dnaAddress)
@@ -434,18 +425,11 @@ class N3hHackMode extends AsyncClass {
           }
           return
         }
-        // Send back to requester
-        if (!(data.requesterAgentId in ref.agentToTransportId)) {
-          this._ipcSend('json', {
-            method: 'failureResult',
-            _id: data._id,
-            dnaAddress: data.dnaAddress,
-            toAgentId: data.requesterAgentId,
-            errorInfo: 'No routing for agent id "' + data.requesterAgentId + '" aborting handleFetchMetaResult'
-          })
+        // Requester must TrackDna
+        tId = this._getTransportIdOrFail(data.dnaAddress, data.requesterAgentId, data.providerAgentId, data._id)
+        if (tId === null) {
           return
         }
-        tId = ref.agentToTransportId[data.requesterAgentId]
         this._p2pSend(tId, {
           type: 'fetchMetaResult',
           _id: data._id,
@@ -658,7 +642,24 @@ class N3hHackMode extends AsyncClass {
         this._processGetDataResp(opt.data.dnaAddress, opt.data.data)
         return
       case 'handleSendMessage':
-        log.t('P2P handleSendMessage', opt.data)
+        log.t('Received P2P handleSendMessage', opt.data)
+
+        // Send error back to sender if we untracked this DNA
+        if (!this._ipcHasTrack(opt.data.toAgentId, opt.data.dnaAddress)) {
+          log.e('#### P2P hasTrack() failed for agent "' + opt.data.toAgentId + '" ; DNA = "' + opt.data.dnaAddress + '"')
+          const tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId)
+          if (tId === null) {
+            return
+          }
+          this._p2pSend(tId, {
+            type: 'failureResult',
+            dnaAddress: opt.data.dnaAddress,
+            _id: opt.data._id,
+            toAgentId: opt.data.fromAgentId,
+            errorInfo: 'Agent "' + opt.data.toAgentId + '" is not tracking DNA' + opt.data.dnaAddress
+          })
+          return
+        }
 
         // transcribe to IPC
         this._ipcSend('json', {
@@ -671,7 +672,7 @@ class N3hHackMode extends AsyncClass {
         })
         return
       case 'sendMessageResult':
-        log.t('P2P sendMessageResult', opt.data)
+        log.t('Received P2P sendMessageResult', opt.data)
 
         // transcribe to IPC
         this._ipcSend('json', {
@@ -722,7 +723,7 @@ class N3hHackMode extends AsyncClass {
         return
     }
 
-    throw new Error('unexpected p2p message ' + opt.from + ' ' + JSON.stringify(
+    throw new Error('Received unexpected p2p message ' + opt.from + ' ' + JSON.stringify(
       opt.data))
   }
 
@@ -933,6 +934,74 @@ class N3hHackMode extends AsyncClass {
   }
 
   /**
+   * @private
+   */
+  _ipcHasTrack (agentId, dnaAddress) {
+    log.t('_ipcHasTrack:', agentId, dnaAddress)
+    if (!this._ipcDnaByAgent.has(agentId)) {
+      return false
+    }
+    const dnas = this._ipcDnaByAgent.get(agentId)
+    log.t('_ipcHasTrack()', dnas.has(dnaAddress))
+    return dnas.has(dnaAddress)
+  }
+
+  /**
+   * @private
+   */
+  _ipcAddTrack (agentId, dnaAddress) {
+    log.t('_ipcAddTrack:', agentId, dnaAddress)
+    let dnas
+    if (!this._ipcDnaByAgent.has(agentId)) {
+      dnas = new Set()
+    } else {
+      dnas = this._ipcDnaByAgent.get(agentId)
+    }
+    dnas.add(dnaAddress)
+    this._ipcDnaByAgent.set(agentId, dnas)
+  }
+
+  /**
+   * @private
+   */
+  _ipcRemoveTrack (agentId, dnaAddress) {
+    log.t('_ipcRemoveTrack:', agentId, dnaAddress)
+    let dnas
+    if (!this._ipcDnaByAgent.has(agentId)) {
+      return
+    }
+    dnas = this._ipcDnaByAgent.get(agentId)
+    dnas.delete(dnaAddress)
+    this._ipcDnaByAgent.set(agentId, dnas)
+  }
+
+  /**
+   *  Check if agent is tracking dna.
+   *  If not, will try to send a FailureResult back to IPC
+   *  Returns _ipcHasTrack() result
+   *  @private
+   */
+  _hasTrackOrFail (agentId, dnaAddress, requestId) {
+    // Check if receiver is known
+    if (this._ipcHasTrack(agentId, dnaAddress)) {
+      log.t('oooo HasTrack() CHECK OK for agent "' + agentId + '" -> DNA "' + dnaAddress + '"')
+      return true
+    }
+    // Send FailureResult back to IPC
+    log.e('#### HasTrack() CHECK FAILED for agent "' + agentId + '" -> DNA "' + dnaAddress + '"')
+    this._ipcSend('json', {
+      method: 'failureResult',
+      dnaAddress: dnaAddress,
+      _id: requestId,
+      toAgentId: agentId,
+      errorInfo: 'This agent is not tracking DNA "' + dnaAddress + '"'
+    })
+    // Done
+    return false
+  }
+
+
+  /**
    *  Check if agent is tracking dna.
    *  If not, will try to send a FailureResult back to sender (if sender info is provided).
    *  Returns transportId of receiverAgentId if agent is tracking dna.
@@ -965,20 +1034,8 @@ class N3hHackMode extends AsyncClass {
    * @private
    */
   _untrack (dnaAddress, agentId) {
-    // get mem slice
-    const ref = this._getMemRef(dnaAddress)
-    // create data entry
-    const agent = {
-      type: 'agent',
-      dnaAddress: dnaAddress,
-      agentId: agentId,
-      address: 'hackmode:peer:discovery:' + agentId,
-      transportId: null
-    }
     log.t('_untrack() for "' + agentId + '" for DNA "' + dnaAddress + '"')
-
-    // store agent (this will map agentId to transportId)
-    ref.mem.insert(agent)
+    this._ipcRemoveTrack(agentId, dnaAddress)
   }
 
   /**
@@ -987,6 +1044,10 @@ class N3hHackMode extends AsyncClass {
   _track (dnaAddress, agentId) {
     log.t('REGISTER AGENT', dnaAddress, agentId)
 
+    // Bookkeep tracking
+    this._ipcAddTrack(agentId, dnaAddress)
+
+    // Insert transportId in Mem
     const ref = this._getMemRef(dnaAddress)
     // store agent (this will map agentId to transportId)
     ref.mem.insert({
