@@ -64,7 +64,8 @@ class N3hHackMode extends AsyncClass {
       pauseUntil: 0
     }
 
-    // list of known local agents
+    // Map of AgentId -> DNAs
+    // Can also serve as a list of known local agents
     this._ipcDnaByAgent = new Map()
 
     this._workDir = workDir
