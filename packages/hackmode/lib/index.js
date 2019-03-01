@@ -980,14 +980,14 @@ class N3hHackMode extends AsyncClass {
    *  Returns _ipcHasTrack() result
    *  @private
    */
-  _hasTrackOrFail (dnaAddress, agentId, requestId) {
+  _hasTrackOrFail (agentId, dnaAddress, requestId) {
     // Check if receiver is known
     if (this._ipcHasTrack(agentId, dnaAddress)) {
-      log.t('oooo HasTrack() CHECK OK for "' + agentId + '" -> DNA "' + dnaAddress + '")
+      log.t('oooo HasTrack() CHECK OK for agent "' + agentId + '" -> DNA "' + dnaAddress + '"')
       return true
     }
     // Send FailureResult back to IPC
-    log.e('#### HasTrack() CHECK FAILED for "' + agentId + '" -> DNA "' + dnaAddress + '"')
+    log.e('#### HasTrack() CHECK FAILED for agent "' + agentId + '" -> DNA "' + dnaAddress + '"')
     this._ipcSend('json', {
       method: 'failureResult',
       dnaAddress: dnaAddress,
