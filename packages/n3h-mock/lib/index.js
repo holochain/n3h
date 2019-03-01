@@ -36,17 +36,6 @@ class N3hMock extends AsyncClass {
     // Set working directory from config (a temp folder) or default to $home/.n3h
     this._workDir = workDir
 
-    // Set ipcUri
-    this._ipcUri = 'N3H_IPC_SOCKET' in process.env
-      ? process.env.N3H_IPC_SOCKET
-      : 'ipc://' + path.resolve(path.join(
-        os.homedir(), '.n3h', 'n3h-ipc.socket'))
-
-    const tmpUri = new URL(this._ipcUri.replace('*', '0'))
-    if (tmpUri.protocol === 'ipc:') {
-      await mkdirp(path.dirname(tmpUri.pathname))
-    }
-
     // Init "submodules"
     await Promise.all([
       this._initIpc()
@@ -54,7 +43,7 @@ class N3hMock extends AsyncClass {
 
     // Notify that Init is done
     // make sure this is output despite our log settings
-    console.log('#IPC-BINDING#:' + this._ipc.boundEndpoint)
+    console.log('#IPC-BINDING#:' + this._ipcBoundUri)
     console.log('#IPC-READY#')
   }
 
@@ -112,8 +101,8 @@ class N3hMock extends AsyncClass {
       return null
     }
     // Send FailureResult back to sender
-    const fromZmqId = ref.agentToTransportId[senderAgentId]
-    this._ipc.sendOne(fromZmqId, 'json', {
+    const fromTransportId = ref.agentToTransportId[senderAgentId]
+    this._ipc.sendOne(fromTransportId, 'json', {
       method: 'failureResult',
       dnaAddress: dnaAddress,
       _id: requestId,
@@ -134,7 +123,7 @@ class N3hMock extends AsyncClass {
 
     log.t('Received IPC: ', opt)
 
-    let toZmqId
+    let tId
     let bucketId
     if (opt.name === 'json' && typeof opt.data.method === 'string') {
       switch (opt.data.method) {
@@ -146,11 +135,11 @@ class N3hMock extends AsyncClass {
             return
           }
           // if not relay to receipient if possible
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId)
-          if (toZmqId === null) {
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId)
+          if (tId === null) {
             return
           }
-          this._ipc.sendOne(toZmqId, 'json', opt.data)
+          this._ipc.sendOne(tId, 'json', opt.data)
           return
         case 'requestState':
           this._ipc.send('json', {
@@ -173,22 +162,22 @@ class N3hMock extends AsyncClass {
           return
         case 'untrackDna':
           // if not relay to receipient if possible
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.agentId)
-          if (toZmqId === null) {
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.agentId)
+          if (tId === null) {
             return
           }
           this._untrack(opt.data.dnaAddress, opt.data.agentId, opt.fromZmqId)
           return
         case 'sendMessage':
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id)
-          if (toZmqId === null) {
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id)
+          if (tId === null) {
             return
           }
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
-          if (toZmqId === null) {
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
+          if (tId === null) {
             return
           }
-          this._ipc.sendOne(toZmqId, 'json', {
+          this._ipc.sendOne(tId, 'json', {
             method: 'handleSendMessage',
             _id: opt.data._id,
             dnaAddress: opt.data.dnaAddress,
@@ -199,15 +188,15 @@ class N3hMock extends AsyncClass {
           return
         case 'handleSendMessageResult':
           // Note: opt.data is a MessageData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id)
-          if (toZmqId === null) {
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id)
+          if (tId === null) {
             return
           }
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
-          if (toZmqId === null) {
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
+          if (tId === null) {
             return
           }
-          this._ipc.sendOne(toZmqId, 'json', {
+          this._ipc.sendOne(tId, 'json', {
             method: 'sendMessageResult',
             _id: opt.data._id,
             dnaAddress: opt.data.dnaAddress,
@@ -218,8 +207,8 @@ class N3hMock extends AsyncClass {
           return
         case 'publishEntry':
           // Note: opt.data is a EntryData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId)
-          if (toZmqId === null) {
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId)
+          if (tId === null) {
             return
           }
           // Bookkeep
@@ -239,8 +228,8 @@ class N3hMock extends AsyncClass {
           return
         case 'publishMeta':
           // Note: opt.data is a DhtMetaData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId)
-          if (toZmqId === null) {
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId)
+          if (tId === null) {
             return
           }
           // Bookkeep each metaId
@@ -259,8 +248,8 @@ class N3hMock extends AsyncClass {
           return
         case 'fetchEntry':
           // Note: opt.data is a FetchEntryData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.requesterAgentId)
-          if (toZmqId === null) {
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.requesterAgentId)
+          if (tId === null) {
             return
           }
           // erm... since we're fully connected,
@@ -270,8 +259,8 @@ class N3hMock extends AsyncClass {
           return
         case 'handleFetchEntryResult':
           // Note: opt.data is a FetchEntryResultData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId, opt.data.requesterAgentId, opt.data._id)
-          if (toZmqId === null) {
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId, opt.data.requesterAgentId, opt.data._id)
+          if (tId === null) {
             return
           }
           // if this message is a response from our own request, do a publish
@@ -296,8 +285,8 @@ class N3hMock extends AsyncClass {
           return
         case 'fetchMeta':
           // Note: opt.data is a FetchMetaData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.requesterAgentId)
-          if (toZmqId === null) {
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.requesterAgentId)
+          if (tId === null) {
             return
           }
           // erm... since we're fully connected,
@@ -307,8 +296,8 @@ class N3hMock extends AsyncClass {
           return
         case 'handleFetchMetaResult':
           // Note: opt.data is a FetchMetaResultData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId, opt.data.requesterAgentId, opt.data._id)
-          if (toZmqId === null) {
+          tId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId, opt.data.requesterAgentId, opt.data._id)
+          if (tId === null) {
             return
           }
           // if its from our own request, do a publish for each new/unknown meta content
@@ -552,7 +541,7 @@ class N3hMock extends AsyncClass {
   /**
    *
    */
-  _track (dnaAddress, agentId, fromZmqId) {
+  _track (dnaAddress, agentId, fromTransportId) {
     // get mem slice
     const ref = this._getMemRef(dnaAddress)
     // create data entry
@@ -560,7 +549,7 @@ class N3hMock extends AsyncClass {
       type: 'agent',
       dnaAddress: dnaAddress,
       agentId: agentId,
-      transportId: fromZmqId
+      transportId: fromTransportId
     }
 
     // store agent (this will map agentId to transportId)
