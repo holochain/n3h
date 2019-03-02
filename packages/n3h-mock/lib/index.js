@@ -1,6 +1,6 @@
 
 const { N3hMode } = require('../../n3h-ipc/lib/n3hMode')
-const { IpcServer } = require('@holochain/n3h-ipc')
+//const { IpcServer } = require('@holochain/n3h-ipc')
 
 const { Mem } = require('./mem')
 
@@ -49,7 +49,7 @@ class N3hMock extends N3hMode {
         this._ipc.sendOne(tId, 'json', data)
         return
       case 'requestState':
-        this._ipc.send('json', {
+        this._ipcSend('json', {
           method: 'state',
           state: 'ready',
           id: '42', // not needed in mock mode
@@ -58,26 +58,28 @@ class N3hMock extends N3hMode {
         return
       case 'connect':
         // maybe log an error?
-        this._ipc.send('json', {
+        this._ipcSend('json', {
           method: 'peerConnected',
           agentId: data.address
         })
 
         return
       case 'trackDna':
+        // Note: data is a TrackDnaData
         this._track(data.dnaAddress, data.agentId)
         return
       case 'untrackDna':
-        // if not relay to receipient if possible
-        tId = this._getTransportIdOrFail(data.dnaAddress, data.agentId)
-        if (tId === null) {
-          return
-        }
+        // Note: data is a TrackDnaData
         this._untrack(data.dnaAddress, data.agentId)
         return
       case 'sendMessage':
-        tId = this._getTransportIdOrFail(data.dnaAddress, data.fromAgentId, data.fromAgentId, data._id)
-        if (tId === null) {
+        // Note: data is a MessageData
+        // Sender must TrackDna
+        if (!this._hasTrackOrFail(data.fromAgentId, data.dnaAddress, data._id)) {
+          return
+        }
+        // Receiver must TrackDna
+        if (!this._hasTrackOrFail(data.toAgentId, data.dnaAddress, data._id)) {
           return
         }
         tId = this._getTransportIdOrFail(data.dnaAddress, data.toAgentId, data.fromAgentId, data._id)
@@ -95,8 +97,12 @@ class N3hMock extends N3hMode {
         return
       case 'handleSendMessageResult':
         // Note: data is a MessageData
-        tId = this._getTransportIdOrFail(data.dnaAddress, data.fromAgentId, data.fromAgentId, data._id)
-        if (tId === null) {
+        // Sender must TrackDna
+        if (!this._hasTrackOrFail(data.fromAgentId, data.dnaAddress, data._id)) {
+          return
+        }
+        // Receiver must TrackDna
+        if (!this._hasTrackOrFail(data.toAgentId, data.dnaAddress, data._id)) {
           return
         }
         tId = this._getTransportIdOrFail(data.dnaAddress, data.toAgentId, data.fromAgentId, data._id)
@@ -114,8 +120,7 @@ class N3hMock extends N3hMode {
         return
       case 'publishEntry':
         // Note: data is a EntryData
-        tId = this._getTransportIdOrFail(data.dnaAddress, data.providerAgentId)
-        if (tId === null) {
+        if (!this._hasTrackOrFail(data.providerAgentId, data.dnaAddress, data._id)) {
           return
         }
         // Bookkeep
@@ -135,8 +140,7 @@ class N3hMock extends N3hMode {
         return
       case 'publishMeta':
         // Note: opt.data is a DhtMetaData
-        tId = this._getTransportIdOrFail(data.dnaAddress, data.providerAgentId)
-        if (tId === null) {
+        if (!this._hasTrackOrFail(data.providerAgentId, data.dnaAddress, data._id)) {
           return
         }
         // Bookkeep each metaId
@@ -155,8 +159,7 @@ class N3hMock extends N3hMode {
         return
       case 'fetchEntry':
         // Note: data is a FetchEntryData
-        tId = this._getTransportIdOrFail(data.dnaAddress, data.requesterAgentId)
-        if (tId === null) {
+        if (!this._hasTrackOrFail(data.requesterAgentId, data.dnaAddress, data._id)) {
           return
         }
         // erm... since we're fully connected,
@@ -166,8 +169,7 @@ class N3hMock extends N3hMode {
         return
       case 'handleFetchEntryResult':
         // Note: data is a FetchEntryResultData
-        tId = this._getTransportIdOrFail(data.dnaAddress, data.providerAgentId, data.requesterAgentId, data._id)
-        if (tId === null) {
+        if (!this._hasTrackOrFail(data.providerAgentId, data.dnaAddress, data._id)) {
           return
         }
         // if this message is a response from our own request, do a publish
@@ -429,25 +431,32 @@ class N3hMock extends N3hMode {
    *
    */
   _untrack (dnaAddress, agentId) {
-    // get mem slice
-    const ref = this._getMemRef(dnaAddress)
-    // create data entry
-    const agent = {
-      type: 'agent',
-      dnaAddress: dnaAddress,
-      agentId: agentId,
-      transportId: undefined
-    }
-    log.t('_untrack() for "' + agentId + '" for DNA "' + dnaAddress + '"')
+    // // get mem slice
+    // const ref = this._getMemRef(dnaAddress)
+    // // create data entry
+    // const agent = {
+    //   type: 'agent',
+    //   dnaAddress: dnaAddress,
+    //   agentId: agentId,
+    //   transportId: undefined
+    // }
+    // log.t('_untrack() for "' + agentId + '" for DNA "' + dnaAddress + '"')
+    //
+    // // store agent (this will map agentId to transportId)
+    // ref.mem.insert(agent)
 
-    // store agent (this will map agentId to transportId)
-    ref.mem.insert(agent)
+    log.t('_untrack() for "' + agentId + '" for DNA "' + dnaAddress + '"')
+    this._ipcRemoveTrack(agentId, dnaAddress)
   }
 
   /**
    *
    */
   _track (dnaAddress, agentId) {
+    const tId = this._ipcBoundUriList.values().next().value
+    log.t('_track:', dnaAddress, agentId, tId)
+    // Bookkeep tracking
+    this._ipcAddTrack(agentId, dnaAddress)
     // get mem slice
     const ref = this._getMemRef(dnaAddress)
     // create data entry
@@ -455,7 +464,7 @@ class N3hMock extends N3hMode {
       type: 'agent',
       dnaAddress: dnaAddress,
       agentId: agentId,
-      transportId: this._ipcBoundUriList.values().next().value
+      transportId: [tId]
     }
 
     // store agent (this will map agentId to transportId)
