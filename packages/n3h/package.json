@@ -2,12 +2,13 @@
   "name": "@holochain/n3h",
   "version": "0.0.1",
   "description": "nodejs holochain networking library with swapable / configurable modules",
-  "main": "lib/index.js",
+  "main": "lib/electron.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
     "mocha": "mocha lib/**/*.test.js bin/**/*.test.js",
     "nyc": "nyc npm run mocha",
     "test": "npm run lint && npm run nyc",
+    "build": "electron-builder",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
   },
   "license": "Apache-2.0",
@@ -18,20 +19,26 @@
     "opn": "^5.4.0",
     "sinon": "^7.1.1",
     "standard": "^12.0.1",
-    "tmp": "0.0.33"
+    "tmp": "0.0.33",
+    "electron": "^4.0.6",
+    "electron-builder": "^20.38.5"
   },
   "dependencies": {
     "@holochain/hackmode": "^0.0.1",
     "@holochain/n3h-mock": "^0.0.1",
-    "@holochain/n3h-ipc": "^0.0.1",
     "@holochain/n3h-common": "^0.0.1",
-    "@holochain/n3h-mod-message-libp2p": "^0.0.1",
-    "@holochain/n3h-mod-nv-persist-sqlite3": "^0.0.1",
-    "@holochain/n3h-mod-persist-cache-lru": "^0.0.1",
     "@holochain/tweetlog": "^0.0.1",
-    "peer-id": "^0.11.0",
-    "peer-info": "^0.14.1",
-    "@holochain/test-suite-executor": "^0.0.1"
+    "sodium-native": "^2.2.3"
+  },
+  "build": {
+    "productName": "n3h",
+    "artifactName": "${productName}-${version}.${ext}",
+    "linux": {
+      "target": "AppImage"
+    },
+    "appImage": {
+      "systemIntegration": "doNotAsk"
+    }
   },
   "standard": {
     "env": {

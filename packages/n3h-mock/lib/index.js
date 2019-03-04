@@ -3,7 +3,7 @@ const os = require('os')
 const { URL } = require('url')
 
 const { AsyncClass, mkdirp } = require('@holochain/n3h-common')
-const { IpcServer } = require('@holochain/n3h-ipc')
+//const { IpcServer } = require('@holochain/n3h-ipc')
 
 const { Mem } = require('./mem')
 

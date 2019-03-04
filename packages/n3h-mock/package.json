@@ -21,7 +21,6 @@
   },
   "dependencies": {
     "@holochain/n3h-common": "^0.0.1",
-    "@holochain/n3h-ipc": "^0.0.1",
     "@holochain/tweetlog": "^0.0.1"
   },
   "standard": {
