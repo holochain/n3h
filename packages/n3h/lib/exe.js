@@ -9,7 +9,7 @@ const log = tweetlog('n3h-bin')
 const { buildLogHandler } = require('../lib/file-logger')
 // const { N3hNode, N3hHackMode, N3hMock } = require('../lib/index')
 const { N3hHackMode } = require('@holochain/hackmode')
-const { N3hMock } = require('@holochain/n3h-mock')
+// const { N3hMock } = require('@holochain/n3h-mock')
 const { unhandledRejection } = require('@holochain/n3h-common')
 unhandledRejection.strict()
 

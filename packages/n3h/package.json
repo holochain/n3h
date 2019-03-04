@@ -2,7 +2,7 @@
   "name": "@holochain/n3h",
   "version": "0.0.1",
   "description": "nodejs holochain networking library with swapable / configurable modules",
-  "main": "lib/electron.js",
+  "main": "lib/exe.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
     "mocha": "mocha lib/**/*.test.js bin/**/*.test.js",

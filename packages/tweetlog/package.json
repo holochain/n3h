@@ -2,7 +2,7 @@
   "name": "@holochain/tweetlog",
   "version": "0.0.1",
   "description": "super light-weight logging abstraction",
-  "main": "lib/tweetlog.js",
+  "main": "lib/index.js",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*.js'",
     "mocha": "mocha lib/**/*.test.js bin/**/*.test.js",
