@@ -98,7 +98,6 @@ class N3hMode extends AsyncClass {
         log.t('_ipcSendOne', data)
         let msg = Buffer.from(JSON.stringify(data), 'utf8')
         msg = msgpack.encode({ name: 'json', data: msg }).toString('base64')
-        // for now just sending to everything
         this._ipc.send([key], msg)
         break
       default:
