@@ -1,6 +1,5 @@
 
 const { N3hMode } = require('../../n3h-ipc/lib/n3hMode')
-//const { IpcServer } = require('@holochain/n3h-ipc')
 
 const { Mem } = require('./mem')
 
@@ -211,7 +210,6 @@ class N3hMock extends N3hMode {
           if (bucketId === '') {
             return
           }
-          log.t('Handle our handleFetchMetaResult:', data._id, bucketId)
           // get already known publishing list
           let knownPublishingMetaList = []
           if (bucketId in this._publishedMetaBook) {
