@@ -32,7 +32,7 @@ async function main () {
 
   // setup logging
   tweetlog.set('t') // enable trace logging
-  //tweetlog.listen(logHandler)
+  tweetlog.listen(logHandler)
 
   const quietMode = 'N3H_QUIET' in process.env
   if (!quietMode) {
