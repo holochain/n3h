@@ -163,8 +163,7 @@ class N3hMock extends N3hMode {
         if (!this._hasTrackOrFail(data.requesterAgentId, data.dnaAddress, data._id)) {
           return
         }
-        // erm... since we're fully connected,
-        // just redirect this back to itself for now...
+        // Since we're fully connected, just redirect this back to itself for now...
         data.method = 'handleFetchEntry'
         this._ipcSendOne(senderId, 'json', data)
         return
@@ -181,14 +180,18 @@ class N3hMock extends N3hMode {
           })
           return
         }
-        // otherwise since we're fully connected, just redirect this back to itself for now...
+        // Requester must track DNA
+        tId = this._getTransportIdOrFail(data.dnaAddress, data.requesterAgentId)
+        if (tId === null) {
+          return
+        }
         // Transfer this id only once
         if (this._transferedRequestList.includes(data._id)) {
           return
         }
         this._transferedRequestList.push(data._id)
         data.method = 'fetchEntryResult'
-        this._ipcSendOne(senderId, 'json', data)
+        this._ipcSendOne(tId, 'json', data)
         return
       case 'fetchMeta':
         // Note: data is a FetchMetaData
@@ -229,7 +232,11 @@ class N3hMock extends N3hMode {
           }
           return
         }
-        // otherwise since we're fully connected, just redirect this back to itself for now..
+        // Requester must track DNA
+        tId = this._getTransportIdOrFail(data.dnaAddress, data.requesterAgentId)
+        if (tId === null) {
+          return
+        }
         // Transfer this id only once
         if (this._transferedRequestList.includes(data._id)) {
           return
@@ -237,7 +244,7 @@ class N3hMock extends N3hMode {
         this._transferedRequestList.push(data._id)
         log.t('Transfer handleFetchMetaResult as fetchMetaResult:', data._id)
         data.method = 'fetchMetaResult'
-        this._ipcSendOne(senderId, 'json', data)
+        this._ipcSendOne(tId, 'json', data)
         return
 
       case 'handleGetPublishingEntryListResult':
