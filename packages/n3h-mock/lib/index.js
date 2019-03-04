@@ -28,8 +28,8 @@ class N3hMock extends N3hMode {
   /**
    * Received 'message' from IPC: process it
    */
-  _handleIpcJson (data) {
-    log.t('Received IPC: ', data)
+  _handleIpcJson (data, senderId) {
+    log.t('Received IPC from', senderId, data)
 
     let tId
     let bucketId
@@ -46,10 +46,11 @@ class N3hMock extends N3hMode {
         if (tId === null) {
           return
         }
-        this._ipc.sendOne(tId, 'json', data)
+        log.t('Received failureResult, forwarding from/to', senderId, tId)
+        this._ipcSendOne(tId, 'json', data)
         return
       case 'requestState':
-        this._ipcSend('json', {
+        this._ipcSendOne(senderId, 'json', {
           method: 'state',
           state: 'ready',
           id: '42', // not needed in mock mode
@@ -66,7 +67,7 @@ class N3hMock extends N3hMode {
         return
       case 'trackDna':
         // Note: data is a TrackDnaData
-        this._track(data.dnaAddress, data.agentId)
+        this._track(data.dnaAddress, data.agentId, senderId)
         return
       case 'untrackDna':
         // Note: data is a TrackDnaData
@@ -86,7 +87,7 @@ class N3hMock extends N3hMode {
         if (tId === null) {
           return
         }
-        this._ipc.sendOne(tId, 'json', {
+        this._ipcSendOne(tId, 'json', {
           method: 'handleSendMessage',
           _id: data._id,
           dnaAddress: data.dnaAddress,
@@ -109,7 +110,7 @@ class N3hMock extends N3hMode {
         if (tId === null) {
           return
         }
-        this._ipc.sendOne(tId, 'json', {
+        this._ipcSendOne(tId, 'json', {
           method: 'sendMessageResult',
           _id: data._id,
           dnaAddress: data.dnaAddress,
@@ -165,20 +166,17 @@ class N3hMock extends N3hMode {
         // erm... since we're fully connected,
         // just redirect this back to itself for now...
         data.method = 'handleFetchEntry'
-        this._ipc.send('json', data)
+        this._ipcSendOne(senderId, 'json', data)
         return
       case 'handleFetchEntryResult':
         // Note: data is a FetchEntryResultData
-        if (!this._hasTrackOrFail(data.providerAgentId, data.dnaAddress, data._id)) {
-          return
-        }
         // if this message is a response from our own request, do a publish
         if (data._id in this._requestBook) {
           delete this._requestBook[data._id]
           this._getMemRef(data.dnaAddress).mem.insert({
             type: 'dhtEntry',
             providerAgentId: data.providerAgentId,
-            entryAddress: data.address,
+            address: data.address,
             content: data.content
           })
           return
@@ -190,25 +188,20 @@ class N3hMock extends N3hMode {
         }
         this._transferedRequestList.push(data._id)
         data.method = 'fetchEntryResult'
-        this._ipc.send('json', data)
+        this._ipcSendOne(senderId, 'json', data)
         return
       case 'fetchMeta':
         // Note: data is a FetchMetaData
-        tId = this._getTransportIdOrFail(data.dnaAddress, data.requesterAgentId)
-        if (tId === null) {
+        // requester must track dna
+        if (!this._hasTrackOrFail(data.requesterAgentId, data.dnaAddress, data._id)) {
           return
         }
-        // erm... since we're fully connected,
-        // just redirect this back to itself for now...
+        // Since we're fully connected, just redirect this back to itself for now...
         data.method = 'handleFetchMeta'
-        this._ipc.send('json', data)
+        this._ipcSendOne(senderId, 'json', data)
         return
       case 'handleFetchMetaResult':
         // Note: data is a FetchMetaResultData
-        tId = this._getTransportIdOrFail(data.dnaAddress, data.providerAgentId, data.requesterAgentId, data._id)
-        if (tId === null) {
-          return
-        }
         // if its from our own request, do a publish for each new/unknown meta content
         if (data._id in this._requestBook) {
           bucketId = this._checkRequest(data._id)
@@ -244,7 +237,7 @@ class N3hMock extends N3hMode {
         this._transferedRequestList.push(data._id)
         log.t('Transfer handleFetchMetaResult as fetchMetaResult:', data._id)
         data.method = 'fetchMetaResult'
-        this._ipc.send('json', data)
+        this._ipcSendOne(senderId, 'json', data)
         return
 
       case 'handleGetPublishingEntryListResult':
@@ -273,7 +266,7 @@ class N3hMock extends N3hMode {
             requesterAgentId: '',
             address: entryAddress
           }
-          this._ipc.send('json', fetchEntry)
+          this._ipcSendOne(senderId, 'json', fetchEntry)
         }
         return
       case 'handleGetHoldingEntryListResult':
@@ -334,7 +327,7 @@ class N3hMock extends N3hMode {
             entryAddress: metaTuple[0],
             attribute: metaTuple[1]
           }
-          this._ipc.send('json', fetchMeta)
+          this._ipcSendOne(senderId, 'json', fetchMeta)
         }
         return
 
@@ -374,7 +367,8 @@ class N3hMock extends N3hMode {
       mem.registerIndexer((store, hash, data) => {
         if (data && data.type === 'dhtEntry') {
           log.t('got dhtEntry', data)
-          this._ipc.send('json', {
+          // Tell everyone to store
+          this._ipcSend('json', {
             method: 'handleStoreEntry',
             dnaAddress,
             providerAgentId: data.providerAgentId,
@@ -387,7 +381,8 @@ class N3hMock extends N3hMode {
       mem.registerIndexer((store, hash, data) => {
         if (data && data.type === 'dhtMeta') {
           log.t('got dhtMeta', data)
-          this._ipc.send('json', {
+          // Tell everyone to store
+          this._ipcSend('json', {
             method: 'handleStoreMeta',
             dnaAddress,
             providerAgentId: data.providerAgentId,
@@ -405,7 +400,8 @@ class N3hMock extends N3hMode {
           if (data && data.type === 'agent') {
             // log.t('got Peer/Agent', data)
             store[data.agentId] = data.transportId
-            this._ipc.send('json', {
+            // Tell everyone
+            this._ipcSend('json', {
               method: 'peerConnected',
               agentId: data.agentId
             })
@@ -431,20 +427,6 @@ class N3hMock extends N3hMode {
    *
    */
   _untrack (dnaAddress, agentId) {
-    // // get mem slice
-    // const ref = this._getMemRef(dnaAddress)
-    // // create data entry
-    // const agent = {
-    //   type: 'agent',
-    //   dnaAddress: dnaAddress,
-    //   agentId: agentId,
-    //   transportId: undefined
-    // }
-    // log.t('_untrack() for "' + agentId + '" for DNA "' + dnaAddress + '"')
-    //
-    // // store agent (this will map agentId to transportId)
-    // ref.mem.insert(agent)
-
     log.t('_untrack() for "' + agentId + '" for DNA "' + dnaAddress + '"')
     this._ipcRemoveTrack(agentId, dnaAddress)
   }
@@ -452,9 +434,8 @@ class N3hMock extends N3hMode {
   /**
    *
    */
-  _track (dnaAddress, agentId) {
-    const tId = this._ipcBoundUriList.values().next().value
-    log.t('_track:', dnaAddress, agentId, tId)
+  _track (dnaAddress, agentId, senderId) {
+    log.t('_track:', dnaAddress, agentId, senderId)
     // Bookkeep tracking
     this._ipcAddTrack(agentId, dnaAddress)
     // get mem slice
@@ -464,7 +445,7 @@ class N3hMock extends N3hMode {
       type: 'agent',
       dnaAddress: dnaAddress,
       agentId: agentId,
-      transportId: [tId]
+      transportId: senderId
     }
 
     // store agent (this will map agentId to transportId)
@@ -472,25 +453,25 @@ class N3hMock extends N3hMode {
 
     // send all 'get list' requests
     let requestId = this._createRequest(dnaAddress, agentId)
-    this._ipc.send('json', {
+    this._ipcSendOne(senderId, 'json', {
       method: 'handleGetPublishingEntryList',
       dnaAddress,
       _id: requestId
     })
     requestId = this._createRequest(dnaAddress, agentId)
-    this._ipc.send('json', {
+    this._ipcSendOne(senderId, 'json', {
       method: 'handleGetHoldingEntryList',
       dnaAddress,
       _id: requestId
     })
     requestId = this._createRequest(dnaAddress, agentId)
-    this._ipc.send('json', {
+    this._ipcSendOne(senderId, 'json', {
       method: 'handleGetPublishingMetaList',
       dnaAddress,
       _id: requestId
     })
     requestId = this._createRequest(dnaAddress, agentId)
-    this._ipc.send('json', {
+    this._ipcSendOne(senderId, 'json', {
       method: 'handleGetHoldingMetaList',
       dnaAddress,
       _id: requestId

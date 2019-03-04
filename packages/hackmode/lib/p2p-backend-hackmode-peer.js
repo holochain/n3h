@@ -299,8 +299,6 @@ class P2pBackendHackmodePeer extends AsyncClass {
         e.boundUriList.forEach(b => this._addBinding(b))
         break
       case 'connection':
-        await this._addConnection(e.id)
-        break
       case 'connect':
         await this._addConnection(e.id)
         break

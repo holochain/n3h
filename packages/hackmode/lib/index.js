@@ -114,7 +114,7 @@ class N3hHackMode extends N3hMode {
   /**
    * @private
    */
-  _handleIpcJson (data) {
+  _handleIpcJson (data, senderId) {
     log.t('Received IPC: ', data)
 
     let ref
