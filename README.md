@@ -35,13 +35,7 @@ First, make sure our own dependencies are installed:
 npm install
 ```
 
-Next, install all project dependencies (through lerna monorepo manager):
-
-```shell
-npm run bootstrap
-```
-
-Now, test all projects:
+Now, to test:
 
 ```shell
 npm test
@@ -50,18 +44,6 @@ npm test
 ## Contribute
 
 Holochain is an open source project.  We welcome all sorts of participation and are actively working on increasing surface area to accept it.  Please see our [contributing guidelines](https://github.com/holochain/org/blob/master/CONTRIBUTING.md) for our general practices and protocols on participating in the community.
-
-### Lerna
-
-This monorepo is managed with the [Lerna](https://www.npmjs.com/package/lerna) helper tool.
-
-### New projects
-
-To create a new project, execute the following and fill out the prompts:
-
-```shell
-npm run new
-```
 
 ## License
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
