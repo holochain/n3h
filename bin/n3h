@@ -31,7 +31,13 @@ async function main () {
   })
 
   // setup logging
-  tweetlog.set('t') // enable trace logging
+  // default to trace level
+  tweetlog.set('t')
+  // Check log level setting in env
+  const hasLogLevel = 'N3H_LOG_LEVEL' in process.env
+  if (hasLogLevel) {
+    tweetlog.set(process.env.N3H_LOG_LEVEL)
+  }
   tweetlog.listen(logHandler)
 
   const quietMode = 'N3H_QUIET' in process.env
