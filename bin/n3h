@@ -9,7 +9,7 @@ const tweetlog = require('../lib/tweetlog')
 const log = tweetlog('n3h-bin')
 
 const { buildLogHandler } = require('../lib/file-logger')
-const { N3hNode, N3hHackMode, N3hMock } = require('../lib/index')
+const { N3hHackMode, N3hMock } = require('../lib/index')
 const { unhandledRejection } = require('../lib/n3h-common')
 unhandledRejection.strict()
 
@@ -109,7 +109,7 @@ async function main () {
   })
 
   log.i('executing mode ' + mode)
-  switch(mode) {
+  switch (mode) {
     case 'MOCK':
       n3hNode = await new N3hMock(workDir, rawConfigData)
       break
@@ -119,8 +119,8 @@ async function main () {
     default:
       log.e('so called "real" mode disabled while running POC on hackmode / mockmode')
       process.exit(1)
-      //n3hNode = await N3hNode.constructDefault(workDir, rawConfigData)
-      //break
+      // n3hNode = await N3hNode.constructDefault(workDir, rawConfigData)
+      // break
   }
 
   await n3hNode.run()
