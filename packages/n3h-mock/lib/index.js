@@ -1,16 +1,12 @@
-const path = require('path')
-const os = require('os')
-const { URL } = require('url')
 
-const { AsyncClass, mkdirp } = require('@holochain/n3h-common')
-const { IpcServer } = require('@holochain/n3h-ipc')
+const { N3hMode } = require('../../n3h-ipc/lib/n3hMode')
 
 const { Mem } = require('./mem')
 
 const tweetlog = require('@holochain/tweetlog')
 const log = tweetlog('@mock@')
 
-class N3hMock extends AsyncClass {
+class N3hMock extends N3hMode {
   /**
    * Network mock init.
    * Normally spawned by holochain_net where config is passed via environment variables
@@ -18,51 +14,10 @@ class N3hMock extends AsyncClass {
   async init (workDir, rawConfigData) {
     await super.init()
 
-    log.t('Initializing...')
+    this._requestBook = {}
 
     // Initialize members
-    this._memory = {}
-
-    this._publishedEntryBook = {}
-    this._storedEntryBook = {}
-    this._publishedMetaBook = {}
-    this._storedMetaBook = {}
-
-    this._requestBook = {}
-    this._requestCount = 0
-
     this._transferedRequestList = []
-
-    // Set working directory from config (a temp folder) or default to $home/.n3h
-    this._workDir = workDir
-
-    // Set ipcUri
-    this._ipcUri = 'N3H_IPC_SOCKET' in process.env
-      ? process.env.N3H_IPC_SOCKET
-      : 'ipc://' + path.resolve(path.join(
-        os.homedir(), '.n3h', 'n3h-ipc.socket'))
-
-    const tmpUri = new URL(this._ipcUri.replace('*', '0'))
-    if (tmpUri.protocol === 'ipc:') {
-      await mkdirp(path.dirname(tmpUri.pathname))
-    }
-
-    // Init "submodules"
-    await Promise.all([
-      this._initIpc()
-    ])
-
-    // Notify that Init is done
-    // make sure this is output despite our log settings
-    console.log('#IPC-BINDING#:' + this._ipc.boundEndpoint)
-    console.log('#IPC-READY#')
-  }
-
-  /**
-   *
-   */
-  async run () {
-    log.t('running')
   }
 
   // ----------------------------------------------------------------------------------------------
@@ -70,401 +25,341 @@ class N3hMock extends AsyncClass {
   // ----------------------------------------------------------------------------------------------
 
   /**
-   * Set IPC function pointers on message received
-   */
-  async _initIpc () {
-    this._ipc = await new IpcServer()
-
-    this._ipc.on('clientAdd', id => {
-      log.t('clientAdd', id)
-    })
-    this._ipc.on('clientRemove', id => {
-      log.t('clientAdd', id)
-    })
-    this._ipc.on('message', opt => this._handleIpcMessage(opt))
-    this._ipc.boundEndpoint = (await this._ipc.bind(this._ipcUri))[0]
-
-    log.t('bound to', this._ipc.boundEndpoint)
-  }
-
-  /**
-   *  Check if agent is tracking dna.
-   *  If not, will try to send a FailureResult back to sender, if sender info is provided.
-   *  Returns transportId of receiverAgentId if agent is tracking dna.
-   */
-  _getTransportIdOrFail (dnaAddress, receiverAgentId, senderAgentId, requestId) {
-    // get memory slice
-    let ref = this._getMemRef(dnaAddress)
-    // Make sure receiver is known
-    if (ref.agentToTransportId[receiverAgentId]) {
-      log.t('oooo CHECK OK for "' + receiverAgentId + '" for DNA "' + dnaAddress + '" = ' + ref.agentToTransportId[receiverAgentId])
-      return ref.agentToTransportId[receiverAgentId]
-    }
-    log.e('#### Check failed for "' + receiverAgentId + '" for DNA "' + dnaAddress + '"')
-    // No receiver, try to return a failureResult back to sender
-    // Make sure sender is known
-    if (!senderAgentId) {
-      log.e('#### No sender info provided')
-      return null
-    }
-    if (ref.agentToTransportId[senderAgentId] === undefined) {
-      log.e('Unknown sender "' + senderAgentId + '" for DNA "' + dnaAddress + '"')
-      return null
-    }
-    // Send FailureResult back to sender
-    const fromZmqId = ref.agentToTransportId[senderAgentId]
-    this._ipc.sendOne(fromZmqId, 'json', {
-      method: 'failureResult',
-      dnaAddress: dnaAddress,
-      _id: requestId,
-      toAgentId: senderAgentId,
-      errorInfo: 'No routing for agent id "' + receiverAgentId + '"'
-    })
-    // Done
-    return null
-  }
-
-  /**
    * Received 'message' from IPC: process it
    */
-  _handleIpcMessage (opt) {
-    if (opt.name === 'ping' || opt.name === 'pong') {
-      return
-    }
+  _handleIpcJson (data, senderId) {
+    log.t('Received IPC from', senderId, data)
 
-    log.t('Received IPC: ', opt)
-
-    let toZmqId
+    let tId
     let bucketId
-    if (opt.name === 'json' && typeof opt.data.method === 'string') {
-      switch (opt.data.method) {
-        case 'failureResult':
-          // Note: opt.data is a FailureResultData
-          // Check if its a response to our own request
-          bucketId = this._checkRequest(opt.data._id)
-          if (bucketId !== '') {
-            return
-          }
-          // if not relay to receipient if possible
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId)
-          if (toZmqId === null) {
-            return
-          }
-          this._ipc.sendOne(toZmqId, 'json', opt.data)
+    switch (data.method) {
+      case 'failureResult':
+        // Note: data is a FailureResultData
+        // Check if its a response to our own request
+        bucketId = this._checkRequest(data._id)
+        if (bucketId !== '') {
           return
-        case 'requestState':
-          this._ipc.send('json', {
-            method: 'state',
-            state: 'ready',
-            id: '42', // not needed in mock mode
-            bindings: [] // not needed in mock mode
-          })
+        }
+        // if not relay to receipient if possible
+        tId = this._getTransportIdOrFail(data.dnaAddress, data.toAgentId)
+        if (tId === null) {
           return
-        case 'connect':
-          // maybe log an error?
-          this._ipc.send('json', {
-            method: 'peerConnected',
-            agentId: opt.data.address
-          })
+        }
+        log.t('Received failureResult, forwarding from/to', senderId, tId)
+        this._ipcSendOne(tId, 'json', data)
+        return
+      case 'requestState':
+        this._ipcSendOne(senderId, 'json', {
+          method: 'state',
+          state: 'ready',
+          id: '42', // not needed in mock mode
+          bindings: [] // not needed in mock mode
+        })
+        return
+      case 'connect':
+        // maybe log an error?
+        this._ipcSend('json', {
+          method: 'peerConnected',
+          agentId: data.address
+        })
 
+        return
+      case 'trackDna':
+        // Note: data is a TrackDnaData
+        this._track(data.dnaAddress, data.agentId, senderId)
+        return
+      case 'untrackDna':
+        // Note: data is a TrackDnaData
+        this._untrack(data.dnaAddress, data.agentId)
+        return
+      case 'sendMessage':
+        // Note: data is a MessageData
+        // Sender must TrackDna
+        if (!this._hasTrackOrFail(data.fromAgentId, data.dnaAddress, data._id)) {
           return
-        case 'trackDna':
-          this._track(opt.data.dnaAddress, opt.data.agentId, opt.fromZmqId)
+        }
+        // Receiver must TrackDna
+        if (!this._hasTrackOrFail(data.toAgentId, data.dnaAddress, data._id)) {
           return
-        case 'untrackDna':
-          // if not relay to receipient if possible
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.agentId)
-          if (toZmqId === null) {
-            return
-          }
-          this._untrack(opt.data.dnaAddress, opt.data.agentId, opt.fromZmqId)
+        }
+        tId = this._getTransportIdOrFail(data.dnaAddress, data.toAgentId, data.fromAgentId, data._id)
+        if (tId === null) {
           return
-        case 'sendMessage':
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id)
-          if (toZmqId === null) {
-            return
-          }
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
-          if (toZmqId === null) {
-            return
-          }
-          this._ipc.sendOne(toZmqId, 'json', {
-            method: 'handleSendMessage',
-            _id: opt.data._id,
-            dnaAddress: opt.data.dnaAddress,
-            toAgentId: opt.data.toAgentId,
-            fromAgentId: opt.data.fromAgentId,
-            data: opt.data.data
-          })
+        }
+        this._ipcSendOne(tId, 'json', {
+          method: 'handleSendMessage',
+          _id: data._id,
+          dnaAddress: data.dnaAddress,
+          toAgentId: data.toAgentId,
+          fromAgentId: data.fromAgentId,
+          data: data.data
+        })
+        return
+      case 'handleSendMessageResult':
+        // Note: data is a MessageData
+        // Sender must TrackDna
+        if (!this._hasTrackOrFail(data.fromAgentId, data.dnaAddress, data._id)) {
           return
-        case 'handleSendMessageResult':
-          // Note: opt.data is a MessageData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.fromAgentId, opt.data.fromAgentId, opt.data._id)
-          if (toZmqId === null) {
-            return
-          }
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.toAgentId, opt.data.fromAgentId, opt.data._id)
-          if (toZmqId === null) {
-            return
-          }
-          this._ipc.sendOne(toZmqId, 'json', {
-            method: 'sendMessageResult',
-            _id: opt.data._id,
-            dnaAddress: opt.data.dnaAddress,
-            toAgentId: opt.data.toAgentId,
-            fromAgentId: opt.data.fromAgentId,
-            data: opt.data.data
-          })
+        }
+        // Receiver must TrackDna
+        if (!this._hasTrackOrFail(data.toAgentId, data.dnaAddress, data._id)) {
           return
-        case 'publishEntry':
-          // Note: opt.data is a EntryData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId)
-          if (toZmqId === null) {
-            return
-          }
-          // Bookkeep
-          this._bookkeepAddress(
-            this._publishedEntryBook,
-            opt.data.dnaAddress,
-            opt.data.providerAgentId,
-            opt.data.address
-          )
-          // TODO: we don't actually need to store the data on the nodejs side, we could just make all the store requests to connected nodes inline here, but that could be an optimization for later.
-          this._getMemRef(opt.data.dnaAddress).mem.insert({
+        }
+        tId = this._getTransportIdOrFail(data.dnaAddress, data.toAgentId, data.fromAgentId, data._id)
+        if (tId === null) {
+          return
+        }
+        this._ipcSendOne(tId, 'json', {
+          method: 'sendMessageResult',
+          _id: data._id,
+          dnaAddress: data.dnaAddress,
+          toAgentId: data.toAgentId,
+          fromAgentId: data.fromAgentId,
+          data: data.data
+        })
+        return
+      case 'publishEntry':
+        // Note: data is a EntryData
+        if (!this._hasTrackOrFail(data.providerAgentId, data.dnaAddress, data._id)) {
+          return
+        }
+        // Bookkeep
+        this._bookkeepAddress(
+          this._publishedEntryBook,
+          data.dnaAddress,
+          data.providerAgentId,
+          data.address
+        )
+        // TODO: we don't actually need to store the data on the nodejs side, we could just make all the store requests to connected nodes inline here, but that could be an optimization for later.
+        this._getMemRef(data.dnaAddress).mem.insert({
+          type: 'dhtEntry',
+          providerAgentId: data.providerAgentId,
+          address: data.address,
+          content: data.content
+        })
+        return
+      case 'publishMeta':
+        // Note: opt.data is a DhtMetaData
+        if (!this._hasTrackOrFail(data.providerAgentId, data.dnaAddress, data._id)) {
+          return
+        }
+        // Bookkeep each metaId
+        for (const metaContent of data.contentList) {
+          let metaId = this._intoMetaId(data.entryAddress, data.attribute, metaContent)
+          this._bookkeepAddress(this._publishedMetaBook, data.dnaAddress, data.providerAgentId, metaId)
+        }
+        // Store on all nodes
+        this._getMemRef(data.dnaAddress).mem.insert({
+          type: 'dhtMeta',
+          providerAgentId: data.providerAgentId,
+          entryAddress: data.entryAddress,
+          attribute: data.attribute,
+          contentList: data.contentList
+        })
+        return
+      case 'fetchEntry':
+        // Note: data is a FetchEntryData
+        if (!this._hasTrackOrFail(data.requesterAgentId, data.dnaAddress, data._id)) {
+          return
+        }
+        // Since we're fully connected, just redirect this back to itself for now...
+        data.method = 'handleFetchEntry'
+        this._ipcSendOne(senderId, 'json', data)
+        return
+      case 'handleFetchEntryResult':
+        // Note: data is a FetchEntryResultData
+        // if this message is a response from our own request, do a publish
+        if (data._id in this._requestBook) {
+          delete this._requestBook[data._id]
+          this._getMemRef(data.dnaAddress).mem.insert({
             type: 'dhtEntry',
-            providerAgentId: opt.data.providerAgentId,
-            address: opt.data.address,
-            content: opt.data.content
+            providerAgentId: data.providerAgentId,
+            address: data.address,
+            content: data.content
           })
           return
-        case 'publishMeta':
-          // Note: opt.data is a DhtMetaData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId)
-          if (toZmqId === null) {
-            return
-          }
-          // Bookkeep each metaId
-          for (const metaContent of opt.data.contentList) {
-            let metaId = this._intoMetaId(opt.data.entryAddress, opt.data.attribute, metaContent)
-            this._bookkeepAddress(this._publishedMetaBook, opt.data.dnaAddress, opt.data.providerAgentId, metaId)
-          }
-          // Store on all nodes
-          this._getMemRef(opt.data.dnaAddress).mem.insert({
-            type: 'dhtMeta',
-            providerAgentId: opt.data.providerAgentId,
-            entryAddress: opt.data.entryAddress,
-            attribute: opt.data.attribute,
-            contentList: opt.data.contentList
-          })
+        }
+        // Requester must track DNA
+        tId = this._getTransportIdOrFail(data.dnaAddress, data.requesterAgentId)
+        if (tId === null) {
           return
-        case 'fetchEntry':
-          // Note: opt.data is a FetchEntryData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.requesterAgentId)
-          if (toZmqId === null) {
-            return
-          }
-          // erm... since we're fully connected,
-          // just redirect this back to itself for now...
-          opt.data.method = 'handleFetchEntry'
-          this._ipc.send('json', opt.data)
+        }
+        // Transfer this id only once
+        if (this._transferedRequestList.includes(data._id)) {
           return
-        case 'handleFetchEntryResult':
-          // Note: opt.data is a FetchEntryResultData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId, opt.data.requesterAgentId, opt.data._id)
-          if (toZmqId === null) {
-            return
-          }
-          // if this message is a response from our own request, do a publish
-          if (opt.data._id in this._requestBook) {
-            delete this._requestBook[opt.data._id]
-            this._getMemRef(opt.data.dnaAddress).mem.insert({
-              type: 'dhtEntry',
-              providerAgentId: opt.data.providerAgentId,
-              entryAddress: opt.data.address,
-              content: opt.data.content
-            })
-            return
-          }
-          // otherwise since we're fully connected, just redirect this back to itself for now...
-          // Transfer this id only once
-          if (this._transferedRequestList.includes(opt.data._id)) {
-            return
-          }
-          this._transferedRequestList.push(opt.data._id)
-          opt.data.method = 'fetchEntryResult'
-          this._ipc.send('json', opt.data)
+        }
+        this._transferedRequestList.push(data._id)
+        data.method = 'fetchEntryResult'
+        this._ipcSendOne(tId, 'json', data)
+        return
+      case 'fetchMeta':
+        // Note: data is a FetchMetaData
+        // requester must track dna
+        if (!this._hasTrackOrFail(data.requesterAgentId, data.dnaAddress, data._id)) {
           return
-        case 'fetchMeta':
-          // Note: opt.data is a FetchMetaData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.requesterAgentId)
-          if (toZmqId === null) {
-            return
-          }
-          // erm... since we're fully connected,
-          // just redirect this back to itself for now...
-          opt.data.method = 'handleFetchMeta'
-          this._ipc.send('json', opt.data)
-          return
-        case 'handleFetchMetaResult':
-          // Note: opt.data is a FetchMetaResultData
-          toZmqId = this._getTransportIdOrFail(opt.data.dnaAddress, opt.data.providerAgentId, opt.data.requesterAgentId, opt.data._id)
-          if (toZmqId === null) {
-            return
-          }
-          // if its from our own request, do a publish for each new/unknown meta content
-          if (opt.data._id in this._requestBook) {
-            bucketId = this._checkRequest(opt.data._id)
-            if (bucketId === '') {
-              return
-            }
-            log.t('Handle our handleFetchMetaResult:', opt.data._id, bucketId)
-            // get already known publishing list
-            let knownPublishingMetaList = []
-            if (bucketId in this._publishedMetaBook) {
-              knownPublishingMetaList = this._publishedMetaBook[bucketId]
-            }
-            for (const metaContent of opt.data.contentList) {
-              let metaId = this._intoMetaId(opt.data.entryAddress, opt.data.attribute, metaContent)
-              if (knownPublishingMetaList.includes(metaId)) {
-                continue
-              }
-              this._getMemRef(opt.data.dnaAddress).mem.insert({
-                type: 'dhtMeta',
-                providerAgentId: opt.data.providerAgentId,
-                entryAddress: opt.data.entryAddress,
-                attribute: opt.data.attribute,
-                contentList: [metaContent]
-              })
-            }
-            return
-          }
-          // otherwise since we're fully connected, just redirect this back to itself for now..
-          // Transfer this id only once
-          if (this._transferedRequestList.includes(opt.data._id)) {
-            return
-          }
-          this._transferedRequestList.push(opt.data._id)
-          log.t('Transfer handleFetchMetaResult as fetchMetaResult:', opt.data._id)
-          opt.data.method = 'fetchMetaResult'
-          this._ipc.send('json', opt.data)
-          return
-
-        case 'handleGetPublishingEntryListResult':
-          // Note: opt.data is EntryListData
-          // Mark my request as resolved and get bucketId from request
-          bucketId = this._checkRequest(opt.data._id)
+        }
+        // Since we're fully connected, just redirect this back to itself for now...
+        data.method = 'handleFetchMeta'
+        this._ipcSendOne(senderId, 'json', data)
+        return
+      case 'handleFetchMetaResult':
+        // Note: data is a FetchMetaResultData
+        // if its from our own request, do a publish for each new/unknown meta content
+        if (data._id in this._requestBook) {
+          bucketId = this._checkRequest(data._id)
           if (bucketId === '') {
             return
           }
-          // get already known publishing list
-          let knownPublishingList = []
-          if (bucketId in this._publishedEntryBook) {
-            knownPublishingList = this._publishedEntryBook[bucketId]
-          }
-          // Update my book-keeping on what this agent has.
-          // and do a getEntry for every new entry
-          for (const entryAddress of opt.data.entryAddressList) {
-            if (knownPublishingList.includes(entryAddress)) {
-              log.t('Entry is known ', entryAddress)
-              continue
-            }
-            let fetchEntry = {
-              method: 'handleFetchEntry',
-              dnaAddress: opt.data.dnaAddress,
-              _id: this._createRequestWithBucket(bucketId),
-              requesterAgentId: '',
-              address: entryAddress
-            }
-            this._ipc.send('json', fetchEntry)
-          }
-          return
-        case 'handleGetHoldingEntryListResult':
-          // Note: opt.data is EntryListData
-          // Mark my request as resolved and get bucketId from request
-          bucketId = this._checkRequest(opt.data._id)
-          if (bucketId === '') {
-            return
-          }
-          // get already known publishing list
-          let knownHoldingList = []
-          if (bucketId in this._storedEntryBook) {
-            knownHoldingList = this._storedEntryBook[bucketId]
-          }
-          // Update my book-keeping on what this agent has.
-          for (const entryAddress of opt.data.entryAddressList) {
-            if (knownHoldingList.includes(entryAddress)) {
-              continue
-            }
-            this._bookkeepAddressWithBucket(this._storedEntryBook, bucketId, entryAddress)
-          }
-          return
-
-        case 'handleGetPublishingMetaListResult':
-          // Note: opt.data is MetaListData
-          // Mark my request as resolved and get bucketId from request
-          bucketId = this._checkRequest(opt.data._id)
-          if (bucketId === '') {
-            return
-          }
-
           // get already known publishing list
           let knownPublishingMetaList = []
           if (bucketId in this._publishedMetaBook) {
             knownPublishingMetaList = this._publishedMetaBook[bucketId]
           }
-
-          // Update my book-keeping on what this agent has.
-          // and do a getEntry for every new entry
-          let requestedMetaKey = []
-          for (const metaTuple of opt.data.metaList) {
-            let metaId = this._intoMetaId(metaTuple[0], metaTuple[1], metaTuple[2])
+          for (const metaContent of data.contentList) {
+            let metaId = this._intoMetaId(data.entryAddress, data.attribute, metaContent)
             if (knownPublishingMetaList.includes(metaId)) {
               continue
             }
-            // dont send same request twice
-            const metaKey = '' + metaTuple[0] + '+' + metaTuple[1]
-            if (requestedMetaKey.includes(metaKey)) {
-              continue
-            }
-            requestedMetaKey.push(metaKey)
-
-            let fetchMeta = {
-              method: 'handleFetchMeta',
-              dnaAddress: opt.data.dnaAddress,
-              _id: this._createRequestWithBucket(bucketId),
-              requesterAgentId: '',
-              entryAddress: metaTuple[0],
-              attribute: metaTuple[1]
-            }
-            this._ipc.send('json', fetchMeta)
+            this._getMemRef(data.dnaAddress).mem.insert({
+              type: 'dhtMeta',
+              providerAgentId: data.providerAgentId,
+              entryAddress: data.entryAddress,
+              attribute: data.attribute,
+              contentList: [metaContent]
+            })
           }
           return
-
-        case 'handleGetHoldingMetaListResult':
-          // Note: opt.data is MetaListData
-          // Mark my request as resolved and get bucketId from request
-          bucketId = this._checkRequest(opt.data._id)
-          if (bucketId === '') {
-            return
-          }
-          // get already known publishing list
-          let knownHoldingMetaList = []
-          if (bucketId in this._storedMetaBook) {
-            knownHoldingMetaList = this._storedMetaBook[bucketId]
-          }
-          // Update my book-keeping on what this agent has.
-          for (const metaTuple of opt.data.metaList) {
-            let metaId = this._intoMetaId(metaTuple[0], metaTuple[1], metaTuple[2])
-            if (knownHoldingMetaList.includes(metaId)) {
-              continue
-            }
-            this._bookkeepAddressWithBucket(this._storedMetaBook, bucketId, metaId)
-          }
+        }
+        // Requester must track DNA
+        tId = this._getTransportIdOrFail(data.dnaAddress, data.requesterAgentId)
+        if (tId === null) {
           return
-      }
+        }
+        // Transfer this id only once
+        if (this._transferedRequestList.includes(data._id)) {
+          return
+        }
+        this._transferedRequestList.push(data._id)
+        log.t('Transfer handleFetchMetaResult as fetchMetaResult:', data._id)
+        data.method = 'fetchMetaResult'
+        this._ipcSendOne(tId, 'json', data)
+        return
+
+      case 'handleGetPublishingEntryListResult':
+        // Note: data is EntryListData
+        // Mark my request as resolved and get bucketId from request
+        bucketId = this._checkRequest(data._id)
+        if (bucketId === '') {
+          return
+        }
+        // get already known publishing list
+        let knownPublishingList = []
+        if (bucketId in this._publishedEntryBook) {
+          knownPublishingList = this._publishedEntryBook[bucketId]
+        }
+        // Update my book-keeping on what this agent has.
+        // and do a getEntry for every new entry
+        for (const entryAddress of data.entryAddressList) {
+          if (knownPublishingList.includes(entryAddress)) {
+            log.t('Entry is known ', entryAddress)
+            continue
+          }
+          let fetchEntry = {
+            method: 'handleFetchEntry',
+            dnaAddress: data.dnaAddress,
+            _id: this._createRequestWithBucket(bucketId),
+            requesterAgentId: '',
+            address: entryAddress
+          }
+          this._ipcSendOne(senderId, 'json', fetchEntry)
+        }
+        return
+      case 'handleGetHoldingEntryListResult':
+        // Note: data is EntryListData
+        // Mark my request as resolved and get bucketId from request
+        bucketId = this._checkRequest(data._id)
+        if (bucketId === '') {
+          return
+        }
+        // get already known publishing list
+        let knownHoldingList = []
+        if (bucketId in this._storedEntryBook) {
+          knownHoldingList = this._storedEntryBook[bucketId]
+        }
+        // Update my book-keeping on what this agent has.
+        for (const entryAddress of data.entryAddressList) {
+          if (knownHoldingList.includes(entryAddress)) {
+            continue
+          }
+          this._bookkeepAddressWithBucket(this._storedEntryBook, bucketId, entryAddress)
+        }
+        return
+
+      case 'handleGetPublishingMetaListResult':
+        // Note: data is MetaListData
+        // Mark my request as resolved and get bucketId from request
+        bucketId = this._checkRequest(data._id)
+        if (bucketId === '') {
+          return
+        }
+
+        // get already known publishing list
+        let knownPublishingMetaList = []
+        if (bucketId in this._publishedMetaBook) {
+          knownPublishingMetaList = this._publishedMetaBook[bucketId]
+        }
+
+        // Update my book-keeping on what this agent has.
+        // and do a getEntry for every new entry
+        let requestedMetaKey = []
+        for (const metaTuple of data.metaList) {
+          let metaId = this._intoMetaId(metaTuple[0], metaTuple[1], metaTuple[2])
+          if (knownPublishingMetaList.includes(metaId)) {
+            continue
+          }
+          // dont send same request twice
+          const metaKey = '' + metaTuple[0] + '+' + metaTuple[1]
+          if (requestedMetaKey.includes(metaKey)) {
+            continue
+          }
+          requestedMetaKey.push(metaKey)
+
+          let fetchMeta = {
+            method: 'handleFetchMeta',
+            dnaAddress: data.dnaAddress,
+            _id: this._createRequestWithBucket(bucketId),
+            requesterAgentId: '',
+            entryAddress: metaTuple[0],
+            attribute: metaTuple[1]
+          }
+          this._ipcSendOne(senderId, 'json', fetchMeta)
+        }
+        return
+
+      case 'handleGetHoldingMetaListResult':
+        // Note: data is MetaListData
+        // Mark my request as resolved and get bucketId from request
+        bucketId = this._checkRequest(data._id)
+        if (bucketId === '') {
+          return
+        }
+        // get already known publishing list
+        let knownHoldingMetaList = []
+        if (bucketId in this._storedMetaBook) {
+          knownHoldingMetaList = this._storedMetaBook[bucketId]
+        }
+        // Update my book-keeping on what this agent has.
+        for (const metaTuple of data.metaList) {
+          let metaId = this._intoMetaId(metaTuple[0], metaTuple[1], metaTuple[2])
+          if (knownHoldingMetaList.includes(metaId)) {
+            continue
+          }
+          this._bookkeepAddressWithBucket(this._storedMetaBook, bucketId, metaId)
+        }
+        return
     }
 
-    throw new Error('unexpected input ' + JSON.stringify(opt))
+    throw new Error('unexpected input ' + JSON.stringify(data))
   }
 
   /**
@@ -477,7 +372,8 @@ class N3hMock extends AsyncClass {
       mem.registerIndexer((store, hash, data) => {
         if (data && data.type === 'dhtEntry') {
           log.t('got dhtEntry', data)
-          this._ipc.send('json', {
+          // Tell everyone to store
+          this._ipcSend('json', {
             method: 'handleStoreEntry',
             dnaAddress,
             providerAgentId: data.providerAgentId,
@@ -490,7 +386,8 @@ class N3hMock extends AsyncClass {
       mem.registerIndexer((store, hash, data) => {
         if (data && data.type === 'dhtMeta') {
           log.t('got dhtMeta', data)
-          this._ipc.send('json', {
+          // Tell everyone to store
+          this._ipcSend('json', {
             method: 'handleStoreMeta',
             dnaAddress,
             providerAgentId: data.providerAgentId,
@@ -508,7 +405,8 @@ class N3hMock extends AsyncClass {
           if (data && data.type === 'agent') {
             // log.t('got Peer/Agent', data)
             store[data.agentId] = data.transportId
-            this._ipc.send('json', {
+            // Tell everyone
+            this._ipcSend('json', {
               method: 'peerConnected',
               agentId: data.agentId
             })
@@ -534,25 +432,17 @@ class N3hMock extends AsyncClass {
    *
    */
   _untrack (dnaAddress, agentId) {
-    // get mem slice
-    const ref = this._getMemRef(dnaAddress)
-    // create data entry
-    const agent = {
-      type: 'agent',
-      dnaAddress: dnaAddress,
-      agentId: agentId,
-      transportId: undefined
-    }
     log.t('_untrack() for "' + agentId + '" for DNA "' + dnaAddress + '"')
-
-    // store agent (this will map agentId to transportId)
-    ref.mem.insert(agent)
+    this._ipcRemoveTrack(agentId, dnaAddress)
   }
 
   /**
    *
    */
-  _track (dnaAddress, agentId, fromZmqId) {
+  _track (dnaAddress, agentId, senderId) {
+    log.t('_track:', dnaAddress, agentId, senderId)
+    // Bookkeep tracking
+    this._ipcAddTrack(agentId, dnaAddress)
     // get mem slice
     const ref = this._getMemRef(dnaAddress)
     // create data entry
@@ -560,7 +450,7 @@ class N3hMock extends AsyncClass {
       type: 'agent',
       dnaAddress: dnaAddress,
       agentId: agentId,
-      transportId: fromZmqId
+      transportId: senderId
     }
 
     // store agent (this will map agentId to transportId)
@@ -568,25 +458,25 @@ class N3hMock extends AsyncClass {
 
     // send all 'get list' requests
     let requestId = this._createRequest(dnaAddress, agentId)
-    this._ipc.send('json', {
+    this._ipcSendOne(senderId, 'json', {
       method: 'handleGetPublishingEntryList',
       dnaAddress,
       _id: requestId
     })
     requestId = this._createRequest(dnaAddress, agentId)
-    this._ipc.send('json', {
+    this._ipcSendOne(senderId, 'json', {
       method: 'handleGetHoldingEntryList',
       dnaAddress,
       _id: requestId
     })
     requestId = this._createRequest(dnaAddress, agentId)
-    this._ipc.send('json', {
+    this._ipcSendOne(senderId, 'json', {
       method: 'handleGetPublishingMetaList',
       dnaAddress,
       _id: requestId
     })
     requestId = this._createRequest(dnaAddress, agentId)
-    this._ipc.send('json', {
+    this._ipcSendOne(senderId, 'json', {
       method: 'handleGetHoldingMetaList',
       dnaAddress,
       _id: requestId
