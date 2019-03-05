@@ -1,21 +1,59 @@
 {
   "name": "n3h",
   "version": "0.0.1",
-  "description": "this top-level lerna project is just tools for helping manage the monorepo",
+  "description": "nodejs holochain networking library with swapable / configurable modules",
   "scripts": {
-    "tools-lint": "standard --fix 'tools/lib/**/*.js' 'tools/bin/**/*.js'",
-    "docs": "node tools/bin/monoman.js docs",
-    "new": "node tools/bin/monoman.js new",
-    "test": "npm run tools-lint && lerna run test && npm run docs",
-    "clean": "lerna clean",
-    "bootstrap": "lerna bootstrap --hoist --no-ci"
+    "lint": "standard --fix 'lib/**/*.js' 'bin/**/*'",
+    "mocha": "mocha lib/*.test.js lib/**/*.test.js",
+    "nyc": "nyc npm run mocha",
+    "test": "npm run lint && npm run nyc",
+    "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
   },
   "license": "Apache-2.0",
   "devDependencies": {
+    "chai": "^4.2.0",
     "handlebars": "^4.0.12",
     "jsdoc-to-markdown": "^4.0.1",
-    "lerna": "^3.5.1",
+    "mocha": "^5.2.0",
+    "nyc": "^12.0.2",
+    "opn": "^5.4.0",
     "prompt": "^1.0.0",
-    "standard": "^12.0.1"
+    "sinon": "^7.1.1",
+    "standard": "^12.0.1",
+    "tmp": "0.0.33"
+  },
+  "dependencies": {
+    "@holochain/n-bch-rs": "^0.0.4",
+    "bip39": "^2.5.0",
+    "bs58": "^4.0.1",
+    "sodium-native": "^2.2.3",
+    "express": "^4.16.4",
+    "express-ws": "^4.0.0",
+    "helmet": "^3.15.0",
+    "msgpack-lite": "^0.1.26",
+    "node-forge": "^0.7.6",
+    "ws": "^6.1.2"
+  },
+  "standard": {
+    "env": {
+      "mocha": true
+    }
+  },
+  "nyc": {
+    "/* TODO - Set check-coverage to true */": "",
+    "check-coverage": false,
+    "per-file": false,
+    "lines": 80,
+    "statements": 80,
+    "functions": 80,
+    "branches": 80,
+    "all": true,
+    "include": [
+      "./lib/**/*.js"
+    ],
+    "reporter": [
+      "lcov",
+      "text-summary"
+    ]
   }
 }
