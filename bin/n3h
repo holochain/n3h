@@ -30,8 +30,8 @@ async function main () {
     dir: logDir
   })
 
-  // setup logging
-  // default to trace level
+  // Setup logging
+  // Default to trace level
   tweetlog.set('t')
   // Check log level setting in env
   const hasLogLevel = 'N3H_LOG_LEVEL' in process.env
