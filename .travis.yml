@@ -1,20 +1,32 @@
 dist: trusty
-
 language: node_js
 node_js:
-  - 8
+- 8
+
+#before_install:
+#- openssl aes-256-cbc -K $encrypted_8723d719d78b_key -iv $encrypted_8723d719d78b_iv -in build/ghmach.enc -out build/ghmach -d
 
 jobs:
   include:
-    - name: "windows"
-      os: windows
-      script:
-        - npm test
-    - name: "linux"
-      os: linux
-      script:
-        - npm test
-    - name: "osx"
-      os: osx
-      script:
-        - npm test
+  - name: windows
+    os: windows
+    script:
+    - npm test
+  - name: linux
+    os: linux
+    script:
+    - npm test
+    deploy:
+      provider: releases
+      api_key:
+        secure: xZGYRJ5E4BnUgRBDIkqeNqDSyUdvZAOJHqey73ZpHfs834kKhJ3x5MMmHdvP0bXA+OVUu+fnIfuuNH158hc7Mo0BPkJN4nkOcl0wjNUpqfg2ujAfcbAehtkz1cpv8AZRNSrL1xrtchOEY7jnuGyv+O05uROxTxvtT3TsGql1Qc62M+MglZtz2bALMbFrTMfxqcXH32h431OIXKZORkQUXgsFvbXg0J2ghzDLMknTlDZF2W2/Xds77FTPe9B7gNiNRvL9y5bU/Y03k1efIcfdMNSL8upGhpPhgDiipPjGFUmyarfcXvd6v2HQNrPTAHXoXHReIqAapNUqU5bWMQ9Kd+f5BAfybKIce6q+m4JvcoritCUJBP9uV9+7oA8rek0Cvykfc1MGFWHSy5Wv1iheUh9T3i/hlrqSZqad0LYw7tHQg1JLbFQOaqlIBmy8fYFsV3k9L1222u9EdWzHTO5kpHOHXeXRaeKrHCMycVWcVINXfKXrMIWO4sxAY71IRBTLQJUFPUUTjcSgkWB0yHZFyli8qEJmVvZikcylz89eVY2iTJepddKnsnSWPOQP1ZA1JRLP0QjhcWMfHPrrMWm2WUfBNebIkmPQylidWkvPBHca4HM7DTYuV9BbOZiR8prQ58v7zEVTxxr9ODFeFcjRcYaFpa+nQKRzSUdvsO1zUpU=
+      file: README.md
+      skip_cleanup: true
+      draft: true
+      on:
+        tags: true
+        repo: holochain/n3h
+  - name: osx
+    os: osx
+    script:
+    - npm test
