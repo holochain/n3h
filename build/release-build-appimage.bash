@@ -5,12 +5,12 @@ set -Eeuo pipefail
 
 # -- variables -- #
 # TODO - update to node v10 after https://github.com/nodejs/node/issues/23440
-NODE_URL=https://github.com/holochain/node-static-build/releases/download/alpha3/node-v8.15.1-linux-x86_64-alpha3
-NODE_FILE=node-v8.15.1-linux-x86_64-alpha3
+NODE_URL=https://github.com/holochain/node-static-build/releases/download/alpha4/node-v8.15.1-linux-x86_64-alpha4
+NODE_FILE=node-v8.15.1-linux-x86_64-alpha4
 NODE_HASH=2fc0d3755e87844ec66330a03e4c0eb9898147845bf7d998a815f51f546f0a94
-NPM_URL=https://github.com/holochain/node-static-build/releases/download/alpha3/npm-node-v8.15.1-alpha3.tar.xz
-NPM_FILE=npm-node-v8.15.1-alpha3.tar.xz
-NPM_HASH=1dea22d1dcbecd5b6ccd34cd7fe5b9df28f3881c5d330c2a67333b45258a9224
+NPM_URL=https://github.com/holochain/node-static-build/releases/download/alpha4/npm-node-v8.15.1-alpha4.tar.xz
+NPM_FILE=npm-node-v8.15.1-alpha4.tar.xz
+NPM_HASH=2f447d0c1532da5e4eb488f37e522ed2963f6b2052e002fe3ebb945f1693755b
 AIT_URL=https://github.com/AppImage/AppImageKit/releases/download/11/appimagetool-x86_64.AppImage
 AIT_FILE=appimagetool-x86_64.AppImage
 AIT_HASH=c13026b9ebaa20a17e7e0a4c818a901f0faba759801d8ceab3bb6007dde00372
