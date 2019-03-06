@@ -61,8 +61,8 @@ cp -a ../../lib ./AppDir/usr/bin/
 cat > ./AppDir/usr/bin/n3h.js << EOF
 const { main } = require('./lib/exe')
 
-main().then(() => {}, (err) => {
-  log.e(err)
+main().then(() => {}, err => {
+  console.error(err)
   process.exit(1)
 })
 EOF
