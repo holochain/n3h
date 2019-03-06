@@ -16,6 +16,8 @@ jobs:
     os: linux
     script:
     - npm test
+    before_deploy:
+    - ./build/release-build-appimage.bash
     deploy:
       provider: releases
       api_key:
@@ -23,6 +25,8 @@ jobs:
       file: README.md
       skip_cleanup: true
       draft: true
+      prerelease: true
+      name: $TRAVIS_TAG
       on:
         tags: true
         repo: holochain/n3h
