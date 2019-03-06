@@ -2,6 +2,7 @@
   "name": "n3h",
   "version": "0.0.5-alpha1",
   "description": "nodejs holochain networking library with swapable / configurable modules",
+  "repository": "github:holochain/n3h",
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*'",
     "mocha": "mocha lib/*.test.js lib/**/*.test.js",
