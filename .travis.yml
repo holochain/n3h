@@ -2,9 +2,13 @@ dist: trusty
 language: node_js
 node_js:
 - 8
-
-#before_install:
-#- openssl aes-256-cbc -K $encrypted_8723d719d78b_key -iv $encrypted_8723d719d78b_iv -in build/ghmach.enc -out build/ghmach -d
+cache:
+  directories:
+    - node_modules
+    - $HOME/.cache/electron
+    - $HOME/.cache/electron-builder
+before_cache:
+  - rm -rf $HOME/.cache/electron-builder/wine
 
 jobs:
   include:
@@ -14,10 +18,19 @@ jobs:
     - npm test
   - name: linux
     os: linux
+    services: docker
     script:
     - npm test
     before_deploy:
     - ./build/release-build-appimage.bash
+    - |
+      docker run --rm \
+        --env-file <(env | grep -iE 'DEBUG|NODE_|ELECTRON_|YARN_|NPM_|CI|CIRCLE|TRAVIS|APPVEYOR_|CSC_|_TOKEN|_KEY|AWS_|STRIP|BUILD_') \
+        -v ${PWD}:/project \
+        -v ~/.cache/electron:/root/.cache/electron \
+        -v ~/.cache/electron-builder:/root/.cache/electron-builder \
+        electronuserland/builder:wine \
+        /bin/bash -c "./build/release-build-electron.bash --win"
     deploy:
       provider: releases
       api_key:
@@ -25,6 +38,7 @@ jobs:
       file_glob: true
       file:
       - build/appimage-build/n3h*
+      - build/electron-build/dist/n3h*
       skip_cleanup: true
       draft: true
       prerelease: true

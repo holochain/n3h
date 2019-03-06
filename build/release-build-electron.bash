@@ -29,6 +29,7 @@ node -e "const p = require('../../package'); delete p.devDependencies; p.main = 
 
 npm install
 npm install --save-dev electron electron-builder
+npm prune
 
 # -- create electron.js -- #
 cat > ./electron.js << EOF
@@ -63,6 +64,7 @@ cat > ./electron-builder.json << EOF
 }
 EOF
 
-./node_modules/.bin/electron-builder --config electron-builder.json
+./node_modules/.bin/electron-builder --config electron-builder.json "${@}"
+(cd dist && for i in $(ls n3h*.AppImage n3h*.dmg n3h*.exe 2> /dev/null); do sha256sum $i > "${i}.sha256"; done)
 
 echo "done."
