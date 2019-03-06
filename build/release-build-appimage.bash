@@ -5,12 +5,27 @@ set -Eeuo pipefail
 
 # -- variables -- #
 # TODO - update to node v10 after https://github.com/nodejs/node/issues/23440
-NODE_SRC=node-v8.15.1
-NODE_SRC_FILE=${NODE_SRC}.tar.gz
-NODE_SRC_HASH=413e0086bd3abde2dfdd3a905c061a6188cc0faceb819768a53ca9c6422418b4
+NODE_URL=https://github.com/holochain/node-static-build/releases/download/alpha3/node-v8.15.1-linux-x86_64-alpha3
+NODE_FILE=node-v8.15.1-linux-x86_64-alpha3
+NODE_HASH=2fc0d3755e87844ec66330a03e4c0eb9898147845bf7d998a815f51f546f0a94
+NPM_URL=https://github.com/holochain/node-static-build/releases/download/alpha3/npm-node-v8.15.1-alpha3.tar.xz
+NPM_FILE=npm-node-v8.15.1-alpha3.tar.xz
+NPM_HASH=1dea22d1dcbecd5b6ccd34cd7fe5b9df28f3881c5d330c2a67333b45258a9224
 AIT_URL=https://github.com/AppImage/AppImageKit/releases/download/11/appimagetool-x86_64.AppImage
 AIT_FILE=appimagetool-x86_64.AppImage
 AIT_HASH=c13026b9ebaa20a17e7e0a4c818a901f0faba759801d8ceab3bb6007dde00372
+
+ARCH=$(uname -m)
+
+function dl {
+  local __url="${1}"
+  local __file="${2}"
+  local __hash="${3}"
+  if [ ! -f "${__file}" ]; then
+    curl -L -O "${__url}"
+  fi
+  echo "${__hash}  ${__file}" | sha256sum --check
+}
 
 # -- resolve symlinks in path -- #
 SOURCE="${BASH_SOURCE[0]}"
@@ -28,6 +43,14 @@ BUILD_DIR=./appimage-build
 # -- setup build directory -- #
 mkdir -p $BUILD_DIR
 cd $BUILD_DIR
+
+# -- download dependencies -- #
+dl $NODE_URL $NODE_FILE $NODE_HASH
+chmod a+x "$NODE_FILE"
+dl $NPM_URL $NPM_FILE $NPM_HASH
+tar xf $NPM_FILE
+dl $AIT_URL $AIT_FILE $AIT_HASH
+chmod a+x "$AIT_FILE"
 
 # -- build the appdir directory -- #
 mkdir -p AppDir
@@ -67,34 +90,21 @@ main().then(() => {}, err => {
 })
 EOF
 
-# -- create package.json -- #
-node -e "const p = require('../../package'); delete p.devDependencies; require('fs').writeFileSync('./AppDir/usr/bin/package.json', JSON.stringify(p, null, 2))"
-
-# -- download nodejs source -- #
-if [ ! -f $NODE_SRC_FILE ]; then
-  curl -L -O https://nodejs.org/dist/latest-v8.x/$NODE_SRC_FILE
-fi
-echo "$NODE_SRC_HASH  $NODE_SRC_FILE" | sha256sum --check
-
-# -- build node src -- #
-if [ ! -f $NODE_SRC/build/usr/bin/node ]; then
-  tar xf $NODE_SRC_FILE
-  (cd $NODE_SRC && ./configure --prefix=/usr --enable-static --partly-static && make -j$(nproc) && DESTDIR=build make install)
-fi
-
 # -- copy in node executable -- #
-cp $NODE_SRC/build/usr/bin/node ./AppDir/usr/bin/
+cp $NODE_FILE ./AppDir/usr/bin/node
+
+# -- create package.json -- #
+./AppDir/usr/bin/node -e "const p = require('../../package'); delete p.devDependencies; require('fs').writeFileSync('./AppDir/usr/bin/package.json', JSON.stringify(p, null, 2))"
+PLATFORM=$(./AppDir/usr/bin/node -e "console.log(require('os').platform())")
+VERSION=$(./AppDir/usr/bin/node -e "console.log(require('../../package').version)")
 
 # -- npm install -- #
 # (make sure to use the node we just built)
-(cd ./AppDir/usr/bin && ./node ../../../$NODE_SRC/build/usr/lib/node_modules/npm/bin/npm-cli.js install --production && ./node ../../../$NODE_SRC/build/usr/lib/node_modules/npm/bin/npm-cli.js prune)
+(cd ./AppDir/usr/bin && ./node ../../../npm/bin/npm-cli.js install --production && ./node ../../../npm/bin/npm-cli.js prune)
 
-# -- get appimagetool -- #
-if [ ! -f $AIT_FILE ]; then
-  curl -L -O $AIT_URL
-fi
-echo "$AIT_HASH  $AIT_FILE" | sha256sum --check
-chmod a+x $AIT_FILE
-ARCH=x86_64 ./$AIT_FILE ./AppDir n3h-0.0.1-linux-x86_64-minimal.AppImage
+# -- build with appimagetool -- #
+OUTPUT=n3h-$VERSION-$PLATFORM-$ARCH-minimal.AppImage
+ARCH=$ARCH ./$AIT_FILE ./AppDir $OUTPUT
+sha256sum $OUTPUT > $OUTPUT.sha256
 
 echo "done."
