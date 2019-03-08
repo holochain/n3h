@@ -3,6 +3,9 @@
   "version": "0.0.5-alpha1",
   "description": "nodejs holochain networking library with swapable / configurable modules",
   "repository": "github:holochain/n3h",
+  "bin": {
+    "n3h": "bin/n3h"
+  },
   "scripts": {
     "lint": "standard --fix 'lib/**/*.js' 'bin/**/*'",
     "mocha": "mocha lib/*.test.js lib/**/*.test.js",
@@ -16,6 +19,7 @@
     "handlebars": "^4.0.12",
     "jsdoc-to-markdown": "^4.0.1",
     "mocha": "^5.2.0",
+    "node2nix": "^1.6.0",
     "nyc": "^12.0.2",
     "opn": "^5.4.0",
     "prompt": "^1.0.0",
