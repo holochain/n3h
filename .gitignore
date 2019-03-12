@@ -1,3 +1,5 @@
+build/appimage-build
+build/electron-build
 .nyc_output
 coverage
 node_modules
