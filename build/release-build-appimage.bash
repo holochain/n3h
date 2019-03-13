@@ -3,28 +3,17 @@
 # -- sane bash errors -- #
 set -Eeuo pipefail
 
-# -- variables -- #
-# TODO - update to node v10 after https://github.com/nodejs/node/issues/23440
-NODE_URL=https://github.com/holochain/node-static-build/releases/download/alpha4/node-v8.15.1-linux-x86_64-alpha4
-NODE_FILE=node-v8.15.1-linux-x86_64-alpha4
-NODE_HASH=2fc0d3755e87844ec66330a03e4c0eb9898147845bf7d998a815f51f546f0a94
-NPM_URL=https://github.com/holochain/node-static-build/releases/download/alpha4/npm-node-v8.15.1-alpha4.tar.xz
-NPM_FILE=npm-node-v8.15.1-alpha4.tar.xz
-NPM_HASH=2f447d0c1532da5e4eb488f37e522ed2963f6b2052e002fe3ebb945f1693755b
-AIT_URL=https://github.com/AppImage/AppImageKit/releases/download/11/appimagetool-x86_64.AppImage
-AIT_FILE=appimagetool-x86_64.AppImage
-AIT_HASH=c13026b9ebaa20a17e7e0a4c818a901f0faba759801d8ceab3bb6007dde00372
-
-ARCH=$(uname -m)
-
-function dl {
-  local __url="${1}"
-  local __file="${2}"
-  local __hash="${3}"
-  if [ ! -f "${__file}" ]; then
-    curl -L -O "${__url}"
+VM_ARCH=${VM_ARCH:-unset}
+if [ "$VM_ARCH" == "unset" ]; then
+  VM_ARCH=$(uname -m)
+  if [ "$VM_ARCH" == "x86_64" ]; then
+    VM_ARCH="x64"
   fi
-  echo "${__hash}  ${__file}" | sha256sum --check
+fi
+export VM_ARCH=$VM_ARCH
+
+function log() {
+  echo "**release-build-appimage** ${@}"
 }
 
 # -- resolve symlinks in path -- #
@@ -38,73 +27,52 @@ DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null 2>&1 && pwd )"
 
 cd $DIR
 
-BUILD_DIR=./appimage-build
-
 # -- setup build directory -- #
+BUILD_DIR=./appimage-build-$VM_ARCH
 mkdir -p $BUILD_DIR
 cd $BUILD_DIR
 
-# -- download dependencies -- #
-dl $NODE_URL $NODE_FILE $NODE_HASH
-chmod a+x "$NODE_FILE"
-dl $NPM_URL $NPM_FILE $NPM_HASH
-tar xf $NPM_FILE
-dl $AIT_URL $AIT_FILE $AIT_HASH
-chmod a+x "$AIT_FILE"
+log "Building $VM_ARCH into $BUILD_DIR"
 
-# -- build the appdir directory -- #
-mkdir -p AppDir
-cat > ./AppDir/AppRun << EOF
-#!/bin/sh
-SELF=\$(readlink -f "\$0")
-HERE=\${SELF%/*}
-export PATH="\${HERE}/usr/bin/:\${HERE}/usr/sbin/:\${HERE}/usr/games/:\${HERE}/bin/:\${HERE}/sbin/\${PATH:+:\$PATH}"
-export LD_LIBRARY_PATH="\${HERE}/usr/lib/:\${HERE}/usr/lib/i386-linux-gnu/:\${HERE}/usr/lib/x86_64-linux-gnu/:\${HERE}/usr/lib32/:\${HERE}/usr/lib64/:\${HERE}/lib/:\${HERE}/lib/i386-linux-gnu/:\${HERE}/lib/x86_64-linux-gnu/:\${HERE}/lib32/:\${HERE}/lib64/\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
-export XDG_DATA_DIRS="\${HERE}/usr/share/\${XDG_DATA_DIRS:+:\$XDG_DATA_DIRS}"
-exec "\${HERE}/usr/bin/node" "\${HERE}/usr/bin/n3h.js" "\$@"
+cp ../../package.json .
+cp -a ../n3h.png .
+cp -a ../../lib .
+
+TC_BIN=""
+function exec_dockcross() {
+  TC_IMG_NAME="n3h-dockcross-linux-$VM_ARCH"
+  cat > Dockerfile <<EOF
+FROM dockcross/linux-$VM_ARCH
+
+ENV DEFAULT_DOCKCROSS_IMAGE $TC_IMG_NAME
+RUN apt-get update && apt-get install -y fuse
 EOF
-chmod a+x ./AppDir/AppRun
-mkdir -p ./AppDir/usr/share/applications
-cat > ./AppDir/usr/share/applications/n3h.desktop << EOF
-[Desktop Entry]
-Categories=Utility;
-Type=Application
-Exec=n3h
-Icon=n3h
-Name=n3h
-Terminal=true
-EOF
-ln -f -s usr/share/applications/n3h.desktop ./AppDir/n3h.desktop
-mkdir -p ./AppDir/usr/share/icons/hicolor/32x32/apps
-cp -a ../n3h.png ./AppDir/usr/share/icons/hicolor/32x32/apps/
-ln -f -s usr/share/icons/hicolor/32x32/apps/n3h.png ./AppDir/n3h.png
-mkdir -p ./AppDir/usr/bin
-rm -rf ./AppDir/usr/bin/lib
-cp -a ../../lib ./AppDir/usr/bin/
-cat > ./AppDir/usr/bin/n3h.js << EOF
-const { main } = require('./lib/exe')
+  docker build -t $TC_IMG_NAME .
+  TC_BIN="dockcross-$VM_ARCH"
+  docker run --rm --device /dev/fuse --cap-add SYS_ADMIN $TC_IMG_NAME > ./$TC_BIN
+  chmod a+x ./$TC_BIN
+  cp ../_release-build-appimage.bash .
+  ./$TC_BIN -a "--device /dev/fuse --cap-add SYS_ADMIN" -- bash -c "VM_ARCH=$VM_ARCH ./_release-build-appimage.bash"
+}
 
-main().then(() => {}, err => {
-  console.error(err)
-  process.exit(1)
-})
-EOF
+case "${VM_ARCH}" in
+  "x86")
+    exec_dockcross
+    ;;
+  "x64")
+    exec_dockcross
+    ;;
+  "aarch64")
+    VM_ARCH=$VM_ARCH ../vm-exec.bash ../_release-build-appimage.bash
+    ;;
+  *)
+    log "ERROR, bad VM_ARCH: $VM_ARCH"
+    exit 1
+    ;;
+esac
 
-# -- copy in node executable -- #
-cp $NODE_FILE ./AppDir/usr/bin/node
+rm -rf output
 
-# -- create package.json -- #
-./AppDir/usr/bin/node -e "const p = require('../../package'); delete p.devDependencies; require('fs').writeFileSync('./AppDir/usr/bin/package.json', JSON.stringify(p, null, 2))"
-PLATFORM=$(./AppDir/usr/bin/node -e "console.log(require('os').platform())")
-VERSION=$(./AppDir/usr/bin/node -e "console.log(require('../../package').version)")
-
-# -- npm install -- #
-# (make sure to use the node we just built)
-(cd ./AppDir/usr/bin && ./node ../../../npm/bin/npm-cli.js install --production && ./node ../../../npm/bin/npm-cli.js prune)
-
-# -- build with appimagetool -- #
-OUTPUT=n3h-$VERSION-$PLATFORM-$ARCH-minimal.AppImage
-ARCH=$ARCH ./$AIT_FILE ./AppDir $OUTPUT
-sha256sum $OUTPUT > $OUTPUT.sha256
+tar xf output.tar.xz
 
 echo "done."
