@@ -42,7 +42,7 @@ jobs:
     if: tag IS present
     before_install:
       - sudo apt-get update
-      - sudo apt-get install -y qemu-system-aarch64
+      - sudo apt-get install -y qemu-system-arm
     os: linux
     services: docker
     script:
