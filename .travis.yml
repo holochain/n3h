@@ -65,6 +65,7 @@ jobs:
         electronuserland/builder:wine \
         /bin/bash -c "./build/release-build-electron.bash --win"
   - name: osx build
+    os: osx
     if: tag IS present
     script:
     - ./build/release-build-electron.bash --mac
