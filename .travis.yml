@@ -21,17 +21,14 @@ deploy:
 jobs:
   include:
   - name: windows test
-    deploy: skip
     os: windows
     script:
     - npm test
   - name: linux test
-    deploy: skip
     os: linux
     script:
     - npm test
   - name: osx test
-    deploy: skip
     os: osx
     script:
     - npm test
