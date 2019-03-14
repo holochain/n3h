@@ -40,6 +40,9 @@ jobs:
     - VM_ARCH=x64 ./build/release-build-appimage.bash
   - name: linux-aarch64 build
     if: tag IS present
+    before_install:
+      - sudo apt-get update
+      - sudo apt-get install -y qemu-system-aarch64
     os: linux
     services: docker
     script:
