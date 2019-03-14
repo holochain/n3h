@@ -174,6 +174,10 @@ twait 10 ssh -F $TMPDIR/ssh_config default <<EOF
 echo vm-exec able to log into vm!
 EOF
 
+if [ -f input.tar.xz ]; then
+  scp -F $TMPDIR/ssh_config input.tar.xz default: || true
+fi
+
 EXEC_FILE=${1}
 EXEC_FILE_NAME=$(basename ${1})
 
@@ -188,6 +192,9 @@ export VM_TAG="${VM_TAG}"
 export VM_CMD="${VM_CMD}"
 export VM_MACHINE="${VM_MACHINE}"
 export VM_CPU="${VM_CPU}"
+if [ -f input.tar.xz ]; then
+  tar xf input.tar.xz
+fi
 echo ""
 echo "-- vm-exec exec command --"
 echo ""

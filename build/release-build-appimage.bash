@@ -37,6 +37,7 @@ log "Building $VM_ARCH into $BUILD_DIR"
 cp ../../package.json .
 cp -a ../n3h.png .
 cp -a ../../lib .
+tar -cJf input.tar.xz package.json n3h.png lib
 
 TC_BIN=""
 function exec_dockcross() {
@@ -75,4 +76,4 @@ rm -rf output
 
 tar xf output.tar.xz
 
-echo "done."
+log "done"

@@ -58,6 +58,8 @@ function dl {
 }
 
 # -- download dependencies -- #
+log "downloading dependencies"
+
 dl "$NODE_URL" "$NODE_FILE" "$NODE_HASH"
 chmod a+x "$NODE_FILE"
 dl "$NPM_URL" "$NPM_FILE" "$NPM_HASH"
@@ -66,6 +68,8 @@ dl "$AIT_URL" "$AIT_FILE" "$AIT_HASH"
 chmod a+x "$AIT_FILE"
 
 # -- build the appdir directory -- #
+log "building AppDir"
+
 mkdir -p AppDir
 cat > ./AppDir/AppRun << EOF
 #!/bin/sh
@@ -110,6 +114,8 @@ cp $NODE_FILE ./AppDir/usr/bin/node
 export PATH=$(pwd)/AppDir/usr/bin:$PATH
 
 # -- create package.json -- #
+log "installing node dependencies"
+
 node -e "const p = require('./package'); delete p.devDependencies; require('fs').writeFileSync('./AppDir/usr/bin/package.json', JSON.stringify(p, null, 2))"
 VERSION=$(node -e "console.log(require('./package').version)")
 
@@ -123,6 +129,9 @@ case "$VM_ARCH" in
     ;;
   "aarch64")
     export ARCH=aarch64
+    dl https://github.com/holochain/node-static-build/releases/download/deps-2019-03-12/sodium-native-2.3.0-aarch64.tar.xz sodium-native-2.3.0-aarch64.tar.xz 017c395ab0404b455f59cf13ffd1a33faba2276e4d04d38db9775659f592e449
+    mkdir -p ./AppDir/usr/bin/node_modules
+    (cd ./AppDir/usr/bin/node_modules && tar xf ../../../../sodium-native-2.3.0-aarch64.tar.xz && rm -rf sodium-native/prebuilds)
     # preseed our prebuilt sodium
     ;;
 esac
@@ -130,11 +139,14 @@ esac
 (cd ./AppDir/usr/bin && node ../../../npm/bin/npm-cli.js install --production --prune)
 
 # -- build with appimagetool -- #
+log "generate AppImage"
+
 mkdir -p ./output
 ONAME=n3h-$VERSION-linux-$VM_ARCH.AppImage
 ./$AIT_FILE ./AppDir ./output/$ONAME
 (cd ./output && sha256sum $ONAME > $ONAME.sha256)
 
+log "package output"
 tar -cJf output.tar.xz ./output
 
-echo "done."
+log "done"
