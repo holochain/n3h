@@ -8,7 +8,7 @@ deploy:
     secure: xZGYRJ5E4BnUgRBDIkqeNqDSyUdvZAOJHqey73ZpHfs834kKhJ3x5MMmHdvP0bXA+OVUu+fnIfuuNH158hc7Mo0BPkJN4nkOcl0wjNUpqfg2ujAfcbAehtkz1cpv8AZRNSrL1xrtchOEY7jnuGyv+O05uROxTxvtT3TsGql1Qc62M+MglZtz2bALMbFrTMfxqcXH32h431OIXKZORkQUXgsFvbXg0J2ghzDLMknTlDZF2W2/Xds77FTPe9B7gNiNRvL9y5bU/Y03k1efIcfdMNSL8upGhpPhgDiipPjGFUmyarfcXvd6v2HQNrPTAHXoXHReIqAapNUqU5bWMQ9Kd+f5BAfybKIce6q+m4JvcoritCUJBP9uV9+7oA8rek0Cvykfc1MGFWHSy5Wv1iheUh9T3i/hlrqSZqad0LYw7tHQg1JLbFQOaqlIBmy8fYFsV3k9L1222u9EdWzHTO5kpHOHXeXRaeKrHCMycVWcVINXfKXrMIWO4sxAY71IRBTLQJUFPUUTjcSgkWB0yHZFyli8qEJmVvZikcylz89eVY2iTJepddKnsnSWPOQP1ZA1JRLP0QjhcWMfHPrrMWm2WUfBNebIkmPQylidWkvPBHca4HM7DTYuV9BbOZiR8prQ58v7zEVTxxr9ODFeFcjRcYaFpa+nQKRzSUdvsO1zUpU=
   file_glob: true
   file:
-  - build/appimage-build*/n3h*
+  - build/appimage-build*/output/*
   - build/electron-build/dist/n3h*
   skip_cleanup: true
   draft: true

@@ -41,30 +41,47 @@ tar -cJf input.tar.xz package.json n3h.png lib
 
 TC_BIN=""
 function exec_dockcross() {
-  TC_IMG_NAME="n3h-dockcross-linux-$VM_ARCH"
+  DOCKCROSS_ARCH="${1}"
+  DOCKCROSS_CMD="${2}"
+  TC_IMG_NAME="n3h-dockcross-linux-$DOCKCROSS_ARCH"
   cat > Dockerfile <<EOF
-FROM dockcross/linux-$VM_ARCH
+FROM dockcross/linux-$DOCKCROSS_ARCH
 
 ENV DEFAULT_DOCKCROSS_IMAGE $TC_IMG_NAME
-RUN apt-get update && apt-get install -y fuse
+RUN apt-get update && apt-get install -y fuse qemu-system-aarch64
 EOF
   docker build -t $TC_IMG_NAME .
-  TC_BIN="dockcross-$VM_ARCH"
-  docker run --rm --device /dev/fuse --cap-add SYS_ADMIN $TC_IMG_NAME > ./$TC_BIN
+  TC_BIN="dockcross-$DOCKCROSS_ARCH"
+  docker run -p 2222:2222 --rm --device /dev/fuse --cap-add SYS_ADMIN $TC_IMG_NAME > ./$TC_BIN
   chmod a+x ./$TC_BIN
-  cp ../_release-build-appimage.bash .
-  ./$TC_BIN -a "--device /dev/fuse --cap-add SYS_ADMIN" -- bash -c "VM_ARCH=$VM_ARCH ./_release-build-appimage.bash"
+  ./$TC_BIN -a "-p 2222:2222 --device /dev/fuse --cap-add SYS_ADMIN" -- bash -c "$DOCKCROSS_CMD"
 }
+
+function exec_qemu() {
+  DOCKER_CMD="${1}"
+  TC_IMG_NAME="n3h-qemu"
+  cat > Dockerfile <<EOF
+FROM debian:sid
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  qemu-system-aarch64 qemu-utils xz-utils curl ssh
+EOF
+  docker build -t $TC_IMG_NAME .
+  docker run -it -v "$PWD":/work -p 2222:2222 --rm $TC_IMG_NAME bash -c "$DOCKER_CMD"
+}
+
+cp ../_release-build-appimage.bash .
+cp ../vm-exec.bash .
 
 case "${VM_ARCH}" in
   "x86")
-    exec_dockcross
+    exec_dockcross $VM_ARCH "VM_ARCH=$VM_ARCH ./_release-build-appimage.bash"
     ;;
   "x64")
-    exec_dockcross
+    exec_dockcross $VM_ARCH "VM_ARCH=$VM_ARCH ./_release-build-appimage.bash"
     ;;
   "aarch64")
-    VM_ARCH=$VM_ARCH ../vm-exec.bash ../_release-build-appimage.bash
+    exec_qemu "cd /work && VM_ARCH=$VM_ARCH ./vm-exec.bash ./_release-build-appimage.bash"
     ;;
   *)
     log "ERROR, bad VM_ARCH: $VM_ARCH"
