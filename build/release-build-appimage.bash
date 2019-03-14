@@ -64,7 +64,7 @@ function exec_qemu() {
 FROM debian:sid
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-  qemu-system-aarch64 qemu-utils xz-utils curl ssh
+  qemu-system-aarch64 qemu-utils xz-utils ca-certificates curl ssh
 EOF
   docker build -t $TC_IMG_NAME .
   docker run -it -v "$PWD":/work -p 2222:2222 --rm $TC_IMG_NAME bash -c "$DOCKER_CMD"
