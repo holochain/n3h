@@ -1,67 +1,69 @@
-<a name="Keypair"></a>
+<a name="KeyBundle"></a>
 
-## Keypair
+## KeyBundle
 Represents two asymmetric cryptography keypairs
 - a signing keypair
 - an encryption keypair
 
-base64url encoded identity string to represent the public sides
+Public keys are encoded with HCID.
+The signing public key acts as the identity string.
 
-can optionally be initialized without the private halves of the pairs
+KeyBundle can optionally be initialized without the private halves of the pairs, and without the encryption keypair.
 
-**Kind**: global class  
+**Kind**: global class
 
-* [Keypair](#Keypair)
+* [KeyBundle](#KeyBundle)
     * _instance_
-        * [.init(opt)](#Keypair+init)
-        * [.getBundle(passphrase, hint)](#Keypair+getBundle)
-        * [.getId()](#Keypair+getId) ⇒ <code>string</code>
-        * [.sign(data)](#Keypair+sign)
-        * [.verify(signature, data)](#Keypair+verify)
-        * [.encrypt(recipientIds, data)](#Keypair+encrypt) ⇒ <code>Buffer</code>
-        * [.decrypt(sourceId, cipher)](#Keypair+decrypt) ⇒ <code>Buffer</code>
+        * [.init(opt)](#KeyBundle+init)
+        * [.getBlob(passphrase, hint)](#KeyBundle+getBlob)
+        * [.getId()](#KeyBundle+getId) ⇒ <code>string</code>
+        * [.sign(data)](#KeyBundle+sign)
+        * [.verify(signature, data)](#KeyBundle+verify)
+        * [.encrypt(recipientIds, data)](#KeyBundle+encrypt) ⇒ <code>Buffer</code>
+        * [.decrypt(sourceId, cipher)](#KeyBundle+decrypt) ⇒ <code>Buffer</code>
     * _static_
-        * [.newFromSeed(seed)](#Keypair.newFromSeed)
-        * [.fromBundle(bundle, passphrase)](#Keypair.fromBundle)
+        * [.newFromSeed(seed)](#KeyBundle.newFromSeed)
+        * [.fromBlob(blob, passphrase)](#KeyBundle.fromBlob)
 
-<a name="Keypair+init"></a>
+<a name="KeyBundle+init"></a>
 
-### keypair.init(opt)
-keypair constructor (you probably want one of the static functions above)
+### KeyBundle.init(opt)
+KeyBundle constructor (you probably want one of the static functions above)
 
-**Kind**: instance method of [<code>Keypair</code>](#Keypair)  
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
 
 | Param | Type | Description |
 | --- | --- | --- |
 | opt | <code>object</code> |  |
-| opt.pubkeys | <code>string</code> | the keypair identity string |
+| opt.signPubId | <code>string</code> | HCID encoded public signature key |
+| [opt.encPubId] | <code>string</code> | HCID encoded public encryption key |
 | [opt.signPriv] | <code>SecBuf</code> | private signature key |
 | [opt.encPriv] | <code>SecBuf</code> | private encryption key |
 
 <a name="Keypair+getBundle"></a>
 
-### keypair.getBundle(passphrase, hint)
+### KeyBundle.getBundle(passphrase, hint)
 generate an encrypted persistence bundle
 
-**Kind**: instance method of [<code>Keypair</code>](#Keypair)  
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
 
 | Param | Type | Description |
 | --- | --- | --- |
 | passphrase | <code>string</code> | the encryption passphrase |
 | hint | <code>string</code> | additional info / description for the bundle |
 
-<a name="Keypair+getId"></a>
+<a name="KeyBundle+getId"></a>
 
-### keypair.getId() ⇒ <code>string</code>
-get the keypair identifier string
+### KeyBundle.getId() ⇒ <code>string</code>
+get the KeyBundle identifier string (the public signing key).
 
-**Kind**: instance method of [<code>Keypair</code>](#Keypair)  
-<a name="Keypair+sign"></a>
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
+<a name="KeyBundle+sign"></a>
 
-### keypair.sign(data)
+### KeyBundle.sign(data)
 sign some arbitrary data with the signing private key
 
-**Kind**: instance method of [<code>Keypair</code>](#Keypair)  
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -69,35 +71,35 @@ sign some arbitrary data with the signing private key
 
 <a name="Keypair+verify"></a>
 
-### keypair.verify(signature, data)
+### KeyBundle.verify(signature, data)
 verify data that was signed with our private signing key
 
-**Kind**: instance method of [<code>Keypair</code>](#Keypair)  
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
 
 | Param | Type |
 | --- | --- |
-| signature | <code>Buffer</code> | 
-| data | <code>Buffer</code> | 
+| signature | <code>Buffer</code> |
+| data | <code>Buffer</code> |
 
 <a name="Keypair+encrypt"></a>
 
-### keypair.encrypt(recipientIds, data) ⇒ <code>Buffer</code>
+### KeyBundle.encrypt(recipientIds, data) ⇒ <code>Buffer</code>
 encrypt arbitrary data to be readale by potentially multiple recipients
 
-**Kind**: instance method of [<code>Keypair</code>](#Keypair)  
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
 
 | Param | Type | Description |
 | --- | --- | --- |
 | recipientIds | <code>array.&lt;string&gt;</code> | multiple recipient identifier strings |
 | data | <code>Buffer</code> | the data to encrypt |
 
-<a name="Keypair+decrypt"></a>
+<a name="KeyBundle+decrypt"></a>
 
-### keypair.decrypt(sourceId, cipher) ⇒ <code>Buffer</code>
+### KeyBundle.decrypt(sourceId, cipher) ⇒ <code>Buffer</code>
 attempt to decrypt the cipher buffer (assuming it was targeting us)
 
-**Kind**: instance method of [<code>Keypair</code>](#Keypair)  
-**Returns**: <code>Buffer</code> - - the decrypted data  
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
+**Returns**: <code>Buffer</code> - - the decrypted data
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -106,24 +108,24 @@ attempt to decrypt the cipher buffer (assuming it was targeting us)
 
 <a name="Keypair.newFromSeed"></a>
 
-### Keypair.newFromSeed(seed)
+### KeyBundle.newFromSeed(seed)
 derive the pairs from a 32 byte seed buffer
 
-**Kind**: static method of [<code>Keypair</code>](#Keypair)  
+**Kind**: static method of [<code>KeyBundle</code>](#KeyBundle)
 
 | Param | Type | Description |
 | --- | --- | --- |
 | seed | <code>SecBuf</code> | the seed buffer |
 
-<a name="Keypair.fromBundle"></a>
+<a name="KeyBundle.fromBundle"></a>
 
-### Keypair.fromBundle(bundle, passphrase)
-initialize the pairs from an encrypted persistence bundle
+### KeyBundle.fromBlob(blob, passphrase)
+initialize the pairs from an encrypted persistence blob
 
-**Kind**: static method of [<code>Keypair</code>](#Keypair)  
+**Kind**: static method of [<code>KeyBundle</code>](#KeyBundle)
 
 | Param | Type | Description |
 | --- | --- | --- |
-| bundle | <code>object</code> | persistence info |
+| blob | <code>object</code> | persistence info |
 | passphrase | <code>string</code> | decryption passphrase |
 
