@@ -20,7 +20,7 @@
 ## Seed
 Superclass of all other seed types
 
-**Kind**: global class  
+**Kind**: global class
 
 * [Seed](#Seed)
     * _instance_
@@ -35,7 +35,7 @@ Superclass of all other seed types
 ### seed.init(type, seed)
 Initialize this seed class with persistence bundle type and private seed
 
-**Kind**: instance method of [<code>Seed</code>](#Seed)  
+**Kind**: instance method of [<code>Seed</code>](#Seed)
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -47,7 +47,7 @@ Initialize this seed class with persistence bundle type and private seed
 ### seed.getBundle(passphrase, hint)
 generate a persistence bundle with hint info
 
-**Kind**: instance method of [<code>Seed</code>](#Seed)  
+**Kind**: instance method of [<code>Seed</code>](#Seed)
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -59,13 +59,13 @@ generate a persistence bundle with hint info
 ### seed.getMnemonic()
 generate a bip39 mnemonic based on the private seed entroyp
 
-**Kind**: instance method of [<code>Seed</code>](#Seed)  
+**Kind**: instance method of [<code>Seed</code>](#Seed)
 <a name="Seed.fromBundle"></a>
 
 ### Seed.fromBundle(bundle, passphrase) ⇒ [<code>RootSeed</code>](#RootSeed) \| [<code>DeviceSeed</code>](#DeviceSeed) \| [<code>DevicePinSeed</code>](#DevicePinSeed)
 Get the proper seed type from a persistence bundle
 
-**Kind**: static method of [<code>Seed</code>](#Seed)  
+**Kind**: static method of [<code>Seed</code>](#Seed)
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -77,7 +77,7 @@ Get the proper seed type from a persistence bundle
 ## DevicePinSeed
 This is a device seed that has been PIN derived
 
-**Kind**: global class  
+**Kind**: global class
 
 * [DevicePinSeed](#DevicePinSeed)
     * [.init()](#DevicePinSeed+init)
@@ -88,24 +88,24 @@ This is a device seed that has been PIN derived
 ### devicePinSeed.init()
 delegate to base class
 
-**Kind**: instance method of [<code>DevicePinSeed</code>](#DevicePinSeed)  
+**Kind**: instance method of [<code>DevicePinSeed</code>](#DevicePinSeed)
 <a name="DevicePinSeed+getApplicationKeypair"></a>
 
-### devicePinSeed.getApplicationKeypair(index) ⇒ <code>Keypair</code>
-generate an application keypair given an index based on this seed
+### devicePinSeed.getApplicationKeyBundle(index) ⇒ <code>KeyBundle</code>
+generate an application KeyBundle given an index based on this seed
 
-**Kind**: instance method of [<code>DevicePinSeed</code>](#DevicePinSeed)  
+**Kind**: instance method of [<code>DevicePinSeed</code>](#DevicePinSeed)
 
 | Param | Type |
 | --- | --- |
-| index | <code>number</code> | 
+| index | <code>number</code> |
 
 <a name="DeviceSeed"></a>
 
 ## DeviceSeed
 This is a device seed that is waiting for PIN derivation
 
-**Kind**: global class  
+**Kind**: global class
 
 * [DeviceSeed](#DeviceSeed)
     * [.init()](#DeviceSeed+init)
@@ -116,13 +116,13 @@ This is a device seed that is waiting for PIN derivation
 ### deviceSeed.init()
 delegate to base class
 
-**Kind**: instance method of [<code>DeviceSeed</code>](#DeviceSeed)  
+**Kind**: instance method of [<code>DeviceSeed</code>](#DeviceSeed)
 <a name="DeviceSeed+getDevicePinSeed"></a>
 
 ### deviceSeed.getDevicePinSeed(pin) ⇒ [<code>DevicePinSeed</code>](#DevicePinSeed)
 generate a device pin seed by applying pwhash of pin with this seed as the salt
 
-**Kind**: instance method of [<code>DeviceSeed</code>](#DeviceSeed)  
+**Kind**: instance method of [<code>DeviceSeed</code>](#DeviceSeed)
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -133,7 +133,7 @@ generate a device pin seed by applying pwhash of pin with this seed as the salt
 ## RootSeed
 This root seed should be pure entropy
 
-**Kind**: global class  
+**Kind**: global class
 
 * [RootSeed](#RootSeed)
     * _instance_
@@ -147,21 +147,21 @@ This root seed should be pure entropy
 ### rootSeed.init()
 delegate to base class
 
-**Kind**: instance method of [<code>RootSeed</code>](#RootSeed)  
+**Kind**: instance method of [<code>RootSeed</code>](#RootSeed)
 <a name="RootSeed+getDeviceSeed"></a>
 
 ### rootSeed.getDeviceSeed(index) ⇒ [<code>DeviceSeed</code>](#DeviceSeed)
 generate a device seed given an index based on this seed
 
-**Kind**: instance method of [<code>RootSeed</code>](#RootSeed)  
+**Kind**: instance method of [<code>RootSeed</code>](#RootSeed)
 
 | Param | Type |
 | --- | --- |
-| index | <code>number</code> | 
+| index | <code>number</code> |
 
 <a name="RootSeed.newRandom"></a>
 
 ### RootSeed.newRandom()
 Get a new, completely random root seed
 
-**Kind**: static method of [<code>RootSeed</code>](#RootSeed)  
+**Kind**: static method of [<code>RootSeed</code>](#RootSeed)

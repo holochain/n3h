@@ -23,7 +23,7 @@
     "tmp": "0.0.33"
   },
   "dependencies": {
-    "@holochain/n-bch-rs": "^0.0.4",
+    "@holochain/hcid-js": "^0.0.5",
     "bip39": "^2.5.0",
     "bs58": "^4.0.1",
     "sodium-native": "^2.2.3",

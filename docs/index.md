@@ -8,7 +8,7 @@
 
 ### hc-dpki
 
-- [keypair](hc-dpki/keypair.md)
+- [keybundle](hc-dpki/keybundle.md)
 - [seed](hc-dpki/seed.md)
 - [util](hc-dpki/util.md)
 
