@@ -65,7 +65,7 @@ cat > ./electron-builder.json << EOF
 EOF
 
 ./node_modules/.bin/electron-builder --config electron-builder.json --publish never "${@}"
-(cd dist && for i in $(ls n3h*.AppImage n3h*.dmg n3h*.exe 2> /dev/null); do sha256sum $i > "${i}.sha256" || shasum -a 256 $i > "${i}.sha256"; done)
+(cd dist && for i in $(ls n3h*.AppImage n3h*.tar.gz n3h*.exe 2> /dev/null); do sha256sum $i > "${i}.sha256" || shasum -a 256 $i > "${i}.sha256"; done)
 rm -f dist/*.blockmap
 
 echo "done."
