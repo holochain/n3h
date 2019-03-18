@@ -1,6 +1,6 @@
 {
   "name": "n3h",
-  "version": "0.0.6-alpha2",
+  "version": "0.0.6-alpha3",
   "description": "nodejs holochain networking library with swapable / configurable modules",
   "repository": "github:holochain/n3h",
   "bin": {
