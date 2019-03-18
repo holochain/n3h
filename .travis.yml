@@ -60,10 +60,10 @@ jobs:
         -v ~/.cache/electron:/root/.cache/electron \
         -v ~/.cache/electron-builder:/root/.cache/electron-builder \
         electronuserland/builder:wine \
-        /bin/bash -c "./build/release-build-electron.bash --win"
+        /bin/bash -c "./build/release-build-electron.bash --win --x64"
   - name: osx build
     os: osx
     if: tag IS present
     script:
-    - ./build/release-build-electron.bash --mac
+    - ./build/release-build-electron.bash --mac --x64
 

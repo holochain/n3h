@@ -48,7 +48,7 @@ EOF
 cat > ./electron-builder.json << EOF
 {
   "productName": "n3h",
-  "artifactName": "\${productName}-\${version}-\${os}-\${arch}.\${ext}",
+  "artifactName": "\${productName}-\${version}-\${os}-x64.\${ext}",
   "mac": {
     "target": "dmg"
   },
