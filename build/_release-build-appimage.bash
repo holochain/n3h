@@ -16,29 +16,21 @@ NODE_URL=""; NODE_FILE=""; NODE_HASH=""
 AIT_URL=""; AIT_FILE=""; AIT_HASH=""
 
 case "$VM_ARCH" in
-  "x86")
-    NODE_URL="https://github.com/holochain/node-static-build/releases/download/deps-2019-03-12/node-v8.15.1-linux-x86-alpha6"
-    NODE_FILE="node-v8.15.1-linux-x86-alpha6"
-    NODE_HASH="fd82092e3a1f3980f0711ae5e74d1d3120ec807be489cfb972b2718ee0ed9e0d"
-    AIT_URL="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-i686.AppImage"
-    AIT_FILE="appimagetool-i686.AppImage"
-    AIT_HASH="61860573ccfafc4d5ad5bbf6d8173833acd2be9472a79d48a160fee4bb3c3b8d"
-    ;;
   "x64")
     NODE_URL="https://github.com/holochain/node-static-build/releases/download/deps-2019-03-12/node-v8.15.1-linux-x64-alpha6"
     NODE_FILE="node-v8.15.1-linux-x64-alpha6"
     NODE_HASH="1e31b2e916608218e09ef9ef9dc48eba0cc58557225f8d81020b7e1b33144cef"
-    AIT_URL="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+    AIT_URL="https://github.com/holochain/node-static-build/releases/download/deps-2019-03-12/appimagetool-x86_64.AppImage"
     AIT_FILE="appimagetool-x86_64.AppImage"
-    AIT_HASH="ca10294b1b165aa60bb2aab604f84c38799c28e20b4db334efe27f72d7111516"
+    AIT_HASH="ba7f973cc28a0edcc6bc42100e68f04722683d4eb84df9fb217b358e12ed1fd0"
     ;;
   "aarch64")
     NODE_URL="https://github.com/holochain/node-static-build/releases/download/deps-2019-03-12/node-v8.15.1-linux-aarch64-alpha6"
     NODE_FILE="node-v8.15.1-linux-aarch64-alpha6"
     NODE_HASH="1ee7bf536272410977581316565a65fbc8cedfa420a9b595978a68c557c37075"
-    AIT_URL="https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-aarch64.AppImage"
+    AIT_URL="https://github.com/holochain/node-static-build/releases/download/deps-2019-03-12/appimagetool-aarch64.AppImage"
     AIT_FILE="appimagetool-aarch64.AppImage"
-    AIT_HASH="8c4e4fd4627ab302c1aba589927fb6a3ae97fa50a9f79833c928674a8c20439f"
+    AIT_HASH="a2f201f9dca7441ebe3706ffdf1447b343250fb85f0b81256e994a3d6da837ba"
     ;;
   *)
     log "VM_ARCH $VM_ARCH not yet supported"
