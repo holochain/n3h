@@ -27,9 +27,9 @@ cp -a ../../lib .
 # -- create package.json -- #
 node -e "const p = require('../../package'); delete p.devDependencies; p.main = 'electron.js'; require('fs').writeFileSync('./package.json', JSON.stringify(p, null, 2))"
 
-npm install
+npm install --prune
 npm install --save-dev electron@4.0.7 electron-builder@20.38.5
-npm prune
+npm rebuild
 
 # -- create electron.js -- #
 cat > ./electron.js << EOF
