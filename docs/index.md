@@ -2,9 +2,13 @@
 
 ## projects
 
+### hackmode
+
+- [hackmode](hackmode/hackmode.md)
+
 ### hc-dpki
 
-- [keypair](hc-dpki/keypair.md)
+- [keybundle](hc-dpki/keybundle.md)
 - [seed](hc-dpki/seed.md)
 - [util](hc-dpki/util.md)
 
@@ -18,6 +22,10 @@
 - [random](mosodium/random.md)
 - [secbuf](mosodium/secbuf.md)
 - [sign](mosodium/sign.md)
+
+### n3h-common
+
+- [type](n3h-common/type.md)
 
 ### n3h-ipc
 

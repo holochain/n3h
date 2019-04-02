@@ -10,15 +10,27 @@
 ## Overview
 n3h delivers the networking component for [holochain-rust](https://github.com/holochain/holochain-rust).  This allows us to abstract away the complexity of p2p networking from the core Holochain functionality.
 
-Currently it consists of an IPC API that connects holochain to a wrapper around the javascript ipfs implementation, or to a mock networking implementation.
-
 ## Versions
 
-Version 0.0.3 of Holochain was the first to use n3h as its networking component. If you are using v0.0.3 of Holochain tools, it will require v0.0.3 of n3h. Please see the tagged release to download a version of n3h that is guaranteed to work with the equivalent version.
+Version 0.0.3 of Holochain was the first to use n3h as its networking component. For each version of the Holochain you must use the a compatible version of n3h.  Make sure to download the tagged release to download a version of n3h that is guaranteed to work with the equivalent Holochain version:
 
-[https://github.com/holochain/n3h/releases/tag/v0.0.3](https://github.com/holochain/n3h/releases/tag/v0.0.3)
 
-[https://github.com/holochain/holochain-rust/releases/tag/v0.0.3](https://github.com/holochain/holochain-rust/releases/tag/v0.0.3)
+### 0.0.7-alpha1
+- [https://github.com/holochain/n3h/releases/tag/v0.0.7-alpha1](https://github.com/holochain/n3h/releases/tag/v0.0.7-alpha1)
+- [https://github.com/holochain/holochain-rust/releases/tag/v0.0.7-alpha](https://github.com/holochain/holochain-rust/releases/tag/v0.0.7-alpha)
+
+### 0.0.6-alpha1
+- [https://github.com/holochain/n3h/releases/tag/v0.0.6-alpha1](https://github.com/holochain/n3h/releases/tag/v0.0.6-alpha1)
+- [https://github.com/holochain/holochain-rust/releases/tag/v0.0.6-alpha](https://github.com/holochain/holochain-rust/releases/tag/v0.0.6-alpha)
+
+### 0.0.4-alpha1
+- [https://github.com/holochain/n3h/releases/tag/v0.0.4-alpha1](https://github.com/holochain/n3h/releases/tag/v0.0.4-alpha1)
+- [https://github.com/holochain/holochain-rust/releases/tag/v0.0.4-alpha](https://github.com/holochain/holochain-rust/releases/tag/v0.0.4-alpha)
+
+### 0.0.3
+- [https://github.com/holochain/n3h/releases/tag/v0.0.3](https://github.com/holochain/n3h/releases/tag/v0.0.3)
+- [https://github.com/holochain/holochain-rust/releases/tag/v0.0.3](https://github.com/holochain/holochain-rust/releases/tag/v0.0.3)
+
 
 ## Usage
 
@@ -30,13 +42,7 @@ First, make sure our own dependencies are installed:
 npm install
 ```
 
-Next, install all project dependencies (through lerna monorepo manager):
-
-```shell
-npm run bootstrap
-```
-
-Now, test all projects:
+Now, to test:
 
 ```shell
 npm test
@@ -45,18 +51,6 @@ npm test
 ## Contribute
 
 Holochain is an open source project.  We welcome all sorts of participation and are actively working on increasing surface area to accept it.  Please see our [contributing guidelines](https://github.com/holochain/org/blob/master/CONTRIBUTING.md) for our general practices and protocols on participating in the community.
-
-### Lerna
-
-This monorepo is managed with the [Lerna](https://www.npmjs.com/package/lerna) helper tool.
-
-### New projects
-
-To create a new project, execute the following and fill out the prompts:
-
-```shell
-npm run new
-```
 
 ## License
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
