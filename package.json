@@ -7,8 +7,8 @@
     "n3h": "bin/n3h"
   },
   "scripts": {
-    "lint": "standard --fix 'lib/**/*.js' 'bin/**/*'",
-    "mocha": "mocha lib/*.test.js lib/**/*.test.js",
+    "lint": "standard --fix",
+    "mocha": "mocha --recursive lib",
     "nyc": "nyc npm run mocha",
     "test": "npm run lint && npm run nyc",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
