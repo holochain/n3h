@@ -48,6 +48,20 @@ function exec_dockcross() {
 FROM dockcross/linux-$DOCKCROSS_ARCH
 
 ENV DEFAULT_DOCKCROSS_IMAGE $TC_IMG_NAME
+
+RUN printf \
+'deb http://cdn-fastly.deb.debian.org/debian/ jessie main\n'\
+'deb-src http://cdn-fastly.deb.debian.org/debian/ jessie main\n'\
+'\n'\
+'deb http://security.debian.org/ jessie/updates main\n'\
+'deb-src http://security.debian.org/ jessie/updates main\n'\
+'\n'\
+'deb http://archive.debian.org/debian jessie-backports main\n'\
+'deb-src http://archive.debian.org/debian jessie-backports main\n'\
+> /etc/apt/sources.list
+
+RUN echo 'Acquire::Check-Valid-Until "false";' >> /etc/apt/apt.conf
+
 RUN apt-get update && apt-get install -y fuse qemu-system-aarch64
 EOF
   docker build -t $TC_IMG_NAME .
