@@ -146,6 +146,7 @@ cp -a ./AppDir/usr/bin/node ./$PNAME
 cp -a ./AppDir/usr/bin/n3h.js ./$PNAME
 cp -a ./AppDir/usr/bin/lib ./$PNAME
 cp -a ./AppDir/usr/bin/node_modules ./$PNAME
+cp -a n3h-nix.bash ./$PNAME
 
 BNAME=$PNAME.tar.gz
 tar -czf ./output/$BNAME $PNAME
