@@ -134,9 +134,22 @@ esac
 log "generate AppImage"
 
 mkdir -p ./output
-ONAME=n3h-$VERSION-linux-$VM_ARCH.AppImage
+
+PNAME=n3h-$VERSION-linux-$VM_ARCH
+
+ONAME=$PNAME.AppImage
 ./$AIT_FILE ./AppDir ./output/$ONAME
 (cd ./output && sha256sum $ONAME > $ONAME.sha256)
+
+mkdir -p ./$PNAME
+cp -a ./AppDir/usr/bin/node ./$PNAME
+cp -a ./AppDir/usr/bin/n3h.js ./$PNAME
+cp -a ./AppDir/usr/bin/lib ./$PNAME
+cp -a ./AppDir/usr/bin/node_modules ./$PNAME
+
+BNAME=$PNAME.tar.gz
+tar -czf ./output/$BNAME $PNAME
+(cd ./output && sha256sum $BNAME > $BNAME.sha256)
 
 log "package output"
 tar -cJf output.tar.xz ./output
