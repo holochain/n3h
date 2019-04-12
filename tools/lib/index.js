@@ -77,13 +77,14 @@ async function _genAllDocs () {
 
 `
   const baseDir = path.resolve(path.join(__dirname, '..', '..'))
-  const projects = fs.readdirSync(path.join(baseDir, 'packages'))
+  const projects = fs.readdirSync(path.join(baseDir, 'lib'))
   projects.sort()
   for (let project of projects) {
-    const fn = path.join(baseDir, 'packages', project)
+    const fn = path.join(baseDir, 'lib', project)
     if (!fs.lstatSync(fn).isDirectory()) {
       continue
     }
+    console.log('gen docs for', fn)
     const ret = await _genDocs(fn, project)
     if (typeof ret === 'string' && ret.length) {
       alldocs += `### ${project}
@@ -104,17 +105,17 @@ async function _genDocs (dir, project) {
 
   const docDir = path.resolve(path.join(__dirname, '..', '..', 'docs'))
 
-  const pkgJsonFile = path.resolve(path.join(dir, 'package.json'))
-  let pkgJson = null
+  const docListFile = path.resolve(path.join(dir, 'docList.json'))
+  let docListJson = null
   try {
-    pkgJson = JSON.parse(fs.readFileSync(pkgJsonFile).toString())
+    docListJson = JSON.parse(fs.readFileSync(docListFile).toString())
   } catch (e) {
-    console.log('skipping', dir, 'package.json read error')
+    console.log('skipping', dir, 'docList.json read error')
     return
   }
   if (
-    typeof pkgJson['generate-docs'] !== 'object' ||
-    Object.keys(pkgJson['generate-docs']).length < 1
+    typeof docListJson !== 'object' ||
+    Object.keys(docListJson).length < 1
   ) {
     console.log('no docs listed for', dir)
     return
@@ -123,11 +124,10 @@ async function _genDocs (dir, project) {
   const projectDocDir = path.join(docDir, project)
   _assertDir(projectDocDir)
 
-  const docs = pkgJson['generate-docs']
-  const docKeys = Object.keys(docs)
+  const docKeys = Object.keys(docListJson)
   docKeys.sort()
   for (let docName of docKeys) {
-    const docPath = path.join(dir, docs[docName])
+    const docPath = path.join(dir, docListJson[docName])
     console.log('generate docs for', docName, docPath)
     const md = await jsdoc2md.render({ files: docPath })
 

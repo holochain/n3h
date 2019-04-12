@@ -1,13 +1,17 @@
 ## Functions
 
 <dl>
-<dt><a href="#encodeId">encodeId(signPub, encPub)</a> ⇒ <code>string</code></dt>
-<dd><p>using base64url encoding (<a href="https://tools.ietf.org/html/rfc4648#section-5">https://tools.ietf.org/html/rfc4648#section-5</a>)
-Generate an identity string with a pair of public keys</p>
+<dt><a href="#encodeSign">encodeSign(signPub)</a> ⇒ <code>string</code></dt>
+<dd><p>Generate an identity string with a public signing key</p>
 </dd>
-<dt><a href="#decodeId">decodeId(id)</a> ⇒ <code>object</code></dt>
-<dd><p>using base64url encoding (<a href="https://tools.ietf.org/html/rfc4648#section-5">https://tools.ietf.org/html/rfc4648#section-5</a>)
-break an identity string up into a pair of public keys</p>
+<dt><a href="#encodeEnc">encodeEnc(signPub)</a> ⇒ <code>string</code></dt>
+<dd><p>Generate an identity string with a public encrypting key</p>
+</dd>
+<dt><a href="#decodeSign">decodeSign(id)</a> ⇒ <code>Buffer</code></dt>
+<dd><p>Convert an identity string into a public signing key</p>
+</dd>
+<dt><a href="#decodeEnc">decodeEnc(id)</a> ⇒ <code>Buffer</code></dt>
+<dd><p>Convert an identity string into a public encrypting key</p>
 </dd>
 <dt><a href="#verify">verify(signature, data, signerId)</a></dt>
 <dd><p>verify a signature given the original data, and the signer&#39;s identity string</p>
@@ -23,32 +27,53 @@ break an identity string up into a pair of public keys</p>
 </dd>
 </dl>
 
-<a name="encodeId"></a>
+<a name="encodeSign"></a>
 
-## encodeId(signPub, encPub) ⇒ <code>string</code>
-using base64url encoding (https://tools.ietf.org/html/rfc4648#section-5)
-Generate an identity string with a pair of public keys
+## encodeSign(signPub) ⇒ <code>string</code>
+Generate an identity string with a public signing key
 
 **Kind**: global function  
-**Returns**: <code>string</code> - - the base64url encoded identity (with parity bytes)  
+**Returns**: <code>string</code> - - the base32 encoded identity (with parity bytes)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| signPub | <code>Buffer</code> | singing public key |
-| encPub | <code>Buffer</code> | encryption public key |
+| signPub | <code>UInt8Array</code> | Public signing key |
 
-<a name="decodeId"></a>
+<a name="encodeEnc"></a>
 
-## decodeId(id) ⇒ <code>object</code>
-using base64url encoding (https://tools.ietf.org/html/rfc4648#section-5)
-break an identity string up into a pair of public keys
+## encodeEnc(signPub) ⇒ <code>string</code>
+Generate an identity string with a public encrypting key
 
 **Kind**: global function  
-**Returns**: <code>object</code> - - { signPub: Buffer, encPub: Buffer }  
+**Returns**: <code>string</code> - - the base32 encoded identity (with parity bytes)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| id | <code>string</code> | the base64url encoded identity string |
+| signPub | <code>UInt8Array</code> | Public encrypting key |
+
+<a name="decodeSign"></a>
+
+## decodeSign(id) ⇒ <code>Buffer</code>
+Convert an identity string into a public signing key
+
+**Kind**: global function  
+**Returns**: <code>Buffer</code> - - Buffer holding the public signing key  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| id | <code>string</code> | the base32 encoded identity string |
+
+<a name="decodeEnc"></a>
+
+## decodeEnc(id) ⇒ <code>Buffer</code>
+Convert an identity string into a public encrypting key
+
+**Kind**: global function  
+**Returns**: <code>Buffer</code> - - Buffer holding the public encrypting key  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| id | <code>string</code> | the base32 encoded identity string |
 
 <a name="verify"></a>
 
@@ -69,7 +94,7 @@ verify a signature given the original data, and the signer's identity string
 simplify the api for generating a password hash with our set parameters
 
 **Kind**: global function  
-**Returns**: <code>object</code> - - { salt: Buffer, hash: SecBuf }  
+**Returns**: <code>object</code> - - { secret: SecBuf, salt: SecBuf }  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -82,7 +107,7 @@ simplify the api for generating a password hash with our set parameters
 Helper for encrypting a buffer with a pwhash-ed passphrase
 
 **Kind**: global function  
-**Returns**: <code>Buffer</code> - - the encrypted data  
+**Returns**: <code>Buffer</code> - - msgpack encoded of the encrypted data  
 
 | Param | Type |
 | --- | --- |
@@ -97,8 +122,8 @@ Helper for decrypting a buffer with a pwhash-ed passphrase
 **Kind**: global function  
 **Returns**: <code>Buffer</code> - - the decrypted data  
 
-| Param | Type |
-| --- | --- |
-| data | <code>Buffer</code> | 
-| passphrase | <code>string</code> | 
+| Param | Type | Description |
+| --- | --- | --- |
+| data | <code>Buffer</code> | msgpack encoded of the encrypted data |
+| passphrase | <code>string</code> |  |
 

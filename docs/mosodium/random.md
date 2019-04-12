@@ -1,15 +1,11 @@
-<a name="bytes"></a>
+<a name="randomBuffer"></a>
 
-## bytes(count) ⇒ <code>Buffer</code>
-Output `count` random bytes
+## randomBuffer(buf)
+Randomize a Buffer
 
 **Kind**: global function  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| count | <code>number</code> | number of random bytes to output |
+| buf | <code>Buffer</code> | buffer to randomize |
 
-**Example**  
-```js
-const bytes = mosodium.random.bytes(32)
-```

@@ -20,34 +20,34 @@
 ## Seed
 Superclass of all other seed types
 
-**Kind**: global class
+**Kind**: global class  
 
 * [Seed](#Seed)
     * _instance_
         * [.init(type, seed)](#Seed+init)
-        * [.getBundle(passphrase, hint)](#Seed+getBundle)
+        * [.getBlob(passphrase, hint)](#Seed+getBlob)
         * [.getMnemonic()](#Seed+getMnemonic)
     * _static_
-        * [.fromBundle(bundle, passphrase)](#Seed.fromBundle) ⇒ [<code>RootSeed</code>](#RootSeed) \| [<code>DeviceSeed</code>](#DeviceSeed) \| [<code>DevicePinSeed</code>](#DevicePinSeed)
+        * [.fromBlob(blob, passphrase)](#Seed.fromBlob) ⇒ [<code>RootSeed</code>](#RootSeed) \| [<code>DeviceSeed</code>](#DeviceSeed) \| [<code>DevicePinSeed</code>](#DevicePinSeed)
 
 <a name="Seed+init"></a>
 
 ### seed.init(type, seed)
-Initialize this seed class with persistence bundle type and private seed
+Initialize this seed class with persistence blob type and private seed
 
-**Kind**: instance method of [<code>Seed</code>](#Seed)
+**Kind**: instance method of [<code>Seed</code>](#Seed)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| type | <code>string</code> | the persistence bundle type |
+| type | <code>string</code> | the persistence blob type |
 | seed | <code>SecBuf</code> \| <code>string</code> | the private seed data (as a buffer or mnemonic) |
 
-<a name="Seed+getBundle"></a>
+<a name="Seed+getBlob"></a>
 
-### seed.getBundle(passphrase, hint)
-generate a persistence bundle with hint info
+### seed.getBlob(passphrase, hint)
+generate a persistence blob with hint info
 
-**Kind**: instance method of [<code>Seed</code>](#Seed)
+**Kind**: instance method of [<code>Seed</code>](#Seed)  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -57,19 +57,19 @@ generate a persistence bundle with hint info
 <a name="Seed+getMnemonic"></a>
 
 ### seed.getMnemonic()
-generate a bip39 mnemonic based on the private seed entroyp
+generate a bip39 mnemonic based on the private seed entropy
 
-**Kind**: instance method of [<code>Seed</code>](#Seed)
-<a name="Seed.fromBundle"></a>
+**Kind**: instance method of [<code>Seed</code>](#Seed)  
+<a name="Seed.fromBlob"></a>
 
-### Seed.fromBundle(bundle, passphrase) ⇒ [<code>RootSeed</code>](#RootSeed) \| [<code>DeviceSeed</code>](#DeviceSeed) \| [<code>DevicePinSeed</code>](#DevicePinSeed)
-Get the proper seed type from a persistence bundle
+### Seed.fromBlob(blob, passphrase) ⇒ [<code>RootSeed</code>](#RootSeed) \| [<code>DeviceSeed</code>](#DeviceSeed) \| [<code>DevicePinSeed</code>](#DevicePinSeed)
+Get the proper seed type from a persistence blob
 
-**Kind**: static method of [<code>Seed</code>](#Seed)
+**Kind**: static method of [<code>Seed</code>](#Seed)  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| bundle | <code>object</code> | the persistence bundle |
+| blob | <code>object</code> | the persistence blob |
 | passphrase | <code>string</code> | the decryption passphrase |
 
 <a name="DevicePinSeed"></a>
@@ -77,35 +77,35 @@ Get the proper seed type from a persistence bundle
 ## DevicePinSeed
 This is a device seed that has been PIN derived
 
-**Kind**: global class
+**Kind**: global class  
 
 * [DevicePinSeed](#DevicePinSeed)
     * [.init()](#DevicePinSeed+init)
-    * [.getApplicationKeypair(index)](#DevicePinSeed+getApplicationKeypair) ⇒ <code>Keypair</code>
+    * [.getApplicationKeyBundle(index)](#DevicePinSeed+getApplicationKeyBundle) ⇒ <code>KeyBundle</code>
 
 <a name="DevicePinSeed+init"></a>
 
 ### devicePinSeed.init()
 delegate to base class
 
-**Kind**: instance method of [<code>DevicePinSeed</code>](#DevicePinSeed)
-<a name="DevicePinSeed+getApplicationKeypair"></a>
+**Kind**: instance method of [<code>DevicePinSeed</code>](#DevicePinSeed)  
+<a name="DevicePinSeed+getApplicationKeyBundle"></a>
 
 ### devicePinSeed.getApplicationKeyBundle(index) ⇒ <code>KeyBundle</code>
 generate an application KeyBundle given an index based on this seed
 
-**Kind**: instance method of [<code>DevicePinSeed</code>](#DevicePinSeed)
+**Kind**: instance method of [<code>DevicePinSeed</code>](#DevicePinSeed)  
 
 | Param | Type |
 | --- | --- |
-| index | <code>number</code> |
+| index | <code>number</code> | 
 
 <a name="DeviceSeed"></a>
 
 ## DeviceSeed
 This is a device seed that is waiting for PIN derivation
 
-**Kind**: global class
+**Kind**: global class  
 
 * [DeviceSeed](#DeviceSeed)
     * [.init()](#DeviceSeed+init)
@@ -116,13 +116,13 @@ This is a device seed that is waiting for PIN derivation
 ### deviceSeed.init()
 delegate to base class
 
-**Kind**: instance method of [<code>DeviceSeed</code>](#DeviceSeed)
+**Kind**: instance method of [<code>DeviceSeed</code>](#DeviceSeed)  
 <a name="DeviceSeed+getDevicePinSeed"></a>
 
 ### deviceSeed.getDevicePinSeed(pin) ⇒ [<code>DevicePinSeed</code>](#DevicePinSeed)
 generate a device pin seed by applying pwhash of pin with this seed as the salt
 
-**Kind**: instance method of [<code>DeviceSeed</code>](#DeviceSeed)
+**Kind**: instance method of [<code>DeviceSeed</code>](#DeviceSeed)  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -133,7 +133,7 @@ generate a device pin seed by applying pwhash of pin with this seed as the salt
 ## RootSeed
 This root seed should be pure entropy
 
-**Kind**: global class
+**Kind**: global class  
 
 * [RootSeed](#RootSeed)
     * _instance_
@@ -147,21 +147,21 @@ This root seed should be pure entropy
 ### rootSeed.init()
 delegate to base class
 
-**Kind**: instance method of [<code>RootSeed</code>](#RootSeed)
+**Kind**: instance method of [<code>RootSeed</code>](#RootSeed)  
 <a name="RootSeed+getDeviceSeed"></a>
 
 ### rootSeed.getDeviceSeed(index) ⇒ [<code>DeviceSeed</code>](#DeviceSeed)
 generate a device seed given an index based on this seed
 
-**Kind**: instance method of [<code>RootSeed</code>](#RootSeed)
+**Kind**: instance method of [<code>RootSeed</code>](#RootSeed)  
 
 | Param | Type |
 | --- | --- |
-| index | <code>number</code> |
+| index | <code>number</code> | 
 
 <a name="RootSeed.newRandom"></a>
 
 ### RootSeed.newRandom()
 Get a new, completely random root seed
 
-**Kind**: static method of [<code>RootSeed</code>](#RootSeed)
+**Kind**: static method of [<code>RootSeed</code>](#RootSeed)  
