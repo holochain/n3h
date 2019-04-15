@@ -21,17 +21,6 @@ function dl() {
   echo "${__hash}  ${__file}" | sha256sum --check
 }
 
-function dl_artifact() {
-  local __file="${1}"
-  if [ ! -f "${__file}" ]; then
-    if [ "x${TRAVIS_TAG}" == "x" ]; then
-      log "ERROR, cannot download an artifact when not running on travis"
-      exit 1
-    fi
-    curl -L -O "https://github.com/holochain/node-static-build/releases/download/${TRAVIS_TAG}/${__file}"
-  fi
-}
-
 # -- resolve environment -- #
 
 this_arch="$(uname -m)"
@@ -58,24 +47,28 @@ qemu_bin=""
 docker_from=""
 
 case "${tgt_arch}" in
-  "x64")
-    qemu_bin="qemu-x86_64-static"
-    docker_from="amd64/debian:stretch-slim"
-    ;;
   "ia32")
     qemu_bin="qemu-i386-static"
     docker_from="i386/debian:stretch-slim"
+    export ARCH=i686 # <- appimage ARCH
     ;;
-  "armv7l")
+  "x64")
+    qemu_bin="qemu-x86_64-static"
+    docker_from="amd64/debian:stretch-slim"
+    export ARCH=x64 # <- appimage ARCH
+    ;;
+  "arm")
     qemu_bin="qemu-arm-static"
     docker_from="arm32v7/debian:stretch-slim"
+    export ARCH=armhf # <- appimage ARCH
     ;;
   "arm64")
     qemu_bin="qemu-aarch64-static"
     docker_from="arm64v8/debian:stretch-slim"
+    export ARCH=aarch64 # <- appimage ARCH
     ;;
   *)
-    log "ERROR, unsupported target arch ${tgt_arch}, supported targets: x64, ia32, armv7l, arm64"
+    log "ERROR, unsupported target arch ${tgt_arch}, supported targets: ia32, x64, arm, arm64"
     exit 1
     ;;
 esac
@@ -95,15 +88,6 @@ cd "${work_dir}"
 
 out_dir="$(pwd)/output"
 mkdir -p "${out_dir}"
-
-# -- download pinned deps -- #
-
-dl "${NPM_URL}" "${NPM_FILE}" "${NPM_HASH}"
-tar xf "${NPM_FILE}"
-dl "${NODE_URL}" "${NODE_FILE}" "${NODE_HASH}"
-xz -dfk "${NODE_FILE}"
-cp "$(basename ${NODE_FILE} .xz)" node
-chmod a+x node
 
 # -- release function -- #
 

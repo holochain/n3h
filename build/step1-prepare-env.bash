@@ -39,9 +39,13 @@ FROM ${docker_from}
 COPY ./qemu/usr/bin/${qemu_bin} /usr/bin/${qemu_bin}
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-  autoconf automake make \
-  g++ gcc python libtool node-gyp && \
-  rm -rf /var/lib/apt/lists/*
+  autoconf automake make cmake \
+  g++ gcc patch python git libtool \
+  ca-certificates wget curl \
+  xxd desktop-file-utils pkg-config \
+  libglib2.0-dev libcairo2-dev libfuse-dev \
+  libarchive-dev zsync \
+  && rm -rf /var/lib/apt/lists/*
 EOF
 
 docker build -t "${docker_img}" .
@@ -49,7 +53,24 @@ docker build -t "${docker_img}" .
 log "compressing docker image"
 docker save "${docker_img}" | pxz -zT 0 > "${docker_img_file}"
 
-release "${docker_img_file}"
+# -- download pinned deps -- #
+
+log "download pinned deps"
+dl "${NPM_URL}" "${NPM_FILE}" "${NPM_HASH}"
+tar xf "${NPM_FILE}"
+dl "${NODE_URL}" "${NODE_FILE}" "${NODE_HASH}"
+xz -dfk "${NODE_FILE}"
+cp "$(basename ${NODE_FILE} .xz)" node
+chmod a+x node
+
+# -- appimagetool source -- #
+
+log "get appimagetool source"
+if [ ! -d AppImageKit ]; then
+  git clone https://github.com/AppImage/AppImageKit.git
+fi
+(cd AppImageKit && git reset --hard)
+(cd AppImageKit && git checkout ce61b83d8551bee46418156a6f197c3ee41f7e13)
 
 # -- done -- #
 log "done"
