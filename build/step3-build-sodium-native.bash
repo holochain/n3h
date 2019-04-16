@@ -30,6 +30,7 @@ cat > build-script-sodium-native.sh <<EOF
 cd /work
 export HOME="/work"
 export PATH="/work:\$PATH"
+unset ARCH # <-- sodium build breaks if this is set
 node -p "'NODE ARCH: ' + require('os').arch()"
 node npm/bin/npm-cli.js install --production sodium-native@2.3.0
 EOF
@@ -38,7 +39,7 @@ EOF
 
 log "execute docker build"
 docker run --rm -it -v "$(pwd):/work" -u "$(id -u ${USER}):$(id -g ${USER})" \
-  -e ARCH="${ARCH}" -e TGT_ARCH="${tgt_arch}" \
+  -e TGT_ARCH="${tgt_arch}" \
   "${docker_img}" /bin/sh /work/build-script-sodium-native.sh
 
 # -- done -- #
