@@ -19,36 +19,36 @@ _prep_env: &_prep_env
   os: linux
   env: TGT_ARCH=x64
   if: tag IS present
-  script: "./step1-prepare-env.bash"
+  script: "./build/step1-prepare-env.bash"
 
 _build_appimagetool: &_build_appimagetool
   stage: "Build appimagetool"
   os: linux
   env: TGT_ARCH=x64
   if: tag IS present
-  script: "./step2-build-appimagetool.bash"
+  script: "./build/step2-build-appimagetool.bash"
 
 _build_sodium: &_build_sodium
   stage: "Build sodium"
   os: linux
   env: TGT_ARCH=x64
   if: tag IS present
-  script: "./step3-build-sodium-native.bash"
+  script: "./build/step3-build-sodium-native.bash"
 
 _build_appimage: &_build_appimage
   stage: "Build appimage"
   os: linux
   env: TGT_ARCH=x64
   if: tag IS present
-  script: "./step4-build-n3h-appimage.bash"
+  script: "./build/step4-build-n3h-appimage.bash"
 
 stages:
   - "Test"
-  - "Build electron"
   - "Prepare env"
   - "Build appimagetool"
   - "Build sodium"
   - "Build appimage"
+  - "Build electron"
 
 jobs:
   include:
