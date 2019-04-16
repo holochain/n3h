@@ -154,7 +154,6 @@ deploy:
   - build/appimage-build*/output/*
   - build/electron-build/dist/n3h*
   skip_cleanup: true
-  draft: true
   prerelease: true
   name: $TRAVIS_TAG
   on:

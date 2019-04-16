@@ -55,7 +55,7 @@ case "${tgt_arch}" in
   "x64")
     qemu_bin="qemu-x86_64-static"
     docker_from="amd64/debian:stretch-slim"
-    export ARCH=x64 # <- appimage ARCH
+    export ARCH=x86_64 # <- appimage ARCH
     ;;
   "arm")
     qemu_bin="qemu-arm-static"
