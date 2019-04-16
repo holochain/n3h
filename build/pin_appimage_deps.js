@@ -51,7 +51,7 @@ async function main () {
     node: {
       ia32: {},
       x64: {},
-      armv7l: {},
+      arm: {},
       arm64: {}
     }
   }
@@ -107,8 +107,8 @@ async function main () {
   bash += '  "x64")\n'
   printBash('    NODE', out.node.x64)
   bash += '    ;;\n'
-  bash += '  "armv7l")\n'
-  printBash('    NODE', out.node.armv7l)
+  bash += '  "arm")\n'
+  printBash('    NODE', out.node.arm)
   bash += '    ;;\n'
   bash += '  "arm64")\n'
   printBash('    NODE', out.node.arm64)
