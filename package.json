@@ -1,6 +1,6 @@
 {
   "name": "n3h",
-  "version": "0.0.9-alpha2",
+  "version": "0.0.10-alpha",
   "description": "nodejs holochain networking library with swapable / configurable modules",
   "repository": "github:holochain/n3h",
   "bin": {
@@ -24,7 +24,8 @@
     "prompt": "^1.0.0",
     "sinon": "^7.1.1",
     "standard": "^12.0.1",
-    "tmp": "0.0.33"
+    "tmp": "0.0.33",
+    "tmp-promise": "1.0.5"
   },
   "dependencies": {
     "@holochain/hcid-js": "^0.0.5",
