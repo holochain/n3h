@@ -36,8 +36,9 @@ log "Building $VM_ARCH into $BUILD_DIR"
 
 cp ../../package.json .
 cp -a ../n3h.png .
+cp -a ../n3h-nix.bash .
 cp -a ../../lib .
-tar -cJf input.tar.xz package.json n3h.png lib
+tar -cJf input.tar.xz package.json n3h.png n3h-nix.bash lib
 
 TC_BIN=""
 function exec_dockcross() {
