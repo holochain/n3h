@@ -60,12 +60,12 @@ case "${tgt_arch}" in
   "arm")
     qemu_bin="qemu-arm-static"
     docker_from="arm32v7/debian:stretch-slim"
-    export ARCH=armhf # <- appimage ARCH
+    export ARCH=arm # <- appimage ARCH
     ;;
   "arm64")
     qemu_bin="qemu-aarch64-static"
     docker_from="arm64v8/debian:stretch-slim"
-    export ARCH=aarch64 # <- appimage ARCH
+    export ARCH=arm_aarch64 # <- appimage ARCH
     ;;
   *)
     log "ERROR, unsupported target arch ${tgt_arch}, supported targets: ia32, x64, arm, arm64"
