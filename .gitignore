@@ -5,4 +5,4 @@ build/machines-vm-exec
 coverage
 node_modules
 tls-data.json
-transportId.keyfile
+machineId.keyfile
