@@ -55,9 +55,6 @@ ln -f -s usr/share/icons/hicolor/32x32/apps/n3h.png ./AppDir/n3h.png
 mkdir -p ./AppDir/usr/bin
 mkdir -p ./AppDir/usr/bin/node_modules
 cp -a node_modules/sodium-native ./AppDir/usr/bin/node_modules
-if [ "${tgt_arch}" == "arm" ] || [ "${tgt_arch}" == "arm64" ]; then
-  rm -rf ./AppDir/usr/bin/node_modules/sodium-native/prebuilds
-fi
 rm -rf ./AppDir/usr/bin/lib
 cp -a ../../lib ./AppDir/usr/bin/
 cp -a ../../package.json .
@@ -84,6 +81,7 @@ echo "\$VERSION" > version
 PNAME="n3h-\${VERSION}-linux-\${TGT_ARCH}"
 ONAME="\${PNAME}.AppImage"
 ./AppImageKit/build/install_prefix/usr/bin/appimagetool ./AppDir "./\${ONAME}"
+echo "{}" | NO_CLEANUP=1 /usr/bin/${qemu_bin} "./\${ONAME}" --appimage-extract-and-run --smoke
 EOF
 
 # -- execute docker script -- #
