@@ -7,8 +7,9 @@
     "n3h": "bin/n3h"
   },
   "scripts": {
-    "lint": "standard --fix 'lib/**/*.js' 'bin/**/*'",
-    "mocha": "mocha lib/*.test.js lib/**/*.test.js",
+    "lint": "standard",
+    "lint-fix": "standard --fix",
+    "mocha": "mocha --recursive bin lib",
     "nyc": "nyc npm run mocha",
     "test": "npm run lint && npm run nyc",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
@@ -16,10 +17,10 @@
   "license": "Apache-2.0",
   "devDependencies": {
     "chai": "^4.2.0",
-    "handlebars": "^4.0.12",
+    "handlebars": "^4.1.2",
     "jsdoc-to-markdown": "^4.0.1",
     "mocha": "^5.2.0",
-    "nyc": "^12.0.2",
+    "nyc": "^14.0.0",
     "opn": "^5.4.0",
     "prompt": "^1.0.0",
     "sinon": "^7.1.1",
@@ -52,10 +53,6 @@
     "statements": 80,
     "functions": 80,
     "branches": 80,
-    "all": true,
-    "include": [
-      "./lib/**/*.js"
-    ],
     "reporter": [
       "lcov",
       "text-summary"
