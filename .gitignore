@@ -5,3 +5,4 @@ build/machines-vm-exec
 coverage
 node_modules
 tls-data.json
+machineId.keyfile

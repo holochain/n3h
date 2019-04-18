@@ -51,7 +51,7 @@ generate a persistence blob with hint info
 
 | Param | Type | Description |
 | --- | --- | --- |
-| passphrase | <code>string</code> | the encryption passphrase |
+| passphrase | <code>SecBuf</code> | the encryption passphrase |
 | hint | <code>string</code> | additional info / description for persistence |
 
 <a name="Seed+getMnemonic"></a>

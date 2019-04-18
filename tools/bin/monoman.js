@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-const prompt = require('prompt')
+// const prompt = require('prompt')
 
 const monoman = require('../lib/index')
 
+/*
 const promptSchema = {
   properties: {
     projectName: {
@@ -39,6 +40,7 @@ function getPrompts () {
     })
   })
 }
+*/
 
 async function main () {
   switch (process.argv[2]) {

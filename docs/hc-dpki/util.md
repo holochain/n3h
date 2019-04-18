@@ -112,7 +112,7 @@ Helper for encrypting a buffer with a pwhash-ed passphrase
 | Param | Type |
 | --- | --- |
 | data | <code>Buffer</code> | 
-| passphrase | <code>string</code> | 
+| passphrase | <code>SecBuf</code> | 
 
 <a name="pwDec"></a>
 
