@@ -24,7 +24,8 @@
     "prompt": "^1.0.0",
     "sinon": "^7.1.1",
     "standard": "^12.0.1",
-    "tmp": "0.0.33"
+    "tmp": "0.0.33",
+    "tmp-promise": "1.0.5"
   },
   "dependencies": {
     "@holochain/hcid-js": "^0.0.5",
