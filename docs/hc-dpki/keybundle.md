@@ -5,88 +5,91 @@ Represents two asymmetric cryptography keypairs
 - a signing keypair
 - an encryption keypair
 
-Public keys are encoded with HCID.
-The signing public key acts as the identity string.
+base32 encoded identity string (hcid) to represent the public sides
 
-KeyBundle can optionally be initialized without the private halves of the pairs, and without the encryption keypair.
+can optionally be initialized without the private halves of the pairs
 
-**Kind**: global class
+**Kind**: global class  
 
 * [KeyBundle](#KeyBundle)
     * _instance_
         * [.init(opt)](#KeyBundle+init)
-        * [.getBlob(passphrase, hint)](#KeyBundle+getBlob)
+        * [.getBlob(passphrase, hint)](#KeyBundle+getBlob) ⇒ <code>Buffer</code>
         * [.getId()](#KeyBundle+getId) ⇒ <code>string</code>
-        * [.sign(data)](#KeyBundle+sign)
-        * [.verify(signature, data)](#KeyBundle+verify)
+        * [.getEncId()](#KeyBundle+getEncId) ⇒ <code>string</code>
+        * [.sign(data)](#KeyBundle+sign) ⇒ <code>SecBuf</code>
+        * [.verify()](#KeyBundle+verify)
         * [.encrypt(recipientIds, data)](#KeyBundle+encrypt) ⇒ <code>Buffer</code>
         * [.decrypt(sourceId, cipher)](#KeyBundle+decrypt) ⇒ <code>Buffer</code>
     * _static_
-        * [.newFromSeed(seed)](#KeyBundle.newFromSeed)
-        * [.fromBlob(blob, passphrase)](#KeyBundle.fromBlob)
+        * [.newFromSeed(seed)](#KeyBundle.newFromSeed) ⇒ [<code>KeyBundle</code>](#KeyBundle)
+        * [.fromBlob(blob, passphrase)](#KeyBundle.fromBlob) ⇒ [<code>KeyBundle</code>](#KeyBundle)
 
 <a name="KeyBundle+init"></a>
 
-### KeyBundle.init(opt)
+### keyBundle.init(opt)
 KeyBundle constructor (you probably want one of the static functions above)
 
-**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | opt | <code>object</code> |  |
-| opt.signPubId | <code>string</code> | HCID encoded public signature key |
-| [opt.encPubId] | <code>string</code> | HCID encoded public encryption key |
+| opt.signPubId | <code>string</code> | the signing identity string |
+| [opt.encPubId] | <code>string</code> | the encrypting identity string |
 | [opt.signPriv] | <code>SecBuf</code> | private signature key |
 | [opt.encPriv] | <code>SecBuf</code> | private encryption key |
 
-<a name="Keypair+getBundle"></a>
+<a name="KeyBundle+getBlob"></a>
 
-### KeyBundle.getBundle(passphrase, hint)
-generate an encrypted persistence bundle
+### keyBundle.getBlob(passphrase, hint) ⇒ <code>Buffer</code>
+generate an encrypted persistence blob of the keyBundle
 
-**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
+**Returns**: <code>Buffer</code> - Object holding encrypted KeyBundle  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | passphrase | <code>string</code> | the encryption passphrase |
-| hint | <code>string</code> | additional info / description for the bundle |
+| hint | <code>string</code> | additional info / description for the blob |
 
 <a name="KeyBundle+getId"></a>
 
-### KeyBundle.getId() ⇒ <code>string</code>
-get the KeyBundle identifier string (the public signing key).
+### keyBundle.getId() ⇒ <code>string</code>
+get the identifier string
 
-**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
+<a name="KeyBundle+getEncId"></a>
+
+### keyBundle.getEncId() ⇒ <code>string</code>
+get the identifier string
+
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
 <a name="KeyBundle+sign"></a>
 
-### KeyBundle.sign(data)
-sign some arbitrary data with the signing private key
+### keyBundle.sign(data) ⇒ <code>SecBuf</code>
+sign some data with the signing private key
 
-**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
+**Returns**: <code>SecBuf</code> - signature  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | data | <code>Buffer</code> | the data to sign |
 
-<a name="Keypair+verify"></a>
+<a name="KeyBundle+verify"></a>
 
-### KeyBundle.verify(signature, data)
-verify data that was signed with our private signing key
+### keyBundle.verify()
+Return true if data was signed with our private signing key
 
-**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
+<a name="KeyBundle+encrypt"></a>
 
-| Param | Type |
-| --- | --- |
-| signature | <code>Buffer</code> |
-| data | <code>Buffer</code> |
-
-<a name="Keypair+encrypt"></a>
-
-### KeyBundle.encrypt(recipientIds, data) ⇒ <code>Buffer</code>
+### keyBundle.encrypt(recipientIds, data) ⇒ <code>Buffer</code>
 encrypt arbitrary data to be readale by potentially multiple recipients
 
-**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
+**Returns**: <code>Buffer</code> - msgpack encoded array of nonce and cipher  
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -95,34 +98,34 @@ encrypt arbitrary data to be readale by potentially multiple recipients
 
 <a name="KeyBundle+decrypt"></a>
 
-### KeyBundle.decrypt(sourceId, cipher) ⇒ <code>Buffer</code>
+### keyBundle.decrypt(sourceId, cipher) ⇒ <code>Buffer</code>
 attempt to decrypt the cipher buffer (assuming it was targeting us)
 
-**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)
-**Returns**: <code>Buffer</code> - - the decrypted data
+**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
+**Returns**: <code>Buffer</code> - - the decrypted data  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | sourceId | <code>string</code> | identifier string of who encrypted this data |
 | cipher | <code>Buffer</code> | the encrypted data |
 
-<a name="Keypair.newFromSeed"></a>
+<a name="KeyBundle.newFromSeed"></a>
 
-### KeyBundle.newFromSeed(seed)
-derive the pairs from a 32 byte seed buffer
+### KeyBundle.newFromSeed(seed) ⇒ [<code>KeyBundle</code>](#KeyBundle)
+derive the keyBundle from a 32 byte seed buffer
 
-**Kind**: static method of [<code>KeyBundle</code>](#KeyBundle)
+**Kind**: static method of [<code>KeyBundle</code>](#KeyBundle)  
 
 | Param | Type | Description |
 | --- | --- | --- |
 | seed | <code>SecBuf</code> | the seed buffer |
 
-<a name="KeyBundle.fromBundle"></a>
+<a name="KeyBundle.fromBlob"></a>
 
-### KeyBundle.fromBlob(blob, passphrase)
-initialize the pairs from an encrypted persistence blob
+### KeyBundle.fromBlob(blob, passphrase) ⇒ [<code>KeyBundle</code>](#KeyBundle)
+initialize the keyBundle from an encrypted persistence blob
 
-**Kind**: static method of [<code>KeyBundle</code>](#KeyBundle)
+**Kind**: static method of [<code>KeyBundle</code>](#KeyBundle)  
 
 | Param | Type | Description |
 | --- | --- | --- |

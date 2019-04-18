@@ -10,8 +10,9 @@
     "lint": "standard",
     "lint-fix": "standard --fix",
     "mocha": "mocha --recursive bin lib",
+    "docs": "node tools/bin/monoman.js docs",
     "nyc": "nyc npm run mocha",
-    "test": "npm run lint && npm run nyc",
+    "test": "npm run lint && npm run nyc && npm run docs",
     "show-coverage": "node -e \"require('opn')('coverage/lcov-report/index.html')\""
   },
   "license": "Apache-2.0",

@@ -1,77 +1,182 @@
 ## Classes
 
 <dl>
+<dt><a href="#SBRoot">SBRoot</a></dt>
+<dd><p>Abstract Base class for a buffer of a SecBuf
+Buffer should be stored in _b
+Expecting methods:</p>
+<ul>
+<li>async readable (fn)</li>
+<li>async writable (fn)
+fn: async function that takes the memory buffer as input</li>
+</ul>
+</dd>
+<dt><a href="#SBSecure">SBSecure</a></dt>
+<dd><p>SBRoot implementation with libsodium</p>
+</dd>
+<dt><a href="#SBInsecure">SBInsecure</a></dt>
+<dd><p>SBRoot implementation with nodeJS Buffer</p>
+</dd>
+<dt><a href="#SBRef">SBRef</a></dt>
+<dd><p>SBRoot implementation with a ref of a nodeJS Buffer</p>
+</dd>
 <dt><a href="#SecBuf">SecBuf</a></dt>
-<dd><p>Wrap libsodium memory lock and protect functions.
-Some nodejs buffer accessors may invalidate security.</p>
+<dd><p>A protected SBRoot
+Holds a SBRoot as _b</p>
 </dd>
 </dl>
 
-## Constants
+<a name="SBRoot"></a>
 
-<dl>
-<dt><a href="#LockLevel">LockLevel</a></dt>
-<dd><p>SecBuf Lock styles</p>
-</dd>
-</dl>
+## SBRoot
+Abstract Base class for a buffer of a SecBuf
+Buffer should be stored in _b
+Expecting methods:
+ - async readable (fn)
+ - async writable (fn)
+ fn: async function that takes the memory buffer as input
 
+**Kind**: global class  
+
+* [SBRoot](#SBRoot)
+    * [.init()](#SBRoot+init)
+    * [.size()](#SBRoot+size)
+
+<a name="SBRoot+init"></a>
+
+### sbRoot.init()
+**Kind**: instance method of [<code>SBRoot</code>](#SBRoot)  
+<a name="SBRoot+size"></a>
+
+### sbRoot.size()
+**Kind**: instance method of [<code>SBRoot</code>](#SBRoot)  
+<a name="SBSecure"></a>
+
+## SBSecure
+SBRoot implementation with libsodium
+
+**Kind**: global class  
+
+* [SBSecure](#SBSecure)
+    * [.init()](#SBSecure+init)
+    * [.readable()](#SBSecure+readable)
+    * [.writable()](#SBSecure+writable)
+
+<a name="SBSecure+init"></a>
+
+### sbSecure.init()
+**Kind**: instance method of [<code>SBSecure</code>](#SBSecure)  
+<a name="SBSecure+readable"></a>
+
+### sbSecure.readable()
+Make buffer readable than execute fn
+
+**Kind**: instance method of [<code>SBSecure</code>](#SBSecure)  
+<a name="SBSecure+writable"></a>
+
+### sbSecure.writable()
+Make buffer writable than execute fn
+
+**Kind**: instance method of [<code>SBSecure</code>](#SBSecure)  
+<a name="SBInsecure"></a>
+
+## SBInsecure
+SBRoot implementation with nodeJS Buffer
+
+**Kind**: global class  
+
+* [SBInsecure](#SBInsecure)
+    * [.init()](#SBInsecure+init)
+    * [.readable()](#SBInsecure+readable)
+    * [.writable()](#SBInsecure+writable)
+
+<a name="SBInsecure+init"></a>
+
+### sbInsecure.init()
+**Kind**: instance method of [<code>SBInsecure</code>](#SBInsecure)  
+<a name="SBInsecure+readable"></a>
+
+### sbInsecure.readable()
+**Kind**: instance method of [<code>SBInsecure</code>](#SBInsecure)  
+<a name="SBInsecure+writable"></a>
+
+### sbInsecure.writable()
+**Kind**: instance method of [<code>SBInsecure</code>](#SBInsecure)  
+<a name="SBRef"></a>
+
+## SBRef
+SBRoot implementation with a ref of a nodeJS Buffer
+
+**Kind**: global class  
+
+* [SBRef](#SBRef)
+    * [.init()](#SBRef+init)
+    * [.readable()](#SBRef+readable)
+    * [.writable()](#SBRef+writable)
+
+<a name="SBRef+init"></a>
+
+### sbRef.init()
+**Kind**: instance method of [<code>SBRef</code>](#SBRef)  
+<a name="SBRef+readable"></a>
+
+### sbRef.readable()
+**Kind**: instance method of [<code>SBRef</code>](#SBRef)  
+<a name="SBRef+writable"></a>
+
+### sbRef.writable()
+**Kind**: instance method of [<code>SBRef</code>](#SBRef)  
 <a name="SecBuf"></a>
 
 ## SecBuf
-Wrap libsodium memory lock and protect functions.
-Some nodejs buffer accessors may invalidate security.
+A protected SBRoot
+Holds a SBRoot as _b
 
 **Kind**: global class  
 
 * [SecBuf](#SecBuf)
-    * [new SecBuf(len)](#new_SecBuf_new)
     * _instance_
+        * [.init(backend)](#SecBuf+init)
         * [.size()](#SecBuf+size)
-        * [.lockLevel()](#SecBuf+lockLevel) ⇒ <code>string</code>
-        * [.free()](#SecBuf+free)
+        * [.readable()](#SecBuf+readable)
+        * [.writable()](#SecBuf+writable)
+        * [.write()](#SecBuf+write)
         * [.randomize()](#SecBuf+randomize)
-        * [.readable(fn)](#SecBuf+readable)
-        * [.writable(fn)](#SecBuf+writable)
-        * [.$makeReadable()](#SecBuf+$makeReadable)
-        * [.$makeWritable()](#SecBuf+$makeWritable)
-        * [.$restoreProtection()](#SecBuf+$restoreProtection)
+        * [.increment()](#SecBuf+increment)
+        * [.compare()](#SecBuf+compare)
     * _static_
-        * [.setLockLevel(lockLevel)](#SecBuf.setLockLevel)
-        * [.readPrompt(promptText)](#SecBuf.readPrompt) ⇒ [<code>SecBuf</code>](#SecBuf)
-        * [.from(buffer)](#SecBuf.from)
+        * [.unlockMulti(spec, fn)](#SecBuf.unlockMulti)
+        * [.secure()](#SecBuf.secure)
+        * [.insecure()](#SecBuf.insecure)
+        * [.ref()](#SecBuf.ref)
+        * [.secureFrom()](#SecBuf.secureFrom)
+        * [.insecureFrom()](#SecBuf.insecureFrom)
 
-<a name="new_SecBuf_new"></a>
+<a name="SecBuf+init"></a>
 
-### new SecBuf(len)
-create a new SecBuf with specified length
+### secBuf.init(backend)
+**Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
 
+| Param | Description |
+| --- | --- |
+| backend | SBRoot backend |
 
-| Param | Type | Description |
-| --- | --- | --- |
-| len | <code>number</code> | the byteLength of the new SecBuf |
-
-**Example**  
-```js
-const sb = new mosodium.SecBuf(32)
-const sb = new mosodium.SecBuf(32, SecBuf.LOCK_NONE)
-const sb = new mosodium.SecBuf(32, SecBuf.LOCK_MEM)
-const sb = new mosodium.SecBuf(32, SecBuf.LOCK_ALL)
-```
 <a name="SecBuf+size"></a>
 
 ### secBuf.size()
 **Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
-<a name="SecBuf+lockLevel"></a>
+<a name="SecBuf+readable"></a>
 
-### secBuf.lockLevel() ⇒ <code>string</code>
-get current mlock/mprotect level
-
+### secBuf.readable()
 **Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
-**Returns**: <code>string</code> - the SecBuf.LOCK_* level this SecBuf is using  
-<a name="SecBuf+free"></a>
+<a name="SecBuf+writable"></a>
 
-### secBuf.free()
-zero out the memory and release the memory protection / lock
+### secBuf.writable()
+**Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
+<a name="SecBuf+write"></a>
+
+### secBuf.write()
+Write oth buffer inside this buffer starting at offset
 
 **Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
 <a name="SecBuf+randomize"></a>
@@ -80,97 +185,57 @@ zero out the memory and release the memory protection / lock
 randomize the underlying buffer
 
 **Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
-<a name="SecBuf+readable"></a>
+<a name="SecBuf+increment"></a>
 
-### secBuf.readable(fn)
-this SecBuf instance will be readable for the duration of the callback
-
-**Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| fn | <code>function</code> | the function to invoke |
-
-**Example**  
-```js
-sb.readable(_sb => {
-  console.log(_sb)
-})
-```
-<a name="SecBuf+writable"></a>
-
-### secBuf.writable(fn)
-this SecBuf instance will be writable for the duration of the callback
+### secBuf.increment()
+sodium_increment
 
 **Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
+<a name="SecBuf+compare"></a>
 
-| Param | Type | Description |
-| --- | --- | --- |
-| fn | <code>function</code> | the function to invoke |
-
-**Example**  
-```js
-sb.writable(_sb => {
-  _sb.writeUInt8(0, 0)
-})
-```
-<a name="SecBuf+$makeReadable"></a>
-
-### secBuf.$makeReadable()
-make buffer readable indefinately... prefer #readable()
+### secBuf.compare()
+return sodium_compare(this, oth)
 
 **Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
-<a name="SecBuf+$makeWritable"></a>
+<a name="SecBuf.unlockMulti"></a>
 
-### secBuf.$makeWritable()
-make buffer writable indefinately... prefer #writable()
-
-**Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
-<a name="SecBuf+$restoreProtection"></a>
-
-### secBuf.$restoreProtection()
-restore memory protection `mprotect_noaccess`
-
-**Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
-<a name="SecBuf.setLockLevel"></a>
-
-### SecBuf.setLockLevel(lockLevel)
-**Kind**: static method of [<code>SecBuf</code>](#SecBuf)  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| lockLevel | <code>string</code> | the SecBuf.LOCK_* level for all generated SecBufs |
-
-<a name="SecBuf.readPrompt"></a>
-
-### SecBuf.readPrompt(promptText) ⇒ [<code>SecBuf</code>](#SecBuf)
-Fetch a buffer from stdin into a SecBuf.
+### SecBuf.unlockMulti(spec, fn)
+Helper for unlocking multiple secbufs and applying a function to them
 
 **Kind**: static method of [<code>SecBuf</code>](#SecBuf)  
 
-| Param | Type | Description |
-| --- | --- | --- |
-| promptText | <code>string</code> | displayed to stderr before awaiting input |
+| Param | Description |
+| --- | --- |
+| spec | array of (secBuf, 'readable|writeable') |
+| fn | async function to process for each secBuf in spec |
 
-**Example**  
-```js
-const passphrase = await mosodium.SecBuf.readPrompt('passphrase (no echo): ')
-```
-<a name="SecBuf.from"></a>
+<a name="SecBuf.secure"></a>
 
-### SecBuf.from(buffer)
-create a new SecBuf based off a source buffer
-attempts to clear the source buffer
+### SecBuf.secure()
+Create a new SecBuf with a SBSecure
 
 **Kind**: static method of [<code>SecBuf</code>](#SecBuf)  
+<a name="SecBuf.insecure"></a>
 
-| Param | Type | Description |
-| --- | --- | --- |
-| buffer | <code>Buffer</code> | the buffer to copy then destroy |
+### SecBuf.insecure()
+Create a new SecBuf with a SBInsecure
 
-<a name="LockLevel"></a>
+**Kind**: static method of [<code>SecBuf</code>](#SecBuf)  
+<a name="SecBuf.ref"></a>
 
-## LockLevel
-SecBuf Lock styles
+### SecBuf.ref()
+Create a new SecBuf out of oth
 
-**Kind**: global constant  
+**Kind**: static method of [<code>SecBuf</code>](#SecBuf)  
+<a name="SecBuf.secureFrom"></a>
+
+### SecBuf.secureFrom()
+Create a new secure SecBuf out of oth
+
+**Kind**: static method of [<code>SecBuf</code>](#SecBuf)  
+<a name="SecBuf.insecureFrom"></a>
+
+### SecBuf.insecureFrom()
+Create a new insecure SecBuf out of oth
+
+**Kind**: static method of [<code>SecBuf</code>](#SecBuf)  
