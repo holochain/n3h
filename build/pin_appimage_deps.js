@@ -60,14 +60,9 @@ async function main () {
     if (!asset.name.includes('npm') && !asset.name.includes('partly-static')) {
       continue
     }
-    const m = asset.name.match(/^[^-]+-([^-]+)-([^-]+)-([^\.]+)(.*)/)
+    const m = asset.name.match(/^[^-]+-([^-]+)-([^-]+)-([^.]+)(.*)/)
     if (!m || m.length !== 5) {
       continue
-    }
-
-    let sum = null
-
-    if (m[4].includes('sha256')) {
     }
 
     if (m[3].includes('npm')) {
@@ -100,7 +95,7 @@ async function main () {
   }
 
   printBash('NPM', out.npm)
-  bash += 'case "${tgt_arch}" in\n'
+  bash += 'case "${tgt_arch}" in\n' // eslint-disable-line no-template-curly-in-string
   bash += '  "ia32")\n'
   printBash('    NODE', out.node.ia32)
   bash += '    ;;\n'
