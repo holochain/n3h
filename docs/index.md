@@ -27,11 +27,6 @@
 
 - [type](n3h-common/type.md)
 
-### n3h-ipc
-
-- [client](n3h-ipc/client.md)
-- [server](n3h-ipc/server.md)
-
 ### tweetlog
 
 - [tweetlog](tweetlog/tweetlog.md)

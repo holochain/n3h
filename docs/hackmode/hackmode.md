@@ -8,15 +8,17 @@ working directory.
 If neither is supplied, will load up the following default:
 
 ```
-"webproxy": {
-  "connection": {
-    "rsaBits": 1024,
-    "bind": [
-      "wss://0.0.0.0:0/"
-    ]
-  },
-  "wssAdvertise": "auto",
-  "wssRelayPeers": null
+{
+  "webproxy": {
+    "connection": {
+      "rsaBits": 1024,
+      "bind": [
+        "wss://0.0.0.0:0/"
+      ]
+    },
+    "wssAdvertise": "auto",
+    "wssRelayPeers": null
+  }
 }
 ```
 
