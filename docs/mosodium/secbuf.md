@@ -138,6 +138,7 @@ Holds a SBRoot as _b
     * _instance_
         * [.init(backend)](#SecBuf+init)
         * [.size()](#SecBuf+size)
+        * [.toBuffer()](#SecBuf+toBuffer)
         * [.readable()](#SecBuf+readable)
         * [.writable()](#SecBuf+writable)
         * [.write()](#SecBuf+write)
@@ -164,6 +165,10 @@ Holds a SBRoot as _b
 <a name="SecBuf+size"></a>
 
 ### secBuf.size()
+**Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
+<a name="SecBuf+toBuffer"></a>
+
+### secBuf.toBuffer()
 **Kind**: instance method of [<code>SecBuf</code>](#SecBuf)  
 <a name="SecBuf+readable"></a>
 

@@ -19,8 +19,6 @@ can optionally be initialized without the private halves of the pairs
         * [.getEncId()](#KeyBundle+getEncId) ⇒ <code>string</code>
         * [.sign(data)](#KeyBundle+sign) ⇒ <code>SecBuf</code>
         * [.verify()](#KeyBundle+verify)
-        * [.encrypt(recipientIds, data)](#KeyBundle+encrypt) ⇒ <code>Buffer</code>
-        * [.decrypt(sourceId, cipher)](#KeyBundle+decrypt) ⇒ <code>Buffer</code>
     * _static_
         * [.newFromSeed(seed)](#KeyBundle.newFromSeed) ⇒ [<code>KeyBundle</code>](#KeyBundle)
         * [.fromBlob(blob, passphrase)](#KeyBundle.fromBlob) ⇒ [<code>KeyBundle</code>](#KeyBundle)
@@ -83,32 +81,6 @@ sign some data with the signing private key
 Return true if data was signed with our private signing key
 
 **Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
-<a name="KeyBundle+encrypt"></a>
-
-### keyBundle.encrypt(recipientIds, data) ⇒ <code>Buffer</code>
-encrypt arbitrary data to be readale by potentially multiple recipients
-
-**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
-**Returns**: <code>Buffer</code> - msgpack encoded array of nonce and cipher  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| recipientIds | <code>array.&lt;string&gt;</code> | multiple recipient identifier strings |
-| data | <code>Buffer</code> | the data to encrypt |
-
-<a name="KeyBundle+decrypt"></a>
-
-### keyBundle.decrypt(sourceId, cipher) ⇒ <code>Buffer</code>
-attempt to decrypt the cipher buffer (assuming it was targeting us)
-
-**Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
-**Returns**: <code>Buffer</code> - - the decrypted data  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| sourceId | <code>string</code> | identifier string of who encrypted this data |
-| cipher | <code>Buffer</code> | the encrypted data |
-
 <a name="KeyBundle.newFromSeed"></a>
 
 ### KeyBundle.newFromSeed(seed) ⇒ [<code>KeyBundle</code>](#KeyBundle)
