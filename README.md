@@ -12,7 +12,7 @@
 
 `n3h` does NOT need to be installed manually by Holochain users or developers. Holochain itself will download and install a pre-built version of `n3h` ready for use on your system, alleviating any concerns of version compatibility and mismatches.
 
-> It did not previously work this way, `n3h` required separte manual installation prior to v0.0.12-alpha1 of `holochain-rust`.
+> It did not previously work this way, `n3h` required separate manual installation prior to v0.0.12-alpha1 of `holochain-rust`.
 
 ## Versions
 
