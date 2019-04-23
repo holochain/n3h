@@ -8,7 +8,11 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## Overview
-n3h delivers the networking component for [holochain-rust](https://github.com/holochain/holochain-rust).  This allows us to abstract away the complexity of p2p networking from the core Holochain functionality.
+`n3h` delivers the networking component for [holochain-rust](https://github.com/holochain/holochain-rust).  This allows us to abstract away the complexity of p2p networking from the core Holochain functionality.
+
+`n3h` does NOT need to be installed manually by Holochain users or developers. Holochain itself will download and install a pre-built version of `n3h` ready for use on your system, alleviating any concerns of version compatibility and mismatches.
+
+> It did not previously work this way, `n3h` required separte manual installation prior to v0.0.12-alpha1 of `holochain-rust`.
 
 ## Versions
 
