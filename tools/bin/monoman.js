@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
-const prompt = require('prompt')
+// const prompt = require('prompt')
 
 const monoman = require('../lib/index')
 
+/*
 const promptSchema = {
   properties: {
     projectName: {
@@ -39,19 +40,20 @@ function getPrompts () {
     })
   })
 }
+*/
 
 async function main () {
   switch (process.argv[2]) {
-    case 'new':
-      await monoman.buildTemplate(await getPrompts())
-      break
+    // case 'new':
+    //   await monoman.buildTemplate(await getPrompts())
+    //   break
     case 'docs':
       await monoman.docs()
       break
     default:
       console.error('UNEXPECTED COMMAND:', process.argv[2])
       console.error('monoman.js usage:')
-      console.error('  `monoman.js new` - create a new repo from template')
+      // console.error('  `monoman.js new` - create a new repo from template')
       console.error('  `monoman.js docs` - generate docs for all projects')
       process.exit(1)
   }

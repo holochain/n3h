@@ -1,0 +1,10 @@
+{
+  "random": "random.js",
+  "secbuf": "secbuf.js",
+  "hash": "hash.js",
+  "pwhash": "pwhash.js",
+  "kx": "kx.js",
+  "kdf": "kdf.js",
+  "sign": "sign.js",
+  "aead": "aead.js"
+}

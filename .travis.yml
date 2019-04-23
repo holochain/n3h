@@ -1,7 +1,153 @@
-dist: trusty
+dist: xenial
 language: node_js
 node_js:
-- 8
+  - 8
+services: docker
+
+addons:
+  apt:
+    packages:
+    - qemu-user-static
+    - pxz
+
+cache:
+  directories:
+    - build/appimage-build-ia32
+    - build/appimage-build-x64
+    - build/appimage-build-arm
+    - build/appimage-build-arm64
+
+_prep_env: &_prep_env
+  stage: "Prepare Env"
+  os: linux
+  env: TGT_ARCH=x64
+  if: tag IS present
+  script: "./build/step1-prepare-env.bash"
+
+_build_appimagetool: &_build_appimagetool
+  stage: "Build appimagetool"
+  os: linux
+  env: TGT_ARCH=x64
+  if: tag IS present
+  script: "./build/step2-build-appimagetool.bash"
+
+_build_sodium: &_build_sodium
+  stage: "Build sodium"
+  os: linux
+  env: TGT_ARCH=x64
+  if: tag IS present
+  script: "./build/step3-build-sodium-native.bash"
+
+_build_appimage: &_build_appimage
+  stage: "Build appimage"
+  os: linux
+  env: TGT_ARCH=x64
+  if: tag IS present
+  script: "./build/step4-build-n3h-appimage.bash"
+
+stages:
+  - "Test"
+  - "Prepare env"
+  - "Build appimagetool"
+  - "Build sodium"
+  - "Build appimage"
+  - "Build electron"
+
+jobs:
+  include:
+    - name: "Windows test"
+      stage: "Test"
+      os: windows
+      script:
+        - npm test
+    - name: "Linux test"
+      stage: "Test"
+      os: linux
+      script:
+        - npm test
+    - name: "Mac test"
+      stage: "Test"
+      os: osx
+      script:
+        - npm test
+
+    - name: "Windows build"
+      stage: "Build electron"
+      if: tag IS present
+      os: linux
+      script:
+        - |
+          docker run --rm \
+            $(env | \
+              grep -Eo '^[^\s=]*(DEBUG|NODE_|ELECTRON_|YARN_|NPM_|CI|CIRCLE|TRAVIS|APPVEYOR_|CSC_|_TOKEN|_KEY|AWS_|STRIP|BUILD_)[^\s=]*' | \
+              sed '/^$/d;s/^/-e /' | \
+              paste -sd ' ' \
+            ) \
+            -v ${PWD}:/project \
+            -v ~/.cache/electron:/root/.cache/electron \
+            -v ~/.cache/electron-builder:/root/.cache/electron-builder \
+            electronuserland/builder:wine \
+            /bin/bash -c "./build/release-build-electron.bash --win --x64"
+
+    - name: "Mac build"
+      stage: "Build electron"
+      os: osx
+      if: tag IS present
+      script:
+        - ./build/release-build-electron.bash --mac --x64
+
+    - name: "Prepare env ia32"
+      <<: *_prep_env
+      env: TGT_ARCH=ia32
+    - name: "Build appimagetool ia32"
+      <<: *_build_appimagetool
+      env: TGT_ARCH=ia32
+    - name: "Build sodium ia32"
+      <<: *_build_sodium
+      env: TGT_ARCH=ia32
+    - name: "Build appimage ia32"
+      <<: *_build_appimage
+      env: TGT_ARCH=ia32
+
+    - name: "Prepare env x64"
+      <<: *_prep_env
+      env: TGT_ARCH=x64
+    - name: "Build appimagetool x64"
+      <<: *_build_appimagetool
+      env: TGT_ARCH=x64
+    - name: "Build sodium x64"
+      <<: *_build_sodium
+      env: TGT_ARCH=x64
+    - name: "Build appimage x64"
+      <<: *_build_appimage
+      env: TGT_ARCH=x64
+
+    - name: "Prepare env arm"
+      <<: *_prep_env
+      env: TGT_ARCH=arm
+    - name: "Build appimagetool arm"
+      <<: *_build_appimagetool
+      env: TGT_ARCH=arm
+    - name: "Build sodium arm"
+      <<: *_build_sodium
+      env: TGT_ARCH=arm
+    - name: "Build appimage arm"
+      <<: *_build_appimage
+      env: TGT_ARCH=arm
+
+    - name: "Prepare env arm64"
+      <<: *_prep_env
+      env: TGT_ARCH=arm64
+    - name: "Build appimagetool arm64"
+      <<: *_build_appimagetool
+      env: TGT_ARCH=arm64
+    - name: "Build sodium arm64"
+      <<: *_build_sodium
+      env: TGT_ARCH=arm64
+    - name: "Build appimage arm64"
+      <<: *_build_appimage
+      env: TGT_ARCH=arm64
+
 deploy:
   provider: releases
   api_key:
@@ -11,59 +157,8 @@ deploy:
   - build/appimage-build*/output/*
   - build/electron-build/dist/n3h*
   skip_cleanup: true
-  draft: true
   prerelease: true
   name: $TRAVIS_TAG
   on:
     tags: true
     repo: holochain/n3h
-
-jobs:
-  include:
-  - name: windows test
-    os: windows
-    script:
-    - npm test
-  - name: linux test
-    os: linux
-    script:
-    - npm test
-  - name: osx test
-    os: osx
-    script:
-    - npm test
-  - name: linux-x64 build
-    if: tag IS present
-    os: linux
-    services: docker
-    script:
-    - VM_ARCH=x64 ./build/release-build-appimage.bash
-  - name: linux-aarch64 build
-    if: tag IS present
-    os: linux
-    services: docker
-    script:
-    - VM_ARCH=aarch64 ./build/release-build-appimage.bash
-  - name: windows build
-    if: tag IS present
-    os: linux
-    services: docker
-    script:
-    - |
-      docker run --rm \
-        $(env | \
-          grep -Eo '^[^\s=]*(DEBUG|NODE_|ELECTRON_|YARN_|NPM_|CI|CIRCLE|TRAVIS|APPVEYOR_|CSC_|_TOKEN|_KEY|AWS_|STRIP|BUILD_)[^\s=]*' | \
-          sed '/^$/d;s/^/-e /' | \
-          paste -sd ' ' \
-        ) \
-        -v ${PWD}:/project \
-        -v ~/.cache/electron:/root/.cache/electron \
-        -v ~/.cache/electron-builder:/root/.cache/electron-builder \
-        electronuserland/builder:wine \
-        /bin/bash -c "./build/release-build-electron.bash --win --x64"
-  - name: osx build
-    os: osx
-    if: tag IS present
-    script:
-    - ./build/release-build-electron.bash --mac --x64
-
