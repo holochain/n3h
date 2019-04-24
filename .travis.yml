@@ -12,6 +12,7 @@ addons:
 
 cache:
   directories:
+    - node_modules
     - build/appimage-build-ia32
     - build/appimage-build-x64
     - build/appimage-build-arm
