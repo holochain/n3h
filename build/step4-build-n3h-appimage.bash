@@ -77,7 +77,10 @@ export PATH="/work/AppDir/usr/bin:\$PATH"
 node -e "const p = require('./package'); delete p.devDependencies; require('fs').writeFileSync('./AppDir/usr/bin/package.json', JSON.stringify(p, null, 2))"
 export VERSION="\$(node -e "console.log(require('./package').version)")"
 echo "\$VERSION" > version
+sh -c 'while [ true ]; do sleep 60; echo "tick - still running npm install"; done' &
+PID="\${!}"
 (cd ./AppDir/usr/bin && node ../../../npm/bin/npm-cli.js install --production --prune)
+kill "\${PID}"
 PNAME="n3h-\${VERSION}-linux-\${TGT_ARCH}"
 ONAME="\${PNAME}.AppImage"
 ./AppImageKit/build/install_prefix/usr/bin/appimagetool ./AppDir "./\${ONAME}"
