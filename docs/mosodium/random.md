@@ -1,11 +1,4 @@
-<a name="randomBuffer"></a>
+<a name="randomBytes"></a>
 
-## randomBuffer(buf)
-Randomize a Buffer
-
+## randomBytes()
 **Kind**: global function  
-
-| Param | Type | Description |
-| --- | --- | --- |
-| buf | <code>Buffer</code> | buffer to randomize |
-
