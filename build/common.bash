@@ -18,7 +18,14 @@ function dl() {
     curl -L -O "${__url}"
   fi
   log "${__file} hashes to $(sha256sum ${__file})"
-  echo "${__hash}  ${__file}" | sha256sum --check
+
+  if echo "${__hash}  ${__file}" | sha256sum --check; then
+    return
+  fi
+
+  echo "hash mismatch, attempting re-download once"
+  curl -L -O "${__url}"
+  log "${__file} hashes to $(sha256sum ${__file})"
 }
 
 # -- resolve environment -- #
