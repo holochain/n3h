@@ -80,7 +80,7 @@ class Carrot {
 
 class BusyChat {
   constructor () {
-    this._name = Math.random().toString(36).substr(2)
+    this._name = this._agentId = Math.random().toString(36).substr(2)
     this._activeChannel = null
     this._channels = new Set()
   }
@@ -112,7 +112,6 @@ class BusyChat {
         this._display(this._n3h.getIpcBinding())
 
         this._display('connecting to ipc...')
-        this._agentId = crypto.randomBytes(32).toString('base64')
         this._ipc = (await new ConnectionBackendWss({
           rsaBits: 1024,
           passphrase: 'hello'
