@@ -64,7 +64,7 @@ class Carrot {
   }
 
   display (...args) {
-    process.stdout.write('\n')
+    process.stdout.write('\u001B[2K\r')
     console.log(...args)
     this._display()
   }
@@ -81,14 +81,16 @@ class Carrot {
 class BusyChat {
   constructor () {
     this._name = Math.random().toString(36).substr(2)
-    this._activeChannel = 'general'
+    this._activeChannel = null
     this._channels = new Set()
-    this._channels.add('general')
   }
 
   async run () {
     return new Promise(async (resolve, reject) => {
       try {
+        this._stats = {
+          entryCount: 0
+        }
 
         const workDir = path.resolve(os.homedir(), '.busychat')
 
@@ -104,11 +106,13 @@ class BusyChat {
 
         this._display('loading n3h...')
         this._n3h = await new N3hRealMode(workDir, {})
+        await this._n3h.run()
         this._display('n3h loaded!\n')
         this._display(this._n3h.getAdvertise())
         this._display(this._n3h.getIpcBinding())
 
         this._display('connecting to ipc...')
+        this._agentId = crypto.randomBytes(32).toString('base64')
         this._ipc = (await new ConnectionBackendWss({
           rsaBits: 1024,
           passphrase: 'hello'
@@ -117,9 +121,10 @@ class BusyChat {
         await this._ipc.connect(this._n3h.getIpcBinding())
         this._ipcSend({
           method: 'trackDna',
-          dnaAddress: 'general',
-          agentId: this._name
+          dnaAddress: '$bot$',
+          agentId: this._agentId
         })
+        this._joinChannel('general')
         this._display('ipc connected!\n')
 
         let ranTerm = false
@@ -153,8 +158,14 @@ class BusyChat {
           })
         }
 
-        process.on('SIGINT', handleTerm)
-        process.on('SIGTERM', handleTerm)
+        process.on('SIGINT', () => {
+          handleTerm()
+          process.exit(1)
+        })
+        process.on('SIGTERM', () => {
+          handleTerm()
+          process.exit(1)
+        })
         process.on('exit', handleTerm)
         process.on('uncaughtException', e => {
           console.error(e.stack || e.toString())
@@ -168,8 +179,8 @@ class BusyChat {
         this._updatePrompt()
 
         this._timerId = setInterval(() => {
-          this._updatePrompt()
-        }, 350)
+          this._busyTick()
+        }, 1000)
       } catch (e) {
         this._masterReject ? this._masterReject(e) : reject(e)
       }
@@ -178,14 +189,26 @@ class BusyChat {
 
   // -- private -- //
 
+  _busyTick () {
+    this._ipcSend({
+      method: 'publishEntry',
+      dnaAddress: '$bot$',
+      providerAgentId: this._agentId,
+      address: Date.now().toString(),
+      content: {
+        from: this._name,
+        data: crypto.randomBytes(32).toString('base64')
+      }
+    })
+  }
+
   _fpad (i, w) {
     return ('' + parseInt(i, 10)).padStart(w, ' ')
   }
 
   _updatePrompt () {
     this._io.setPrompt(
-      this._fpad(Math.random() * 300 + 300, 3) + '/s, ' +
-      this._fpad(Math.random() * 40 + 40, 2) + ' MiB, ' +
+      this._stats.entryCount + ' ent ' +
       '[' + this._activeChannel + '] ' +
       this._name +
       '> '
@@ -208,6 +231,41 @@ class BusyChat {
     this._updatePrompt()
   }
 
+  _joinChannel (channel) {
+    this._activeChannel = channel
+    if (this._channels.has(channel)) {
+      return
+    }
+    this._ipcSend({
+      method: 'trackDna',
+      dnaAddress: channel,
+      agentId: this._agentId
+    })
+    this._channels.add(channel)
+    this._display('joined channel [' + this._activeChannel + ']')
+  }
+
+  _partChannel (channel) {
+    if (!this._channels.has(channel)) {
+      this._display('you are not in channel [' + channel + ']')
+      return
+    }
+    if (this._channels.size <= 1) {
+      this._display('you must be a part of at least 1 channel')
+      return
+    }
+    if (channel !== '$bot$') {
+      this._ipcSend({
+        method: 'untrackDna',
+        dnaAddress: channel,
+        agentId: this._agentId
+      })
+    }
+    this._channels.delete(channel)
+    this._activeChannel = this._channels.values().next().value
+    this._display('left channel [' + channel + ']')
+  }
+
   _handleInput (value) {
     const trimmed = value.trim().toLowerCase()
     if (trimmed.startsWith('/help')) {
@@ -219,21 +277,10 @@ class BusyChat {
       this._display('set name to [' + this._name + ']')
     } else if (trimmed.startsWith('/join')) {
       const channel = trimmed.substr(5).trim()
-      this._channels.add(channel)
-      this._activeChannel = channel
-      this._display('joined channel [' + this._activeChannel + ']')
+      this._joinChannel(channel)
     } else if (trimmed.startsWith('/part')) {
       const channel = trimmed.substr(5).trim()
-      if (!this._channels.has(channel)) {
-        this._display('you are not in channel [' + channel + ']')
-        return
-      }
-      if (this._channels.size <= 1) {
-        this._display('you must be a part of at least 1 channel')
-        return
-      }
-      this._channels.delete(channel)
-      this._activeChannel = this._channels.values().next().value
+      this._partChannel(channel)
     } else if (trimmed.startsWith('/status')) {
       let out = ['channels:']
       for (let c of this._channels) {
@@ -243,7 +290,18 @@ class BusyChat {
     } else if (trimmed.startsWith('/list')) {
       this._display('sorry... I don\'t know how to list channels yet')
     } else {
-      this._display(this._name + ': ' + value)
+      // publish a message to the active channel
+      //this._display(this._name + ': ' + value)
+      this._ipcSend({
+        method: 'publishEntry',
+        dnaAddress: this._activeChannel,
+        providerAgentId: this._agentId,
+        address: Date.now().toString(),
+        content: {
+          from: this._name,
+          data: value
+        }
+      })
     }
   }
 
@@ -282,7 +340,21 @@ busychat n3h test app
   }
 
   _handleParsedIpcEvent (e) {
-    this._display(e)
+    switch (e.method) {
+      case 'handleStoreEntry':
+        this._stats.entryCount += 1
+        this._updatePrompt()
+
+        if (!this._channels.has(e.dnaAddress)) {
+          return
+        }
+        this._display(
+          '[' + e.dnaAddress + ']', e.content.from + ':', e.content.data)
+        break
+      default:
+        this._display(e)
+        break
+    }
   }
 }
 
