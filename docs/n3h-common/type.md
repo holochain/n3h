@@ -13,6 +13,7 @@ Library for runtime type checking
     * [~arrayOf](#module_type..arrayOf) : <code>object</code>
     * [~addModifier(n, f)](#module_type..addModifier)
     * [~addTerminal(n, f)](#module_type..addTerminal)
+    * [~boolean(v)](#module_type..boolean)
     * [~string(v)](#module_type..string)
     * [~number(v)](#module_type..number)
     * [~object(v)](#module_type..object)
@@ -100,6 +101,17 @@ Where:
 | --- | --- | --- |
 | n | <code>string</code> | name of the terminal |
 | f | <code>function</code> | the terminal handler function |
+
+<a name="module_type..boolean"></a>
+
+### type~boolean(v)
+is the value a boolean
+
+**Kind**: inner method of [<code>type</code>](#module_type)  
+
+| Param | Type | Description |
+| --- | --- | --- |
+| v | <code>\*</code> | value |
 
 <a name="module_type..string"></a>
 
