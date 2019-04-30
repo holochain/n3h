@@ -186,16 +186,7 @@ class BusyChat {
   // -- private -- //
 
   _busyTick () {
-    this._ipcSend({
-      method: 'publishEntry',
-      dnaAddress: '$bot$',
-      providerAgentId: this._agentId,
-      address: Date.now().toString(),
-      content: {
-        from: this._name,
-        data: crypto.randomBytes(32).toString('base64')
-      }
-    })
+    this._publishMessage('$bot$', crypto.randomBytes(32).toString('base64'))
   }
 
   _fpad (i, w) {
@@ -262,6 +253,55 @@ class BusyChat {
     this._display('left channel [' + channel + ']')
   }
 
+  _fetchMessage (channel, address) {
+    this._ipcSend({
+      method: 'fetchEntry',
+      dnaAddress: channel,
+      requesterAgentId: this._agentId,
+      address
+    })
+  }
+
+  _fetchMeta (channel, entryAddress, attribute) {
+    this._ipcSend({
+      method: 'fetchMeta',
+      dnaAddress: channel,
+      requesterAgentId: this._agentId,
+      entryAddress,
+      attribute
+    })
+  }
+
+  _publishMessage (channel, message) {
+    const address = crypto.randomBytes(32).toString('base64')
+    this._ipcSend({
+      method: 'publishEntry',
+      dnaAddress: channel,
+      providerAgentId: this._agentId,
+      address,
+      content: {
+        type: 'message',
+        from: this._name,
+        data: message
+      }
+    })
+    this._ipcSend({
+      method: 'publishMeta',
+      dnaAddress: channel,
+      providerAgentId: this._agentId,
+      entryAddress: address,
+      attribute: 'testAttr',
+      contentList: [
+        {
+          test: 'meta1'
+        },
+        {
+          test: 'meta2'
+        }
+      ]
+    })
+  }
+
   _handleInput (value) {
     const trimmed = value.trim().toLowerCase()
     if (trimmed.startsWith('/help')) {
@@ -287,17 +327,7 @@ class BusyChat {
       this._display('sorry... I don\'t know how to list channels yet')
     } else {
       // publish a message to the active channel
-      // this._display(this._name + ': ' + value)
-      this._ipcSend({
-        method: 'publishEntry',
-        dnaAddress: this._activeChannel,
-        providerAgentId: this._agentId,
-        address: Date.now().toString(),
-        content: {
-          from: this._name,
-          data: value
-        }
-      })
+      this._publishMessage(this._activeChannel, value)
     }
   }
 
@@ -337,18 +367,43 @@ busychat n3h test app
 
   _handleParsedIpcEvent (e) {
     switch (e.method) {
+      case 'peerConnected':
+      case 'handleGetPublishingEntryList':
+      case 'handleGetHoldingEntryList':
+      case 'handleGetPublishingMetaList':
+      case 'handleGetHoldingMetaList':
+        // ignore some explicitly un-handled messages
+        break
       case 'handleStoreEntry':
         this._stats.entryCount += 1
         this._updatePrompt()
 
+        this._fetchMessage(e.dnaAddress, e.address)
+
+        // if (!this._channels.has(e.dnaAddress)) {
+        //   return
+        // }
+        // this._display(
+        //   '[' + e.dnaAddress + ']', e.content.from + ':', e.content.data)
+        break
+      case 'handleStoreMeta':
+        this._fetchMeta(e.dnaAddress, e.entryAddress, e.attribute)
+        break
+      case 'fetchEntryResult':
         if (!this._channels.has(e.dnaAddress)) {
           return
         }
+
         this._display(
           '[' + e.dnaAddress + ']', e.content.from + ':', e.content.data)
         break
+      case 'fetchMetaResult':
+        //console.log(e)
+        break
       default:
-        this._display(e)
+        console.error('unhandled ' + JSON.stringify(e))
+        process.exit(13298)
+        // this._display(e)
         break
     }
   }
