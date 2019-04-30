@@ -102,7 +102,11 @@ class BusyChat {
         })
 
         this._display('loading n3h...')
-        this._n3h = await new N3hRealMode(workDir, {})
+        this._n3h = await new N3hRealMode(workDir, {
+          network: {
+            transientTransportId: true
+          }
+        })
         await this._n3h.run()
         this._display('n3h loaded!\n')
         this._display(this._n3h.getAdvertise())
@@ -368,6 +372,8 @@ busychat n3h test app
   _handleParsedIpcEvent (e) {
     switch (e.method) {
       case 'peerConnected':
+        this._display(JSON.stringify(e))
+        break
       case 'handleGetPublishingEntryList':
       case 'handleGetHoldingEntryList':
       case 'handleGetPublishingMetaList':
@@ -398,13 +404,11 @@ busychat n3h test app
           '[' + e.dnaAddress + ']', e.content.from + ':', e.content.data)
         break
       case 'fetchMetaResult':
-        //console.log(e)
+        // console.log(e)
         break
       default:
         console.error('unhandled ' + JSON.stringify(e))
-        process.exit(13298)
-        // this._display(e)
-        break
+        return process.exit(13298)
     }
   }
 }
