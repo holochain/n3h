@@ -104,7 +104,7 @@ class BusyChat {
         this._display('loading n3h...')
         this._n3h = await new N3hRealMode(workDir, {
           network: {
-            transientTransportId: true
+            useTransientTransportId: true
           }
         })
         await this._n3h.run()
@@ -385,12 +385,6 @@ busychat n3h test app
         this._updatePrompt()
 
         this._fetchMessage(e.dnaAddress, e.address)
-
-        // if (!this._channels.has(e.dnaAddress)) {
-        //   return
-        // }
-        // this._display(
-        //   '[' + e.dnaAddress + ']', e.content.from + ':', e.content.data)
         break
       case 'handleStoreMeta':
         this._fetchMeta(e.dnaAddress, e.entryAddress, e.attribute)
