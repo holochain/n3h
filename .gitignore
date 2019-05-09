@@ -6,3 +6,4 @@ coverage
 node_modules
 tls-data.json
 transportId.keyfile
+result
