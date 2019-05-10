@@ -5,7 +5,7 @@
 }:
 
 let
-  nodePackages = import ./default.nix {
+  nodePackages = import ./n3h.nix {
     inherit pkgs system;
   };
   nodeEnv = import ./node-env.nix { inherit pkgs system; };
