@@ -1,17 +1,14 @@
-<a name="derive"></a>
+<a name="kdfDerive"></a>
 
-## derive(index, context, parent) ⇒ <code>SecBuf</code>
+## kdfDerive(output, index, context, parent)
 Derive a subkey from a parent key
 
 **Kind**: global function  
 
 | Param | Type | Description |
 | --- | --- | --- |
-| index | <code>number</code> | subkey index |
+| output | <code>SecBuf</code> |  |
+| index | <code>number</code> | index of subkey to generate |
 | context | <code>Buffer</code> | eight bytes context |
 | parent | <code>SecBuf</code> | the parent key to derive from |
 
-**Example**  
-```js
-const subkey = mosodium.kdf.derive(1, Buffer.from('eightchr'), pk)
-```

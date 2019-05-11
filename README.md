@@ -8,31 +8,15 @@
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0)
 
 ## Overview
-n3h delivers the networking component for [holochain-rust](https://github.com/holochain/holochain-rust).  This allows us to abstract away the complexity of p2p networking from the core Holochain functionality.
+`n3h` delivers the networking component for [holochain-rust](https://github.com/holochain/holochain-rust). Core Holochain functionality is sheltered from the complexity of low level p2p networking.
+
+`n3h` does NOT need to be installed manually by Holochain users or developers. Holochain itself will download and install a pre-built version of `n3h` ready for use on your system, alleviating any concerns of version compatibility and mismatches.
+
+> It did not previously work this way, `n3h` required separate manual installation prior to v0.0.12-alpha1 of `holochain-rust`.
 
 ## Versions
 
-Version 0.0.3 of Holochain was the first to use n3h as its networking component. For each version of the Holochain you must use the a compatible version of n3h.  Make sure to download the tagged release to download a version of n3h that is guaranteed to work with the equivalent Holochain version:
-
-### 0.0.9-alpha2
-- [https://github.com/holochain/n3h/releases/tag/v0.0.9-alpha2](https://github.com/holochain/n3h/releases/tag/v0.0.9-alpha2)
-- [https://github.com/holochain/holochain-rust/releases/tag/v0.0.9-alpha](https://github.com/holochain/holochain-rust/releases/tag/v0.0.9-alpha)
-
-### 0.0.7-alpha1
-- [https://github.com/holochain/n3h/releases/tag/v0.0.7-alpha1](https://github.com/holochain/n3h/releases/tag/v0.0.7-alpha1)
-- [https://github.com/holochain/holochain-rust/releases/tag/v0.0.7-alpha](https://github.com/holochain/holochain-rust/releases/tag/v0.0.7-alpha)
-
-### 0.0.6-alpha1
-- [https://github.com/holochain/n3h/releases/tag/v0.0.6-alpha1](https://github.com/holochain/n3h/releases/tag/v0.0.6-alpha1)
-- [https://github.com/holochain/holochain-rust/releases/tag/v0.0.6-alpha](https://github.com/holochain/holochain-rust/releases/tag/v0.0.6-alpha)
-
-### 0.0.4-alpha1
-- [https://github.com/holochain/n3h/releases/tag/v0.0.4-alpha1](https://github.com/holochain/n3h/releases/tag/v0.0.4-alpha1)
-- [https://github.com/holochain/holochain-rust/releases/tag/v0.0.4-alpha](https://github.com/holochain/holochain-rust/releases/tag/v0.0.4-alpha)
-
-### 0.0.3
-- [https://github.com/holochain/n3h/releases/tag/v0.0.3](https://github.com/holochain/n3h/releases/tag/v0.0.3)
-- [https://github.com/holochain/holochain-rust/releases/tag/v0.0.3](https://github.com/holochain/holochain-rust/releases/tag/v0.0.3)
+To see the archive of release versions and compatibility with Holochain core, please visit [release-versions.md](./release-versions.md).
 
 
 ## Usage

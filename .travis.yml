@@ -12,7 +12,10 @@ addons:
 
 cache:
   directories:
-    - build
+    - build/appimage-build-ia32
+    - build/appimage-build-x64
+    - build/appimage-build-arm
+    - build/appimage-build-arm64
 
 _prep_env: &_prep_env
   stage: "Prepare Env"
