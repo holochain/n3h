@@ -211,6 +211,15 @@ let
         sha1 = "978857442c44749e4206613e37946205826abd80";
       };
     };
+    "dns-packet-4.2.0" = {
+      name = "dns-packet";
+      packageName = "dns-packet";
+      version = "4.2.0";
+      src = fetchurl {
+        url = "https://registry.npmjs.org/dns-packet/-/dns-packet-4.2.0.tgz";
+        sha512 = "bn1AKpfkFbm0MIioOMHZ5qJzl2uypdBwI4nYNsqvhjsegBhcKJUlCrMPWLx6JEezRjxZmxhtIz/FkBEur2l8Cw==";
+      };
+    };
     "dns-prefetch-control-0.1.0" = {
       name = "dns-prefetch-control";
       packageName = "dns-prefetch-control";
@@ -472,6 +481,15 @@ let
         sha1 = "277b228a87d95ad777d07c13832022406a473423";
       };
     };
+    "ip-1.1.5" = {
+      name = "ip";
+      packageName = "ip";
+      version = "1.1.5";
+      src = fetchurl {
+        url = "https://registry.npmjs.org/ip/-/ip-1.1.5.tgz";
+        sha1 = "bdded70114290828c0a039e72ef25f5aaec4354a";
+      };
+    };
     "ipaddr.js-1.8.0" = {
       name = "ipaddr.js";
       packageName = "ipaddr.js";
@@ -569,6 +587,15 @@ let
       src = fetchurl {
         url = "https://registry.npmjs.org/msgpack-lite/-/msgpack-lite-0.1.26.tgz";
         sha1 = "dd3c50b26f059f25e7edee3644418358e2a9ad89";
+      };
+    };
+    "multicast-dns-7.2.0" = {
+      name = "multicast-dns";
+      packageName = "multicast-dns";
+      version = "7.2.0";
+      src = fetchurl {
+        url = "https://registry.npmjs.org/multicast-dns/-/multicast-dns-7.2.0.tgz";
+        sha512 = "Tu2QORGOFANB124NWQ/JTRhMf/ODouVLEuvu5Dz8YWEU55zQgRgFGnBHfIh5PbfNDAuaRl7yLB+pgWhSqVxi2Q==";
       };
     };
     "nan-2.13.0" = {
@@ -805,6 +832,15 @@ let
         sha512 = "oJQ3f1hrOnbRLOcwKz0Liq2IcrvDeZRHXhd9RgLrsT+DjWY/nty1Hi7v3dtkaEYbPYe0mUoOfzRrMwfXXwgPUA==";
       };
     };
+    "thunky-1.0.3" = {
+      name = "thunky";
+      packageName = "thunky";
+      version = "1.0.3";
+      src = fetchurl {
+        url = "https://registry.npmjs.org/thunky/-/thunky-1.0.3.tgz";
+        sha512 = "YwT8pjmNcAXBZqrubu22P4FYsh2D4dxRmnWBOL8Jk8bUcRUtc5326kx32tuTmFDAZtLOGEVNl8POAR8j896Iow==";
+      };
+    };
     "type-is-1.6.16" = {
       name = "type-is";
       packageName = "type-is";
@@ -881,7 +917,7 @@ let
   args = {
     name = "n3h";
     packageName = "n3h";
-    version = "0.0.11-alpha";
+    version = "0.0.12-alpha";
     src = ./.;
     dependencies = [
       sources."@holochain/hcid-js-0.0.5"
@@ -906,6 +942,7 @@ let
       sources."debug-2.6.9"
       sources."depd-1.1.2"
       sources."destroy-1.0.4"
+      sources."dns-packet-4.2.0"
       sources."dns-prefetch-control-0.1.0"
       sources."dont-sniff-mimetype-1.0.0"
       sources."ee-first-1.1.1"
@@ -947,6 +984,7 @@ let
       sources."inherits-2.0.3"
       sources."ini-1.3.5"
       sources."int64-buffer-0.1.10"
+      sources."ip-1.1.5"
       sources."ipaddr.js-1.8.0"
       sources."isarray-1.0.0"
       sources."md5.js-1.3.5"
@@ -958,6 +996,7 @@ let
       sources."mime-types-2.1.22"
       sources."ms-2.0.0"
       sources."msgpack-lite-0.1.26"
+      sources."multicast-dns-7.2.0"
       sources."nan-2.13.0"
       sources."negotiator-0.6.1"
       sources."nocache-2.0.0"
@@ -984,6 +1023,7 @@ let
       sources."sodium-native-2.3.0"
       sources."statuses-1.4.0"
       sources."text-encoding-0.7.0"
+      sources."thunky-1.0.3"
       sources."type-is-1.6.16"
       sources."unorm-1.5.0"
       sources."unpipe-1.0.0"

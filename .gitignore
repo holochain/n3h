@@ -1,6 +1,7 @@
 build/appimage-build*
 build/electron-build
 build/machines-vm-exec
+build/nix-tag
 .nyc_output
 coverage
 node_modules

@@ -10,7 +10,7 @@ let
     inherit (pkgs) fetchurl fetchgit;
   });
   nodeEnv = import ./node-env.nix {
-    inherit (pkgs)  python2 utillinux runCommand writeTextFile; 
+    inherit (pkgs)  python2 utillinux runCommand writeTextFile;
     stdenv = pkgs.clangStdenv;
     inherit nodejs;
     libtool = if pkgs.stdenv.isDarwin then pkgs.darwin.cctools else null;
