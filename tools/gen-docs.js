@@ -2,70 +2,10 @@ const fs = require('fs')
 const path = require('path')
 const jsdoc2md = require('jsdoc-to-markdown')
 
-const handlebars = require('handlebars')
-
 /**
  */
-exports.docs = async function docs () {
+module.exports = exports = async function docs () {
   await _genAllDocs()
-}
-
-/**
- */
-exports.buildTemplate = async function buildTemplate (opts) {
-  if (
-    typeof opts !== 'object' ||
-    typeof opts.projectName !== 'string' ||
-    typeof opts.projectDesc !== 'string' ||
-    typeof opts.template !== 'string'
-  ) {
-    throw new Error('required opts: { projectName, projectDesc, template }')
-  }
-
-  const baseDir = path.resolve(path.join(__dirname, '..', '..'))
-
-  const config = {
-    projectName: opts.projectName,
-    projectDesc: opts.projectDesc,
-    baseDir,
-    template: path.resolve(path.join(baseDir, 'templates', opts.template)),
-    target: path.resolve(path.join(baseDir, 'packages', opts.projectName))
-  }
-
-  console.log(JSON.stringify(config, null, 2))
-
-  try {
-    fs.statSync(config.target)
-    throw new Error('cannot create "' + config.target + '", does it already exists?')
-  } catch (e) {
-    if (e.errno !== -2 || e.code !== 'ENOENT') {
-      throw e
-    }
-  }
-
-  _recTplGen(config.template, config.target, config)
-}
-
-/**
- */
-function _recTplGen (srcDir, destDir, config) {
-  fs.mkdirSync(destDir)
-  for (let f of fs.readdirSync(srcDir)) {
-    const srcPart = path.join(srcDir, f)
-    const destPart = path.join(destDir, f)
-    const s = fs.statSync(srcPart)
-    if (s.isFile()) {
-      console.log('# template', destPart)
-      const data = fs.readFileSync(srcPart).toString()
-      const tpl = handlebars.compile(data)
-      const res = tpl(config)
-      fs.writeFileSync(destPart, res)
-    } else if (s.isDirectory()) {
-      _recTplGen(srcPart, destPart, config)
-    } else {
-      throw new Error('bad type: "' + srcPart + '"')
-    }
-  }
 }
 
 /**
@@ -76,7 +16,7 @@ async function _genAllDocs () {
 ## projects
 
 `
-  const baseDir = path.resolve(path.join(__dirname, '..', '..'))
+  const baseDir = path.resolve(path.join(__dirname, '..'))
   const projects = fs.readdirSync(path.join(baseDir, 'lib'))
   projects.sort()
   for (let project of projects) {
@@ -103,7 +43,7 @@ ${ret}
 async function _genDocs (dir, project) {
   let doclist = ''
 
-  const docDir = path.resolve(path.join(__dirname, '..', '..', 'docs'))
+  const docDir = path.resolve(path.join(__dirname, '..', 'docs'))
 
   const docListFile = path.resolve(path.join(dir, 'docList.json'))
   let docListJson = null
