@@ -31,9 +31,9 @@ qemu_hash=""
 
 case "${this_arch}" in
   "x86_64")
-    qemu_url="http://ftp.us.debian.org/debian/pool/main/q/qemu/qemu-user-static_3.1+dfsg-7_amd64.deb"
-    qemu_file="qemu-user-static_3.1+dfsg-7_amd64.deb"
-    qemu_hash="0699a74d9eb7cb4b68d500a2788e699ee98964460e5d10020619014135527d76"
+    qemu_url="http://ftp.us.debian.org/debian/pool/main/q/qemu/qemu-user-static_3.1+dfsg-8~deb10u1_amd64.deb"
+    qemu_file="qemu-user-static_3.1+dfsg-8~deb10u1_amd64.deb"
+    qemu_hash="244d9e69509bb9930716d7bb0873c1bd1afcd7cba62161a49ca0b6d99c93bec2"
     ;;
   *)
     log "ERROR, unsupported host arch ${this_arch}, supported hosts: x86_64"
