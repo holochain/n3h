@@ -257,12 +257,12 @@ class BusyChat {
     this._display('left channel [' + channel + ']')
   }
 
-  _fetchMessage (channel, address) {
+  _fetchMessage (channel, entryAddress) {
     this._ipcSend({
       method: 'fetchEntry',
       dnaAddress: channel,
       requesterAgentId: this._agentId,
-      address
+      entryAddress
     })
   }
 
@@ -277,12 +277,12 @@ class BusyChat {
   }
 
   _publishMessage (channel, message) {
-    const address = crypto.randomBytes(32).toString('base64')
+    const entryAddress = crypto.randomBytes(32).toString('base64')
     this._ipcSend({
       method: 'publishEntry',
       dnaAddress: channel,
       providerAgentId: this._agentId,
-      address,
+      entryAddress,
       content: {
         type: 'message',
         from: this._name,
@@ -293,7 +293,7 @@ class BusyChat {
       method: 'publishMeta',
       dnaAddress: channel,
       providerAgentId: this._agentId,
-      entryAddress: address,
+      entryAddress: entryAddress,
       attribute: 'testAttr',
       contentList: [
         {
@@ -384,7 +384,7 @@ busychat n3h test app
         this._stats.entryCount += 1
         this._updatePrompt()
 
-        this._fetchMessage(e.dnaAddress, e.address)
+        this._fetchMessage(e.dnaAddress, e.entryAddress)
         break
       case 'handleStoreMeta':
         this._fetchMeta(e.dnaAddress, e.entryAddress, e.attribute)
