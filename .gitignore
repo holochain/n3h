@@ -6,3 +6,4 @@ coverage
 node_modules
 tls-data.json
 machineId.keyfile
+n3h-debug-snapshot-state-*.sqlite3
