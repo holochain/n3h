@@ -5,5 +5,7 @@ build/machines-vm-exec
 coverage
 node_modules
 tls-data.json
+transportId.keyfile
+result
 machineId.keyfile
 n3h-debug-snapshot-state-*.sqlite3
