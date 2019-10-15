@@ -65,7 +65,7 @@ get the identifier string
 **Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
 <a name="KeyBundle+sign"></a>
 
-### keyBundle.sign(data) ⇒ <code>SecBuf</code>
+### keyBundle.sign(data) ⇒ [<code>SecBuf</code>](https://github.com/holochain/n3h/blob/master/docs/mosodium/secbuf.md#SecBuf)
 sign some data with the signing private key
 
 **Kind**: instance method of [<code>KeyBundle</code>](#KeyBundle)  
