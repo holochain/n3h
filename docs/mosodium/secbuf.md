@@ -3,7 +3,7 @@
 <dl>
 <dt><a href="#SBRoot">SBRoot</a></dt>
 <dd><p>Abstract Base class for a buffer of a SecBuf
-Buffer should be stored in _b
+Buffer should be stored in binary.
 Expecting methods:</p>
 <ul>
 <li>async readable (fn)</li>
@@ -22,7 +22,7 @@ fn: async function that takes the memory buffer as input</li>
 </dd>
 <dt><a href="#SecBuf">SecBuf</a></dt>
 <dd><p>A protected SBRoot
-Holds a SBRoot as _b</p>
+Holds a SBRoot as binary</p>
 </dd>
 </dl>
 
@@ -30,7 +30,7 @@ Holds a SBRoot as _b</p>
 
 ## SBRoot
 Abstract Base class for a buffer of a SecBuf
-Buffer should be stored in _b
+Buffer should be stored in binary
 Expecting methods:
  - async readable (fn)
  - async writable (fn)
@@ -130,7 +130,7 @@ SBRoot implementation with a ref of a nodeJS Buffer
 
 ## SecBuf
 A protected SBRoot
-Holds a SBRoot as _b
+Holds a SBRoot as binary
 
 **Kind**: global class  
 
